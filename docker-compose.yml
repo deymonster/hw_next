@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres_container
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - hw-network
+    env_file:
+      - .env
+
+  prometheus:
+    image: prom/prometheus:v2.36.0
+    container_name: prometheus_container
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
+    volumes:
+      - prom-data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/targets:/etc/prometheus/targets
+      - ./prometheus/alerts:/etc/prometheus/alerts
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    env_file:
+      - .env
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager_container
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+
+  nginx-proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: nginx_prometheus_proxy
+    ports:
+      - "8080:8080"
+
+volumes:
+  pg_data:
+  prom-data:
+  prom-configs:
+
+networks:
+  hw-network:
+  

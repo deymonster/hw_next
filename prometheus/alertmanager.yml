@@ -1,0 +1,48 @@
+global:
+  resolve_timeout: 5m
+  telegram_api_url: https://api.telegram.org
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'your-email@gmail.com'
+  smtp_auth_username: 'your-email@gmail.com'
+  smtp_auth_password: 'your-app-password'
+  smtp_require_tls: true
+
+route:
+  group_by: ['alertname', 'hostname']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: 'telegram-notifications'
+
+receivers:
+# - name: 'email-notifications'
+#   email_configs:
+#   - to: 'admin@your-company.com'
+#     send_resolved: true
+#     html: |
+#       {{ range .Alerts }}
+#       <h3>{{ .Labels.alertname }}</h3>
+#       <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+#       <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+#       <p><strong>Started:</strong> {{ .StartsAt }}</p>
+#       {{ end }}
+- name: 'telegram-notifications'
+  telegram_configs:
+  - bot_token: '7244398080:AAH6oRecs7FpY9iE-chLXRQM5cfAVBxtvL4'
+    chat_id: 349494621
+    parse_mode: 'HTML'
+    message: >-
+      🚨 <b>{{ .Status | toUpper }}</b>
+      
+      {{ range .Alerts }}
+      <b>Хост:</b> {{ .Labels.hostname }}
+      <b>Тип:</b> {{ .Labels.alertname }}
+      <b>Важность:</b> {{ .Labels.severity }}
+      <b>Описание:</b> {{ .Annotations.description }}
+      
+      ⏰ Начало: {{ .StartsAt | since }}
+      {{- if .EndsAt }}
+      ✅ Завершено: {{ .EndsAt | since }}
+      {{- end }}
+      {{ end }}
+    send_resolved: true

@@ -1,0 +1,51 @@
+groups:
+- name: hardware_alerts
+  rules:
+  
+
+  # CPU Temperature Alert
+  - alert: HighCPUTemperature
+    expr: cpu_temperature > 75
+    for: 30s  # Уменьшим время для быстрого тестирования
+    labels:
+      severity: warning
+    annotations:
+      description: "CPU температура превысила 75°C"
+
+  # Disk Space Alert
+  - alert: LowDiskSpace
+    expr: (disk_free_bytes / disk_total_bytes) * 100 < 10
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: "Свободного места на диске менее 10%"
+
+  # Hardware Change Alerts
+  - alert: CPUModelChanged
+    expr: changes(cpu_info{processor=""}[1h]) > 0
+    labels:
+      severity: critical
+    annotations:
+      description: "Обнаружена смена модели процессора"
+
+  - alert: DiskModelChanged
+    expr: changes(disk_model_info[1h]) > 0
+    labels:
+      severity: critical
+    annotations:
+      description: "Обнаружена смена модели диска"
+
+  - alert: MemoryDecreased
+    expr: delta(memory_total_bytes[1h]) < 0
+    labels:
+      severity: critical
+    annotations:
+      description: "Обнаружено уменьшение объема оперативной памяти"
+
+  - alert: SystemModelChanged
+    expr: changes(system_information{model=""}[1h]) > 0
+    labels:
+      severity: warning
+    annotations:
+      description: "Обнаружено изменение модели системы"
