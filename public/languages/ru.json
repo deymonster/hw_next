@@ -1,5 +1,25 @@
 {
-    "home": {
-        "title": "Главная страница"
+    "auth": {
+        "register": {
+            "heading": "Регистрация в NITRINOnet Monitoring",
+			"backButtonLabel": "Есть учетная запись? Войти",
+			"usernameLabel": "Имя пользователя",
+			"usernameDescription": "Под этим именем вас будут знать другие пользователи.",
+			"emailLabel": "Почта",
+			"emailDescription": "Вашу почта будет использовать для отправки уведомлений",
+			"passwordLabel": "Пароль",
+			"passwordDescription": "Пароль должен содержать не менее 8 символов.",
+			"submitButton": "Зарегистрироваться",
+            "registeringButton": "Регистрация...",
+			"successAlertTitle": "Проверьте свою почту",
+			"successAlertDescription": "На ваш адрес электронной почты было отправлено письмо для подтверждения. Если вы не видите письмо, проверьте папку «Спам»",
+			"errorMessage": "Ошибка при создании аккаунта" 
+        },
+        "verify": {
+            "heading": "Верификация аккаунта",
+            "verifying": "Проверяем ваш email...",
+            "successMessage": "Аккаунт верифицирован",
+			"errorMesage": "Ошибка при верификации аккаунта"
+        }
     }
 }

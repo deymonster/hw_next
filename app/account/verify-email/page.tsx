@@ -1,53 +1,18 @@
-'use client';
+import { VerifyAccountForm } from "@/components/features/auth/forms/VerifyAccountForm";
+import { redirect } from "next/navigation";
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+export default async function VerifyEmailPage(props: {
+  searchParams: Promise<{ token: string }>
+}) {
+  const searchParams = await props.searchParams;
 
-export default function VerifyEmailPage() {
-  const [isVerifying, setIsVerifying] = useState(true);
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  useEffect(() => {
-    const token = searchParams.get('token');
-
-    if (!token) {
-      toast.error("Токен отсутствует");
-      setIsVerifying(false);
-      return;
-    }
-
-    async function verifyEmail() {
-      try {
-        const res = await fetch(`/api/account/verify-email?token=${token}`);
-        const result = await res.json();
-
-        if (result.success) {
-          toast.success("Email успешно подтвержден! Перенаправляем на вход...");
-          setTimeout(() => {
-            router.push('/account/login');
-          }, 2000);
-        } else {
-          toast.error(result.message);
-        }
-      } catch (error) {
-        toast.error("Ошибка при подтверждении email");
-      } finally {
-        setIsVerifying(false);
-      }
-    }
-
-    verifyEmail();
-  }, [searchParams, router]);
+  if (!searchParams.token) {
+    return redirect('/account/create')
+  }
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      {isVerifying ? (
-        <p>Подтверждаем ваш email...</p>
-      ) : (
-        <p>Ошибка при подтверждении email</p>
-      )}
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <VerifyAccountForm token={searchParams.token} />
     </div>
   );
 }

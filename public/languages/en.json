@@ -1,5 +1,26 @@
 {
-    "home": {
-        "title": "Home page"
+    "auth": {
+        "register": {
+            "heading": "Register on NITRINOnet Monitoring",
+			"backButtonLabel": "Already have an account? Sign in",
+			"usernameLabel": "Username",
+			"usernameDescription": "This is the name other users will know you by. You can change it later.",
+			"emailLabel": "Email",
+			"emailDescription": "Your email will be used for sending notifications.",
+			"passwordLabel": "Password",
+			"passwordDescription": "The password must contain at least 8 characters.",
+			"submitButton": "Sign up",
+            "registeringButton": "Registration...",
+			"successAlertTitle": "Check Your Email",
+			"successAlertDescription": "A verification email has been sent to your inbox. If you don't see the email, check your spam folder",
+			"errorMessage": "Error when creating an account"
+        },
+        "verify": {
+            "heading": "Account verification",
+            "verifying": "Verifying your email...",
+            "successMessage": "Account verified",
+			"errorMesage": "Verification error"
+        }
+
     }
 }
