@@ -4,6 +4,8 @@ import { IUserCreateInput, IUserFindManyArgs, IUserRepository } from './user.int
 
 import { TypeCreateAccountSchema } from "@/schemas/auth/create-account.schema";
 import * as bcrypt from 'bcryptjs';
+import { sendMail } from '@/libs/send-mail';
+import crypto from "crypto";
 
 
 export class UserService 
@@ -17,6 +19,12 @@ export class UserService
     async getByEmail(email: string): Promise<User | null> {
         return await this.model.findUnique({
           where: { email },
+        });
+      }
+    
+    async getByToken(token: string): Promise<User | null> {
+        return await this.model.findUnique({
+          where: { verificationToken: token },
         });
       }
 
@@ -34,15 +42,54 @@ export class UserService
 
             // Хэшируем пароль
             const hashedPassword = await bcrypt.hash(data.password, 10);
+            
+            // Генерация токена для подтверждения
+            const verificationToken = crypto.randomBytes(32).toString("hex");
 
             // Создаем пользователя
             const user = await this.prisma.user.create({
                 data: {
                     email: data.email,
                     name: data.username,
-                    password: hashedPassword
+                    password: hashedPassword,
+                    verificationToken,
                 }
             });
+
+            // Формируем ссылку подтверждения
+            const verificationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/account/verify-email?token=${verificationToken}`;
+
+            // Отправляем письмо с подтверждением
+            const html = `
+            <html>
+                <body>
+                <h1>Подтверждение email</h1>
+                <p>Здравствуйте, ${data.username}!</p>
+                <p>Пожалуйста, подтвердите вашу почту, перейдя по ссылке ниже:</p>
+                <a href="${verificationLink}" target="_blank">Подтвердить Email</a>
+                <p>Если вы не регистрировались, просто проигнорируйте это письмо.</p>
+                </body>
+            </html>
+            `;
+
+            try {
+                await sendMail({
+                    sendTo: data.email,
+                    subject: "Подтверждение регистрации",
+                    text: `Пожалуйста, подтвердите вашу почту: ${verificationLink}`,
+                    html,
+                });
+            } catch (mailError: any) {
+                console.error("[SEND_MAIL_ERROR]", mailError);
+
+                // Удаляем пользователя, если письмо не отправлено
+                await this.prisma.user.delete({ where: { id: user.id } });
+
+                return {
+                    success: false,
+                    error: `Ошибка при отправке письма подтверждения: ${mailError.message}`,
+                };
+            }
 
             // Возвращаем успех, но без пароля
             const { password, ...userWithoutPassword } = user;

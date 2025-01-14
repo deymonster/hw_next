@@ -69,7 +69,10 @@ export function CreateAccountForm() {
             <FormItem>
               <FormLabel>Имя пользователя</FormLabel>
               <FormControl>
-                <Input placeholder="username" {...field}/> 
+                <Input 
+                  placeholder="username"
+                  disabled={isPending}
+                  {...field}/> 
               </FormControl>
               <FormDescription>
                 Это имя будет отображаться в вашем профиле
@@ -86,7 +89,10 @@ export function CreateAccountForm() {
             <FormItem>
               <FormLabel>Почта</FormLabel>
               <FormControl>
-                <Input placeholder="username@example.com" {...field}/> 
+                <Input 
+                  placeholder="username@example.com" 
+                  disabled={isPending}
+                  {...field}/> 
               </FormControl>
               <FormDescription>
                 На этот адрес будут приходить уведомления
@@ -105,6 +111,7 @@ export function CreateAccountForm() {
               <FormControl>
                 <Input 
                   placeholder="********" 
+                  disabled={isPending}
                   type="password"
                   {...field}
                 /> 

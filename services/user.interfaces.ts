@@ -5,6 +5,8 @@ export interface IUserCreateInput {
     email: string;
     name: string;
     password: string;
+    emailVerified?: boolean;
+    verificationToken?: string | null;
   }
   
   // Тип параметров для поиска пользователей
@@ -17,5 +19,6 @@ export interface IUserCreateInput {
   // Интерфейс для дополнительных методов репозитория пользователя
   export interface IUserRepository {
     getByEmail(email: string): Promise<User | null>;
+    getByToken(token: string): Promise<User | null>;
   }
   
