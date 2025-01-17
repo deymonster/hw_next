@@ -15,12 +15,64 @@
 			"successAlertDescription": "A verification email has been sent to your inbox. If you don't see the email, check your spam folder",
 			"errorMessage": "Error when creating an account"
         },
+		"errors": {
+			"INVALID_CREDENTIALS": "Invalid email or password",
+			"EMAIL_NOT_VERIFIED": "Email not verified",
+			"USER_NOT_FOUND": "User not found",
+			"RESET_PASSWORD_FAILED": "Password reset error",
+			"EMAIL_ALREADY_EXISTS": "User with this email already exists",
+			"INVALID_TOKEN": "Invalid token",
+			"TOKEN_EXPIRED": "Token expired",
+			"TOKEN_MISSING": "Token missing",
+			"EMAIL_VERIFICATION_ERROR": "Email verification error",
+			"EMAIL_VERIFICATION_SUCCESS": "Email successfully verified",
+			"CREATE_USER_FAILED": "Failed to create user",
+			"AUTHENTICATION_FAILED": "Authentication failed",
+			"UPDATE_PASSWORD_FAILED": "Failed to update password"
+		},
         "verify": {
             "heading": "Account verification",
             "verifying": "Verifying your email...",
             "successMessage": "Account verified",
 			"errorMesage": "Verification error"
-        }
+        },
+		"login": {
+			"heading": "Login to NITRINOnet Monitoring",
+			"backButtonLabel": "Don't have an account? Sign up!",
+			"loginLabel": "Login",
+			"loginDescription": "Your username or email that you used during registration.",
+			"passwordLabel": "Password",
+			"passwordDescription": "The password you used during registration.",
+			"pinLabel": "6-digit code",
+			"pinDescription": "Enter the code from your authentication app.",
+			"forgotPassword": "Forgot password?",
+			"submitButton": "Login",
+			"successMessage": "You have successfully logged in",
+			"errorMessage": "Error when logging in"
+		},
+		"resetPassword": {
+			"heading": "Reset password",
+			"backButtonLabel": "Already have an account? Sign in",
+			"emailLabel": "Email",
+			"emailDescription": "The email you used during registration",
+			"submitButton": "Reset password",
+			"successAlertTitle": "Link sent",
+			"successAlertDescription": "We have sent a password reset link to your email. If you have enabled Telegram notifications, the link was sent there as well",
+			"errorMessage": "Password reset error",
+			"userNotFound": "User not found with this email"
+		},
+		"newPassword": {
+			"heading": "New password",
+			"backButtonLabel": "Already have an account? Sign in",
+			"passwordLabel": "New password",
+			"passwordDescription": "The password you used during registration",
+			"passwordRepeatLabel": "Repeat password",
+			"passwordRepeatDescription": "Repeat your new password for confirmation",
+			"submitButton": "Set new password",
+			"successMessage": "Password successfully changed",
+			"errorMessage": "Error when setting a new password",
+			"invalidToken": "Invalid or expired token"
+		}
 
     }
 }

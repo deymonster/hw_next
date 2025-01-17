@@ -28,7 +28,7 @@
       "@/*": ["./*"],
       "@/services/*": ["./services/*"]
     },
-    "types": ["node"]
+    "types": ["node", "next-auth"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "middleware.ts"]

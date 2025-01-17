@@ -15,11 +15,65 @@
 			"successAlertDescription": "На ваш адрес электронной почты было отправлено письмо для подтверждения. Если вы не видите письмо, проверьте папку «Спам»",
 			"errorMessage": "Ошибка при создании аккаунта" 
         },
+		"errors": {
+			"INVALID_CREDENTIALS": "Неверный email или пароль",
+			"EMAIL_NOT_VERIFIED": "Email не подтвержден",
+			"USER_NOT_FOUND": "Пользователь не найден",
+			"RESET_PASSWORD_FAILED": "Ошибка при сбросе пароля",
+			"EMAIL_ALREADY_EXISTS": "Пользователь с таким email уже существует",
+			"INVALID_TOKEN": "Недействительный токен",
+			"TOKEN_EXPIRED": "Срок действия токена истек",
+			"TOKEN_MISSING": "Токен отсутствует",
+			"EMAIL_VERIFICATION_ERROR": "Ошибка подтверждения email",
+			"EMAIL_VERIFICATION_SUCCESS": "Email успешно подтвержден",
+			"CREATE_USER_FAILED": "Не удалось создать пользователя",
+			"AUTHENTICATION_FAILED": "Произошла ошибка при аутентификации",
+			"UPDATE_PASSWORD_FAILED": "Произошла ошибка при обновлении пароля"
+		},
         "verify": {
             "heading": "Верификация аккаунта",
             "verifying": "Проверяем ваш email...",
             "successMessage": "Аккаунт верифицирован",
 			"errorMesage": "Ошибка при верификации аккаунта"
-        }
+        },
+
+		"login": {
+			"heading": "Войти в NITRINOnet Monitoring",
+			"backButtonLabel": "У вас нет учетной записи? Зарегистрируйтесь!",
+			"loginLabel": "Логин",
+			"loginDescription": "Ваше имя или почта, которые вы вводили при регистрации.",
+			"passwordLabel": "Пароль",
+			"passwordDescription": "Пароль, который вы вводили при регистрации.",
+			"pinLabel": "6-значный код",
+			"pinDescription": "Введите код из вашего приложения для аутентификации.",
+			"forgotPassword": "Забыли пароль?",
+			"submitButton": "Войти",
+			"successMessage": "Вы успешно вошли в систему",
+			"errorMessage": "Ошибка при входе в систему"
+		},
+		"resetPassword": {
+			"heading": "Сброс пароля",
+			"backButtonLabel": "Есть учётная запись? Войти",
+			"emailLabel": "Почта",
+			"emailDescription": "Ваша почта, которую вы вводили при регистрации",
+			"submitButton": "Сбросить пароль",
+			"successAlertTitle": "Ссылка отправлена",
+			"successAlertDescription": "Мы отправили ссылку для сброса пароля на вашу почту. Если у вас включены уведомления в Telegram, ссылка также была отправлена туда",
+			"errorMessage": "Ошибка при сбросе пароля",
+			"userNotFound": "Пользователь с таким email не найден"
+		},
+		"newPassword": {
+			"heading": "Новый пароль",
+			"backButtonLabel": "Есть учётная запись? Войти",
+			"passwordLabel": "Новый пароль",
+			"passwordDescription": "Пароль, который вы вводили при регистрации",
+			"passwordRepeatLabel": "Повторите пароль",
+			"passwordRepeatDescription": "Повторите свой новый пароль для подтверждения",
+			"submitButton": "Продолжить",
+			"successMessage": "Пароль успешно изменён",
+			"errorMessage": "Ошибка при установлении нового пароля",
+			"invalidToken": "Неверный или устаревший токен"
+			
+		}
     }
 }

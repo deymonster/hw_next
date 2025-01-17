@@ -6,7 +6,7 @@ import { TypeCreateAccountSchema } from "@/schemas/auth/create-account.schema";
 import * as bcrypt from 'bcryptjs';
 import { sendMail } from '@/libs/send-mail';
 import crypto from "crypto";
-
+import { AUTH_ERRORS } from "@/libs/auth/constants";
 
 export class UserService 
     extends BaseRepository<User, IUserCreateInput, IUserFindManyArgs, PrismaClient['user'], string>
@@ -28,6 +28,12 @@ export class UserService
         });
       }
 
+    async getByResetToken(token: string): Promise<User | null> {
+        return await this.model.findUnique({
+          where: { resetToken: token },
+        });
+    }
+
     async createUser(data: TypeCreateAccountSchema): Promise<{ success: boolean; user?: Omit<User, 'password'>; error?: string }>  {
         try {
             // Проверяем, существует ли пользователь
@@ -36,7 +42,7 @@ export class UserService
             if (existingUser) {
                 return {
                     success: false,
-                    error: "Пользователь с таким email уже существует"
+                    error: AUTH_ERRORS.EMAIL_ALREADY_EXISTS
                 };
             }
 
@@ -104,6 +110,61 @@ export class UserService
                 success: false,
                 error: "Произошла ошибка при создании пользователя"
             };
+        }
+    }
+
+    async createResetToken(userId: string): Promise<string> {
+        const token = crypto.randomBytes(32).toString('hex');
+        const expires = new Date(Date.now() +  5 * 60 * 1000); // 24 часа
+
+        await this.update(userId, {
+            resetToken: token,
+            resetTokenExpires: expires
+        });
+
+        return token;
+    }
+
+    async verifyResetToken(token: string): Promise<string | null> {
+        const user = await this.getByResetToken(token);  // Нужно отдельный метод getByResetToken!
+        if (user && user.resetTokenExpires && user.resetTokenExpires > new Date()) {
+          return user.id;
+        }
+        return null;
+    }
+
+    async updatePassword(userId: string, newPassword: string): Promise<User> {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        return await this.update(userId, {
+          password: hashedPassword,
+          resetToken: null,
+          resetTokenExpires: null
+      });
+    }
+
+    async sendPasswordResetEmail(email: string, token: string): Promise<void> {
+        const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/account/recovery/${token}`;
+        
+        await sendMail({
+          sendTo: email,
+          subject: 'Reset your password',
+          text: `You requested to reset your password. Click the link below to set a new password: ${resetLink}`,
+          html: `
+            <p>You requested to reset your password.</p>
+            <p>Click the link below to set a new password:</p>
+            <a href="${resetLink}">Reset Password</a>
+            <p>If you didn't request this, please ignore this email.</p>
+            <p>The link will expire in 24 hours.</p>
+          `
+        });
+
+        // Если включены уведомления в Telegram
+        if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+          // await this.telegram.sendMessage(
+          //   process.env.TELEGRAM_CHAT_ID,
+          //   `Reset password link: ${resetLink}`
+          // );
         }
     }
 }

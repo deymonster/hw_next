@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { services } from '@/services/index';
+import { AUTH_ERRORS } from "@/libs/auth/constants";
 
 export async function GET(request: Request) {
     const url = new URL(request.url);
@@ -7,7 +8,7 @@ export async function GET(request: Request) {
 
     if (!token) {
         return NextResponse.json(
-            { success: false, message: "Токен отсутствует" },
+            { success: false, message: AUTH_ERRORS.TOKEN_MISSING },
             { status: 400 }
           );
     }
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
         const user = await services.user.getByToken(token);
         if (!user) {
             return NextResponse.json(
-              { success: false, message: "Токен недействителен или устарел" },
+              { success: false, message: AUTH_ERRORS.INVALID_TOKEN },
               { status: 400 }
             );
         }
@@ -26,14 +27,14 @@ export async function GET(request: Request) {
           });
         
         return NextResponse.json(
-            { success: true, message: "Email успешно подтвержден" },
+            { success: true, message: AUTH_ERRORS.EMAIL_VERIFICATION_SUCCESS },
             { status: 200 }
         );
         
     } catch (error) {
             console.error("Error verifying email:", error);
         return NextResponse.json(
-        { success: false, message: "Ошибка подтверждения email" },
+        { success: false, message: AUTH_ERRORS.EMAIL_VERIFICATION_ERROR },
         { status: 500 }
         );
     }
