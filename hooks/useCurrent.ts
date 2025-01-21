@@ -1,0 +1,55 @@
+import { clearSession, getCurrentUser } from "@/app/actions/auth";
+import { useAuth } from "./useAuth";
+import { useEffect, useState } from "react";
+import { User } from "@prisma/client"; 
+
+export function useCurrent() {
+    const { isAuthenticated, exit } = useAuth();
+    const [loading, setLoading] = useState(false); 
+    const [error, setError] = useState<string | null>(null);
+    const [user, setUser] = useState<User | null>(null);
+
+    const fetchUser = async (forceRefetch = false) => {
+        if (!isAuthenticated) {
+            setUser(null);
+            setError(null);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const result = await getCurrentUser(forceRefetch);
+            
+            if (result.error) {
+                setError(result.error);
+                setUser(null);
+                // Если произошла ошибка при получении данных пользователя,
+                // удаляем сессию и выходим
+                await clearSession();
+                exit();
+                return;
+            }
+
+            setUser(result.user);
+            setError(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to fetch user data');
+            setUser(null);
+            await clearSession();
+            exit();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUser();
+    }, [isAuthenticated]);
+
+    return {
+        user,
+        loading,
+        error,
+        refetch: () => fetchUser(true)
+    };
+}

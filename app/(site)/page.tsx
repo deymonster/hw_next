@@ -1,8 +1,12 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
+import { useCurrent } from "@/hooks/useCurrent";
 // import { useTranslations } from "next-intl";
 
 export default function Home() {
   // const t = useTranslations('home');
+  const { user, loading } = useCurrent()
   return (
     <div>
       
@@ -12,6 +16,7 @@ export default function Home() {
       <Button variant="outline">Outline</Button>
       <Button variant="secondary">Secondary</Button>
       <Button variant="ghost">Ghost</Button>
+      <div>{loading ? <div>Loading ...</div> : JSON.stringify(user)}</div>
     </div>
   );
 }

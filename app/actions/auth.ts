@@ -7,6 +7,7 @@ import { services } from '@/services/index';
 import { auth, signIn, signOut } from "@/auth"
 import { AUTH_ERRORS } from '@/libs/auth/constants';
 
+
 export async function updatePasswordWithToken(token: string, data: TypeNewPasswordSchema) {
   try {
     // 1. Проверяем токен на валидность
@@ -85,13 +86,76 @@ export async function authenticate(
   }
 }
 
+// Тип для возвращаемого значения getCurrentUser
+type GetCurrentUserReturn = {
+  user: any;  
+  error: string | null;
+  loading: boolean;
+}
+
 // Получение данных текущего пользователя
-export async function getCurrentUser() {
+export async function getCurrentUser(forceRefetch = false): Promise<GetCurrentUserReturn> {
   try {
     const session = await auth()
-    return session?.user
+    
+    if (!session?.user?.id) {
+      return {
+        user: null,
+        error: null,
+        loading: false
+      };
+    }
+
+    // Если не нужно обновлять данные из БД, возвращаем данные из сессии
+    if (!forceRefetch) {
+      return {
+        user: session.user,
+        error: null,
+        loading: false
+      };
+    }
+
+    // Получаем актуальные данные из БД
+    try {
+      const user = await services.user.getById(session.user.id);
+      
+      if (!user) {
+        return {
+          user: null,
+          error: 'User not found',
+          loading: false
+        };
+      }
+
+      // Возвращаем данные из БД
+      return {
+        user,
+        error: null,
+        loading: false
+      };
+
+    } catch (error) {
+      return {
+        user: null,
+        error: error instanceof Error ? error.message : 'Failed to fetch user data from DB',
+        loading: false
+      };
+    }
   } catch (error) {
-    return null
+    return {
+      user: null,
+      error: error instanceof Error ? error.message : 'Failed to get session',
+      loading: false
+    };
+  }
+}
+
+// Action для удаления сессии
+export async function clearSession() {
+  try {
+    await signOut()
+  } catch (error) {
+    console.error('[CLEAR_SESSION_ERROR]', error)
   }
 }
 
