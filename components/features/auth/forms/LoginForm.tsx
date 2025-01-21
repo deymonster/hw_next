@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/hooks/useAuth"
 
 
 export function LoginForm() {
+    const { auth } = useAuth()
     const router = useRouter()
+    
     const searchParams = useSearchParams()
     const t = useTranslations('auth.login')
     const errors = useTranslations('auth.errors')
@@ -51,6 +54,7 @@ export function LoginForm() {
             }
             
             if (result.success && result.callbackUrl) {
+                auth()
                 toast.success(t('successMessage'))
                 router.push(result.callbackUrl)
             } else {

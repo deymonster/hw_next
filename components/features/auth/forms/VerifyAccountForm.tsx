@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AuthWrapper } from "../AuthWrapper";
 import { Loader } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface VerifyAccountFormProps {
     token: string;
@@ -13,6 +14,7 @@ interface VerifyAccountFormProps {
 
 export function VerifyAccountForm({ token }: VerifyAccountFormProps) {
     const t = useTranslations('auth.verify');
+    const { auth } = useAuth()
     const router = useRouter();
     const [isVerifying, setIsVerifying] = useState(true);
     const [verificationStatus, setVerificationStatus] = useState<'pending' | 'success' | 'error'>('pending');
@@ -24,6 +26,7 @@ export function VerifyAccountForm({ token }: VerifyAccountFormProps) {
                 const result = await res.json();
 
                 if (result.success) {
+                    auth();
                     setVerificationStatus('success');
                     toast.success(t('successMessage'));
                     setTimeout(() => {

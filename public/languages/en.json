@@ -1,4 +1,56 @@
-{
+{	
+	"layout": {
+		"header": {
+			"logo": {
+				"platform": "Hardware monitoring system"
+			},
+			"headerMenu": {
+				"login": "Sign In",
+				"register": "Sign Up",
+				"profileMenu": {
+					"notifications": {
+						"heading": "Notifications",
+						"loading": "Loading...",
+						"empty": "You have no notifications"
+					},
+					"successMessage": "Successfully logged out",
+					"errorMessage": "Logout error",
+					"channel": "My channel",
+					"dashboard": "Dashboard",
+					"logout": "Sign out"
+				}
+			},
+			"search": {
+				"placeholder": "Search"
+			}
+		},
+		"sidebar": {
+			"header": {
+				"expand": "Expand",
+				"collapse": "Collapse",
+				"navigation": "Navigation"
+			},
+			"userNav": {
+				"home": "Home",
+				"categories": "Categories",
+				"streams": "Streams",
+				"recommended": "Recommended"
+			},
+			"recommended": {
+				"heading": "Recommendations"
+			},
+			"dashboardNav": {
+				"settings": "Settings",
+				"streamSettings": "Stream Settings",
+				"keys": "Stream Keys",
+				"chatSettings": "Chat Settings",
+				"followers": "Followers",
+				"sponsors": "Sponsors",
+				"premium": "Premium Plans",
+				"transactions": "Transactions"
+			}
+		}
+	},
     "auth": {
         "register": {
             "heading": "Register on NITRINOnet Monitoring",

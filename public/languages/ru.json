@@ -1,4 +1,56 @@
-{
+{	
+	"layout": {
+		"header": {
+			"logo": {
+				"platform": "Система мониторинга оборудования"
+			},
+			"headerMenu": {
+				"login": "Войти",
+				"register": "Регистрация",
+				"profileMenu": {
+					"notifications": {
+						"heading": "Уведомления",
+						"loading": "Загрузка...",
+						"empty": "У вас нет уведомлений"
+					},
+					"successMessage": "Вы успешно вышли из системы",
+					"errorMessage": "Ошибка при выходе",
+					"channel": "Мой канал",
+					"dashboard": "Панель управления",
+					"logout": "Выйти"
+				}
+			},
+			"search": {
+				"placeholder": "Поиск"
+			}
+		},
+		"sidebar": {
+			"header": {
+				"expand": "Развернуть",
+				"collapse": "Свернуть",
+				"navigation": "Навигация"
+			},
+			"dashboardNav": {
+				"settings": "Настройки",
+				"streamSettings": "Настройки стрима",
+				"keys": "Ключи для стрима",
+				"chatSettings": "Настройки чата",
+				"followers": "Подписчики",
+				"sponsors": "Спонсоры",
+				"premium": "Премиум планы",
+				"transactions": "Транзакции"
+			},
+			"userNav": {
+				"home": "Главная",
+				"categories": "Категории",
+				"streams": "Трансляции",
+				"recommended": "Рекомендации"
+			},
+			"recommended": {
+				"heading": "Рекомендации"
+			}
+		}
+	},
     "auth": {
         "register": {
             "heading": "Регистрация в NITRINOnet Monitoring",
