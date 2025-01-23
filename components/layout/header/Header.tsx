@@ -1,3 +1,4 @@
+import { HeaderMenu } from "./HeaderMenu";
 import { Logo } from "./Logo";
 import { Search } from "./Search";
 
@@ -8,6 +9,7 @@ export function Header() {
         gap-x-4 border-border bg-card p-4">
           <Logo />
           <Search />
+          <HeaderMenu />
       </header>
   )
 }

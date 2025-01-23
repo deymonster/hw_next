@@ -15,7 +15,7 @@
 					},
 					"successMessage": "Successfully logged out",
 					"errorMessage": "Logout error",
-					"channel": "My channel",
+					"profile": "Profile",
 					"dashboard": "Dashboard",
 					"logout": "Sign out"
 				}

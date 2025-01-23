@@ -58,9 +58,7 @@ export const providers = [
           email: user.email,
           name: user.name || '',
           role: user.role || Role.USER,
-          emailVerified: user.emailVerified ? new Date() : null,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
+          image: user.image || null
         }
 
         return customUser

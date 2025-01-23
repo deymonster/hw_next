@@ -1,26 +1,36 @@
-import { Session, User } from "next-auth"
+import { User } from "next-auth"
 import { JWT } from "next-auth/jwt"
 import { Role } from "@prisma/client"
+import { DefaultSession } from "next-auth"
 
-// Расширяем стандартный тип User
-export interface CustomUser extends User {
-  id: string
-  email: string
-  emailVerified: Date | null
-  role: Role
-  createdAt: Date
-  updatedAt: Date
+declare module "next-auth" {
+    interface Session {
+        user: {
+            id: string
+            email: string
+            role: Role
+            image?: string | null
+        } & DefaultSession["user"]
+    }
 }
 
-
+// Расширяем стандартный тип User
+export interface CustomUser {
+  id: string
+  email: string
+  role: Role
+  name?: string | null
+  image?: string | null
+}
 
 // Расширяем тип Session
-export interface CustomSession extends Session {
-  user: {
-    id: string
-    email: string
-    role: Role
-  } & Session["user"]
+export interface CustomSession extends DefaultSession {
+    user: {
+        id: string
+        email: string
+        role: Role
+        image?: string | null
+    } & DefaultSession["user"]
 }
 
 // Расширяем тип JWT

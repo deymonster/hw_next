@@ -97,11 +97,11 @@ type GetCurrentUserReturn = {
 export async function getCurrentUser(forceRefetch = false): Promise<GetCurrentUserReturn> {
   try {
     const session = await auth()
-    
+    console.log('Session', session)
     if (!session?.user?.id) {
       return {
         user: null,
-        error: null,
+        error: 'Token not found',
         loading: false
       };
     }
@@ -117,7 +117,7 @@ export async function getCurrentUser(forceRefetch = false): Promise<GetCurrentUs
 
     // Получаем актуальные данные из БД
     try {
-      const user = await services.user.getById(session.user.id);
+      const user = await services.user.findById(session.user.id);
       
       if (!user) {
         return {

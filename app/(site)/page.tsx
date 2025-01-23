@@ -1,22 +1,44 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { useCurrent } from "@/hooks/useCurrent";
-// import { useTranslations } from "next-intl";
+import { UserAvatar } from "@/components/ui/elements/UserAvatar";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Home() {
-  // const t = useTranslations('home');
-  const { user, loading } = useCurrent()
+  const { user, loading, exit } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div>
-      
-      <h1 className="text-2xl font-bold">Welcome to the Monitoring Dashboard</h1>
-      <p className="mt-4">Select a section to view metrics and analytics.</p>
-      <Button>Default</Button>
-      <Button variant="outline">Outline</Button>
-      <Button variant="secondary">Secondary</Button>
-      <Button variant="ghost">Ghost</Button>
-      <div>{loading ? <div>Loading ...</div> : JSON.stringify(user)}</div>
+    <div className="p-4">
+      <div className="flex gap-2 mb-4">
+        <Button variant="outline">Outline</Button>
+        <Button variant="secondary">Secondary</Button>
+        <Button variant="ghost">Ghost</Button>
+        <Button variant="secondary" onClick={exit}>Выйти</Button>
+      </div>
+
+      {user && (
+        <div className="p-4 border rounded-lg">
+          <h2 className="text-xl font-bold mb-2">Информация о пользователе:</h2>
+
+          <p>Email: {user.email}</p>
+          <p>Имя: {user.name || 'Не указано'}</p>
+          <p>Роль: {user.role}</p>
+          <div>
+            {JSON.stringify(user)}
+            <UserAvatar 
+              profile={{
+                name: user.name,
+                image: user.image
+              }} />
+
+          </div>
+          
+        </div>
+      )}
     </div>
   );
 }

@@ -42,11 +42,11 @@ export function LoginForm() {
             formData.append('email', data.email)
             formData.append('password', data.password)
 
-            
             // Получаем маршрут откуда пришел пользователь
-            // Преобразуем null в undefined для типизации
             const from = searchParams.get('from') || undefined
+            console.log('Authenticating...');
             const result = await authenticate(from, formData)
+            console.log('Authentication result:', result);
 
             if (result.error) {
                 toast.error(errors(result.error));
@@ -54,15 +54,16 @@ export function LoginForm() {
             }
             
             if (result.success && result.callbackUrl) {
-                auth()
+                console.log('Authentication successful, setting auth state');
+                auth() // Просто устанавливаем isAuthenticated в true
                 toast.success(t('successMessage'))
                 router.push(result.callbackUrl)
             } else {
                 toast.error(t('errorMessage'))
             }
         } catch (error) {
-            toast.error(t('errorMessage'))
             console.error('Login error:', error)
+            toast.error(t('errorMessage'))
         } finally {
             setIsLoadingLogin(false)
         }

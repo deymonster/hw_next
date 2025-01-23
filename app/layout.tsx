@@ -5,6 +5,8 @@ import { getLocale, getMessages } from "next-intl/server";
 import {GeistSans} from 'geist/font/sans';
 import { ThemeProvider } from "@/providers/Themeprovider";
 import { ToastProvider } from "@/providers/ToastProvider";
+import { SessionProvider } from "next-auth/react";
+
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +27,7 @@ export default async function RootLayout({
     <html lang={locale} suppressHydrationWarning>
       <body className={GeistSans.variable}>
         <NextIntlClientProvider messages={messages} locale={locale}>
+        <SessionProvider> 
           <ThemeProvider 
             attribute="class"
             defaultTheme="dark"
@@ -33,6 +36,7 @@ export default async function RootLayout({
             <ToastProvider />
             {children}
           </ThemeProvider>
+        </SessionProvider>
         </NextIntlClientProvider>
       </body>
     </html>

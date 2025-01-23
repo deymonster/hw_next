@@ -1,14 +1,58 @@
-import { authStore } from "@/store/auth/auth.store";
+import { authStore } from "@/store/auth/auth.store"
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react"
+import { useEffect } from "react"
+import { StoreUser } from "@/store/auth/auth.types"
+import { clearSession } from "@/app/actions/auth"
 
-export function useAuth() {
-    const isAuthenticated = authStore(state => state.isAuthenticated)
-    const setIsAuthenticated = authStore(state => state.setIsAuthenticated)
+export function useAuth(): {
+    isAuthenticated: boolean,
+    user: StoreUser | null,
+    loading: boolean,
+    auth: () => void,
+    exit: () => Promise<void>
+} {
+    const { data: session, status } = useSession()
+    const store = authStore()
 
-    const auth = () => setIsAuthenticated(true)
-    const exit = () => setIsAuthenticated(false)
+    useEffect(() => {
+        if (session?.user && session.user.email && session.user.id) {
+            store.setIsAuthenticated(true)
+            const storeUser: StoreUser = {
+                id: session.user.id,
+                email: session.user.email,
+                name: session.user.name ?? null,
+                image: session.user.image ?? null,
+                role: session.user.role
+            }
+            store.setUser(storeUser)
+        } else if (status === 'unauthenticated') {
+            store.clear()
+        }
+    }, [session, status])
+
+    const auth = () => store.setIsAuthenticated(true)
+    
+    const exit = async () => {
+        try {
+            // Очищаем серверную сессию
+            await clearSession()
+            // Очищаем клиентское состояние
+            store.clear()
+            // Выходим через NextAuth
+            await nextAuthSignOut({
+                redirect: true,
+                callbackUrl: "/account/login"
+            })
+        } catch (error) {
+            console.error('Logout error:', error)
+            throw error
+        }
+    }
 
     return {
-        isAuthenticated,
+        isAuthenticated: store.isAuthenticated,
+        user: store.user,
+        loading: status === 'loading',
         auth,
         exit
     }

@@ -17,11 +17,11 @@ export abstract class BaseRepository<
     this.model = getModel(prisma);
   }
 
-  async getAll(params?: TFindManyArgs): Promise<T[]> {
+  async findMany(params?: TFindManyArgs): Promise<T[]> {
     return await this.model.findMany(params);
   }
 
-  async getById(id: TId): Promise<T | null> {
+  async findById(id: TId): Promise<T | null> {
     return await this.model.findUnique({ where: { id } });
   }
   

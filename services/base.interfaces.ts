@@ -1,7 +1,7 @@
 // Интерфейс для базовых операций CRUD
 export interface IBaseRepository<T, TCreateInput, TFindManyArgs, TId> {
-    getAll(params?: TFindManyArgs): Promise<T[]>;
-    getById(id: TId): Promise<T | null>;
+    findMany(params?: TFindManyArgs): Promise<T[]>;
+    findById(id: TId): Promise<T | null>;
     create(data: TCreateInput): Promise<T>;
     update(id: TId, data: Partial<TCreateInput>): Promise<T>;
     delete(id: TId): Promise<T>;

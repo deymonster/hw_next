@@ -3,6 +3,7 @@ import { useAuth } from "./useAuth";
 import { useEffect, useState } from "react";
 import { User } from "@prisma/client"; 
 
+
 export function useCurrent() {
     const { isAuthenticated, exit } = useAuth();
     const [loading, setLoading] = useState(false); 
@@ -25,8 +26,11 @@ export function useCurrent() {
                 setUser(null);
                 // Если произошла ошибка при получении данных пользователя,
                 // удаляем сессию и выходим
-                await clearSession();
-                exit();
+                if (result.error === 'Token not found') {
+                    await clearSession();
+                    exit();
+                }
+                
                 return;
             }
 
@@ -43,7 +47,11 @@ export function useCurrent() {
     };
 
     useEffect(() => {
-        fetchUser();
+        if (isAuthenticated) {
+            fetchUser();
+        } else {
+            setUser(null);
+        }
     }, [isAuthenticated]);
 
     return {

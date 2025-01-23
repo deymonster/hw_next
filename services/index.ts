@@ -1,16 +1,10 @@
 import { prisma } from "@/libs/prisma";
-import { UserService } from "./user.service";
+import { UserService } from './user.service'
+import { NotificationService } from './notification.service'
 
-let services: { user: UserService };
 
-if (typeof window === 'undefined') {
-    services = {
-        user: new UserService(prisma),
-    };
-} else {
-    services = {
-        user: null as any // или создайте заглушку для клиентской стороны
-    };
+
+export const services = {
+    user: new UserService(prisma),
+    notification: new NotificationService(prisma)
 }
-
-export { services };

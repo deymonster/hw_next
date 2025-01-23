@@ -1,4 +1,4 @@
-import { NextAuthConfig } from "next-auth"
+import type { NextAuthConfig } from "next-auth"
 import { AUTH_ROUTES, SESSION_CONFIG } from "./constants"
 import { CustomSession, CustomUser } from "./types"
 import { Role } from "@prisma/client"
@@ -50,5 +50,16 @@ export const authConfig: NextAuthConfig = {
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-  useSecureCookies: process.env.NODE_ENV === 'production'
+  useSecureCookies: process.env.NODE_ENV === 'production',
+  cookies: {
+    sessionToken: {
+      name: "authjs.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+      }
+    }
+  }
 }

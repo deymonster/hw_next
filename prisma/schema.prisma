@@ -18,6 +18,7 @@ model User {
   id                String   @id @default(uuid()) // Уникальный идентификатор
   email             String   @unique
   name              String?
+  image             String?  // URL аватара пользователя
   password          String           // Хранение хэша пароля
   role              Role     @default(USER) // Роль пользователя
   emailVerified     Boolean  @default(false) // Статус подтверждения email
@@ -26,9 +27,46 @@ model User {
   resetTokenExpires DateTime? // Время истечения токена
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+  notifications     Notification[] // Связь с уведомлениями
 }
 
 enum Role {
   USER
   ADMIN
+}
+
+
+enum NotificationType {
+  SYSTEM        // Системные уведомления (обновления, maintenance и т.д.)
+  USER          // Уведомления связанные с пользователем (смена пароля, email и т.д.)
+  DEVICE        // Уведомления от устройств
+  ALERT         // Тревожные уведомления (критические показатели устройств)
+  INFO          // Информационные уведомления
+}
+
+// Уровни важности уведомлений
+enum NotificationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Notification {
+  id        String   @id @default(uuid()) // Уникальный идентификатор
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type      NotificationType
+  severity  NotificationSeverity @default(LOW)
+  title     String
+  message   String
+  isRead    Boolean @default(false)
+
+  user      User @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
 }
