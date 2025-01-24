@@ -14,7 +14,10 @@ export function Hint({ children, label, asChild, side, align }: PropsWithChildre
         <TooltipTrigger asChild={asChild}>
             {children}
         </TooltipTrigger>
-        <TooltipContent className="bg-secondary" side={side} align={align}>
+        <TooltipContent 
+            className="dark:bg-white bg-[#1f2128] text-white dark:text-[#1f2128]" 
+            side={side} 
+            align={align}>
             <p className="font-semibold">{label}</p>
         </TooltipContent>
     </Tooltip>
