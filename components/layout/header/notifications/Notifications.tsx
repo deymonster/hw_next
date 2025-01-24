@@ -9,39 +9,40 @@ import { NotificationsList } from './NotificationsList';
 
 export function Notifications() {
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [isOpen, setIsOpen] = useState(false);
   const { user, loading } = useCurrentSession();
 
-  const displayCount = unreadCount > 10 ? '+9' : unreadCount;
+  const displayCount = unreadCount > 9 ? '9+' : unreadCount;
 
+  // Получаем количество непрочитанных при загрузке и при изменении isOpen
   useEffect(() => {
     async function fetchUnreadCount() {
       if (user?.id) {
-        try {
-          const count = await getUnreadNotificationsCount(user.id);
-          setUnreadCount(count);
-        } catch (error) {
-          console.error('Failed to fetch unread count:', error);
-        }
+        const count = await getUnreadNotificationsCount(user.id);
+        setUnreadCount(count);
       }
     }
+    
     fetchUnreadCount();
-  }, [user?.id]);
+  }, [user?.id, isOpen]); // Обновляем счетчик при изменении isOpen
 
   if (loading) return null;
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger>
-        {unreadCount !== 0 && (
-            <div className="absolute right-[72px] top-5 rounded-full
-            bg-primary px-[5px] text-xs font-semibold text-white">
-                {displayCount}
+        <div className="relative">
+          <Bell className="size-5 text-foreground"/>
+          {unreadCount > 0 && (
+            <div className="absolute right-0 top-0 -translate-y-1/2 translate-x-1/2 rounded-full
+              bg-primary px-[5px] text-xs font-semibold text-white">
+              {displayCount}
             </div>
-        )}
-        <Bell className="size-5 text-foreground"/>
+          )}
+        </div>
       </PopoverTrigger>
       <PopoverContent align="end" className="max-h-[500px] w-[320px] overflow-y-auto">
-        <NotificationsList />
+        <NotificationsList onRead={() => setUnreadCount(0)} />
       </PopoverContent>
     </Popover>
   );

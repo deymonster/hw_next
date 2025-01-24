@@ -17,6 +17,7 @@ export interface INotificationRepository {
     findMany(args?: INotificationFindManyArgs): Promise<Notification[]>;
     findById(id: string): Promise<Notification | null>;
     findByUserId(userId: string, take?: number): Promise<Notification[]>;
+    findAndMarkAsRead(userId: string, take?: number): Promise<Notification[]>;
     markAsRead(id: string): Promise<Notification>;
     markAllAsRead(userId: string): Promise<Prisma.BatchPayload>;
     getUnreadCount(userId: string): Promise<number>;
