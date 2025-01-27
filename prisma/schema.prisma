@@ -70,3 +70,45 @@ model Notification {
   @@index([type])
   @@index([createdAt])
 }
+
+
+model Device {
+  id              String    @id @default(uuid()) // Уникальный идентификатор
+  uniqueId        String?   @unique // UUID от экспортера
+  serialNumber    String?     // Серийный номер устройства
+  warrantyStatus  DateTime?   // Дата окончания гарантии
+  lastUpdate      DateTime    @updatedAt // Время последнего обновления
+  status          DeviceStatus @default(ACTIVE) // Статус устройства
+  type            DeviceType  @default(WINDOWS) // Тип устройства (Windows, Linux)
+  locationId      String?     // Идентификатор местоположения
+  location        Location?   @relation("LocationDevices", fields: [locationId], references: [id], onDelete: SetNull)
+  deviceTag       String?     //  Тег устройства для идентификации
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([status])
+  @@index([uniqueId])
+  @@index([type])
+
+}
+
+enum DeviceStatus {
+  ACTIVE         // Устройство активно и мониторится
+  INACTIVE       // Устройство временно неактивно
+  PENDING        // Устройство ожидает подтверждения
+  DECOMMISSIONED // Устройство снято с эксплуатации
+}
+
+enum DeviceType {
+  WINDOWS
+  LINUX
+}
+
+model Location {
+  id          String    @id @default(uuid()) // Уникальный идентификатор
+  name        String    // Название местоположения
+  description String?  // Описание местоположения
+  devices     Device[]  @relation("LocationDevices")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
