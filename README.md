@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hardware Monitoring System
 
-## Getting Started
+A comprehensive hardware monitoring solution for local network workstations built with Next.js, Prometheus, and Go agents.
 
-First, run the development server:
+## Overview
+
+This system allows you to monitor multiple workstations in your local network, collecting and analyzing hardware metrics in real-time. It features automatic device discovery, metric collection, alerting, and a user-friendly dashboard.
+
+## Features
+
+### Device Management
+- Automatic network scanning for device discovery
+- Real-time hardware metrics collection
+- Dynamic Prometheus target configuration
+- Device status monitoring
+
+### Metrics Monitoring
+- CPU usage and temperature
+- RAM utilization
+- Storage capacity and usage
+- GPU metrics
+- BIOS and motherboard information
+- Running processes list
+
+### User System
+- User authentication and authorization
+- Role-based access control (Admin/User)
+- Password recovery system
+- Email notifications
+
+### Interface
+- Modern, responsive dashboard
+- Dark/Light theme support
+- Multilingual support (English/Russian)
+- Real-time metric graphs
+- Alert notifications
+
+### Alerting System
+- Configurable alert thresholds
+- Multiple notification channels:
+  - Telegram notifications
+  - Email alerts
+- Custom alert rules for different metrics
+
+## Technology Stack
+
+### Frontend
+- Next.js 14 (App Router)
+- TypeScript
+- TailwindCSS
+- Recharts for graphs
+- Next-Auth for authentication
+
+### Backend
+- Next.js API routes
+- Prisma ORM
+- PostgreSQL database
+- Redis for caching
+- Node.js
+
+### Monitoring
+- Prometheus for metrics collection
+- AlertManager for alert handling
+- Custom Go agents for workstations
+- Nginx as reverse proxy
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL 13+
+- Redis
+- Prometheus
+- Docker and Docker Compose
+- Go (for building agents)
+- Yarn package manager
+
+## Environment Setup
+
+1. Clone the repository
+2. Copy `.env.example` to `.env` and configure:
+   - Database credentials
+   - Prometheus settings
+   - SMTP configuration
+   - Telegram bot token
+   - Redis configuration
+
+## Installation
 
 ```bash
-npm run dev
-# or
+# Install dependencies
+yarn install
+
+# Generate Prisma client
+yarn prisma generate
+
+# Run database migrations
+yarn prisma migrate dev
+
+# Start development server
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
