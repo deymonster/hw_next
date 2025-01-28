@@ -32,22 +32,19 @@
 			},
 			"userNav": {
 				"home": "Home",
-				"categories": "Categories",
-				"streams": "Streams",
-				"recommended": "Recommended"
+				"devices": "Devices",
+				"events": "Events"
 			},
 			"recommended": {
 				"heading": "Recommendations"
 			},
 			"dashboardNav": {
 				"settings": "Settings",
-				"streamSettings": "Stream Settings",
-				"keys": "Stream Keys",
-				"chatSettings": "Chat Settings",
-				"followers": "Followers",
-				"sponsors": "Sponsors",
-				"premium": "Premium Plans",
-				"transactions": "Transactions"
+				"devices": "Devices",
+				"events": "Events",
+				"locations": "Locations",
+				"inventory": "Inventory",
+				"users": "Users"
 			}
 		}
 	},

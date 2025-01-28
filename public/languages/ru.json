@@ -32,19 +32,16 @@
 			},
 			"dashboardNav": {
 				"settings": "Настройки",
-				"streamSettings": "Настройки стрима",
-				"keys": "Ключи для стрима",
-				"chatSettings": "Настройки чата",
-				"followers": "Подписчики",
-				"sponsors": "Спонсоры",
-				"premium": "Премиум планы",
-				"transactions": "Транзакции"
+				"devices": "Устройства",
+				"events": "События",
+				"locations": "Местоположения",
+				"inventory": "Инвентаризация",
+				"users": "Пользователи"
 			},
 			"userNav": {
 				"home": "Главная",
-				"categories": "Категории",
-				"streams": "Трансляции",
-				"recommended": "Рекомендации"
+				"devices": "Устройства",
+				"events": "События"
 			},
 			"recommended": {
 				"heading": "Рекомендации"
