@@ -1,9 +1,23 @@
-import type { Metadata } from 'next'
 
-export const metadata: Metadata = {
-  title: 'Панель управления',
+
+import { UserSettings } from '@/components/features/user/UserSettings'
+import type { Metadata } from 'next'
+import { getTranslations } from 'next-intl/server'
+
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('dashboard.settings.header')
+
+  return {
+    title: t('heading'),
+    description: t('description'),
+    robots: {
+      index: false,
+      follow: false
+    }
+  }
 }
 
-export default function DashboardPage() {
-  return <div>Dashboard</div>
+export default function SettingsPage() {
+  return <UserSettings />
 }

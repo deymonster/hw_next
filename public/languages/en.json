@@ -122,6 +122,24 @@
 			"errorMessage": "Error when setting a new password",
 			"invalidToken": "Invalid or expired token"
 		}
-
-    }
+    },
+	"dashboard": {
+		"settings": {
+			"header": {
+				"heading": "Settings",
+				"description": "Here you can change your settings",
+				"profile": "Profile",
+				"account": "Account",
+				"appearance": "Appearance",
+				"notifications": "Notifications",
+				"sessions": "Sessions"
+			}
+		}
+	},
+	"components": {
+		"devices": {
+			"heading": "Devices",
+			"scan": "Scanning"
+		}
+	}
 }

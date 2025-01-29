@@ -124,5 +124,24 @@
 			"invalidToken": "Неверный или устаревший токен"
 			
 		}
-    }
+    },
+	"dashboard": {
+		"settings": {
+			"header": {
+				"heading": "Настройки",
+				"description": "Настройки вашего аккаунта",
+				"profile": "Профиль",
+				"account": "Аккаунт",
+				"appearance": "Внешний вид",
+				"notifications": "Уведомления",
+				"sessions": "Сессии"
+			}
+		}
+	},
+	"components": {
+		"devices": {
+			"heading": "Устройства",
+			"scan": "Сканирование"
+		}
+	}
 }

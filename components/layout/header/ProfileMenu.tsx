@@ -59,7 +59,7 @@ export function ProfileMenu() {
                         </DropdownMenuItem>
                     </Link>
 
-                    <Link href='dashboard/settings'>
+                    <Link href='/dashboard/settings'>
                         <DropdownMenuItem>
                             <LayoutDashboard className="size-4 mr-2"/>
                             {t('dashboard')}
