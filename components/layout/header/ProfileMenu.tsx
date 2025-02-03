@@ -55,7 +55,7 @@ export function ProfileMenu() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[230px]">
                     <div className="flex items-center gap-x-2 p-2">
-                        <UserAvatar profile={user}/>
+                        <UserAvatar profile={user} />
                         <h2 className="font-medium text-foreground">{user.name}</h2>
                     </div>
                     <DropdownMenuSeparator />

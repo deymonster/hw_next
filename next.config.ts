@@ -15,6 +15,11 @@ const nextConfig: NextConfig = {
       },
     ],
    },
+   experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb'
+    }
+  },
    webpack: (config, { isServer }) => {
       if (!isServer) {
         config.resolve.fallback = {
@@ -24,7 +29,8 @@ const nextConfig: NextConfig = {
           dns: false,
         }
       }
-      return config
+
+      return config;
     },
  };
 

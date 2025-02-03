@@ -31,10 +31,12 @@ export function useUser() {
   }, [user?.id, session?.user, updateSession])
 
   const deleteAvatar = useCallback(async () => {
+    console.log('Deleting avatar for user:', user?.id)
     if (!user?.id) return null
 
     try {
       const updatedUser = await deleteUserAvatar(user.id)
+      console.log('Updated user after delete:', updatedUser)
       if (updatedUser) {
         // Обновляем сессию, удаляя изображение
         await updateSession({

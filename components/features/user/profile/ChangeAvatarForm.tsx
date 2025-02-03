@@ -1,7 +1,7 @@
 'use client'
 
 import { Skeleton } from "@/components/ui/skeleton"
-import { type ChangeEvent, useRef, useState } from "react"
+import { type ChangeEvent, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { useTranslations } from "use-intl"
 import { TypeUploadFileSchema, UploadFileSchema } from "@/schemas/upload-file.schema"
@@ -13,6 +13,8 @@ import { UserAvatar } from "@/components/ui/elements/UserAvatar"
 import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
 import { useUser } from "@/hooks/useUser"
+import { Trash } from "lucide-react"
+
 
 export function ChangeAvatarForm() {
     const t = useTranslations('dashboard.settings.profile.avatar')
@@ -28,14 +30,10 @@ export function ChangeAvatarForm() {
 
         if (file) {
             try {
-                form.setValue('file', file)
-                const updatedUser = await updateAvatar(file)
-                if (updatedUser) {
-                    toast.success(t('successUpdateMessage'))
-                }
+                await updateAvatar(file)
+                toast.success(t('successUpdateMessage'))
             } catch (error) {
                 toast.error(t('errorUpdateMessage'))
-                form.setValue('file', user?.image ? getMediaSource(user.image) : undefined)
             }
         }
     }
@@ -43,12 +41,11 @@ export function ChangeAvatarForm() {
     async function handleDeleteAvatar() {
         try {
             await deleteAvatar()
-            toast.success(t('successDeleteMessage'))
+            toast.success(t('successRemoveMessage'))
         } catch (error) {
-            toast.error(t('errorDeleteMessage'))
+            toast.error(t('errorRemoveMessage'))
         }
     }
-    
 
     if (loading) return <ChangeAvatarFormSkeleton />
 
@@ -58,7 +55,7 @@ export function ChangeAvatarForm() {
                 <FormField 
                     control={form.control} 
                     name='file' 
-                    render={({ field }) => (
+                    render={() => (
                         <div className='px-5 pb-5'>
                             <div className='w-full items-center space-x-6 lg:flex'>
                                 <UserAvatar
@@ -67,6 +64,7 @@ export function ChangeAvatarForm() {
                                         image: getMediaSource(user?.image!)
                                     }}
                                     size='xl'
+                                    isLive={true}
                                 />
                                 <div className='space-y-3'>
                                     <div className='flex items-center gap-x-3'>
@@ -83,13 +81,15 @@ export function ChangeAvatarForm() {
                                         >
                                             {t('updateButton')}
                                         </Button>
-                                        {/* <Button
-                                            variant='secondary'
-                                            onClick={handleDeleteAvatar}
-                                            disabled={!user?.image}
-                                        >
-                                            {t('deleteButton')}
-                                        </Button> */}
+                                        {user?.image && (
+                                            <Button
+                                                variant='ghost'
+                                                size='lgIcon'
+                                                onClick={handleDeleteAvatar}
+                                            >
+                                                <Trash className='size-4' />
+                                            </Button>
+                                        )}
                                     </div>
                                     <p className='text-sm text-muted-foreground'>{t('info')}</p>
                                 </div>

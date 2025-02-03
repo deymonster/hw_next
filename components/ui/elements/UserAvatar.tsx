@@ -38,11 +38,7 @@ export function UserAvatar({ size, profile, isLive }: UserAvatarProps) {
                 : undefined
         : undefined
     
-    console.log('Profile:', profile);
-    console.log('Profile image:', profile.image);
     
-    console.log('Generated URL:', imageUrl);
-    console.log('Base URL:', process.env.NEXT_PUBLIC_STORAGE_URL);
     
     return <div className="relative">
         <Avatar className={cn(

@@ -48,8 +48,6 @@ export async function updateUserAvatar(userId: string, file: File): Promise<User
             await storage.deleteFile(currentUser.image)
             console.log('file deleted', currentUser.image)
         }
-        // update user with new avatar path
-      
 
         return await services.user.updateUserImage(userId, uploadedPath);
     } catch (error) {
@@ -59,16 +57,21 @@ export async function updateUserAvatar(userId: string, file: File): Promise<User
 }
 
 export async function deleteUserAvatar(userId: string): Promise<User | null> {
+    console.log('Starting deleteUserAvatar for userId:', userId)
     if (!userId) return null;
     try {
         const currentUser = await services.user.findById(userId)
+        console.log('Current user:', currentUser)
         if (currentUser?.image) {
             await storage.deleteFile(currentUser.image)
+            
         }
 
-        return await services.user.removeUserImage(userId);
+        const updatedUser = await services.user.removeUserImage(userId);
+        console.log('User after removing image:', updatedUser)
+        return updatedUser;
     } catch (error) {
-        console.error(`[REMOVE_USER_AVATAR_ERROR]`, error);
+        console.error(`[DELETE_USER_AVATAR_ERROR]`, error);
         return null;
     }
 }

@@ -69,7 +69,7 @@ export class StorageService {
 
             await fs.access(filePath)
             await fs.unlink(filePath)
-            console.log(`Successfully deleted file: ${filePath}`)
+            
         } catch (error) {
             console.error(`Failed to delete file: ${fileUrl}`, error)
         }

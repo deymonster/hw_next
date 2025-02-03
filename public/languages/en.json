@@ -147,7 +147,7 @@
 						"heading": "Remove avatar",
 						"message": "Are you sure you want to remove your avatar? This action cannot be undone."
 					},
-					"info": "Supported formats: JPG, JPEG, PNG, GIF. Max size: 10MB",
+					"info": "Supported formats: JPG, JPEG, PNG, GIF. Max size: 20MB",
 					"successUpdateMessage": "Avatar successfully updated",
 					"errorUpdateMessage": "Error when updating avatar",
 					"successRemoveMessage": "Avatar successfully removed",
