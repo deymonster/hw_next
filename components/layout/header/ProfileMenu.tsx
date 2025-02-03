@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdowmmenu"
 import { UserAvatar } from "@/components/ui/elements/UserAvatar"
 import { useAuth } from "@/hooks/useAuth"
-import { useCurrentSession } from "@/hooks/useCurrentSession"
+import { useUser } from "@/hooks/useUser"
 import { LayoutDashboard, Loader2, LogOut, User } from "lucide-react"
 import { useTranslations } from "next-intl"
 import Link from "next/link"
@@ -22,7 +22,9 @@ export function ProfileMenu() {
     const router = useRouter()
 
     const {exit} = useAuth()
-    const {user, loading} = useCurrentSession()
+    const {user, loading} = useUser()
+
+    console.log('ProfileMenu user:', user)
 
     const handleLogout = async () => {
         try {
@@ -44,7 +46,12 @@ export function ProfileMenu() {
             <Notifications/>
             <DropdownMenu>
                 <DropdownMenuTrigger>
-                    <UserAvatar profile={user}/>
+                    <UserAvatar profile={{
+                        name: user?.name || '',
+                        image: user?.image || null
+                    }}
+                    
+                    />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[230px]">
                     <div className="flex items-center gap-x-2 p-2">

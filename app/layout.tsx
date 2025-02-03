@@ -6,7 +6,7 @@ import {GeistSans} from 'geist/font/sans';
 import { ThemeProvider } from "@/providers/Themeprovider";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { SessionProvider } from "next-auth/react";
-
+import { SWRProvider } from '@/providers/SWRProvider';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,9 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <ToastProvider />
-            {children}
+              <SWRProvider>
+              {children}
+              </SWRProvider>
           </ThemeProvider>
         </SessionProvider>
         </NextIntlClientProvider>

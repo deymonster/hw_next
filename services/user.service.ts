@@ -1,6 +1,6 @@
 import { PrismaClient, User } from "@prisma/client";
 import { BaseRepository } from "./base.service";
-import { IUserCreateInput, IUserFindManyArgs, IUserRepository } from './user.interfaces';
+import { IUserCreateInput, IUserFindManyArgs, IUserRepository, IUserUpdateInput } from './user.interfaces';
 
 import { TypeCreateAccountSchema } from "@/schemas/auth/create-account.schema";
 import * as bcrypt from 'bcryptjs';
@@ -165,6 +165,41 @@ export class UserService
           //   process.env.TELEGRAM_CHAT_ID,
           //   `Reset password link: ${resetLink}`
           // );
+        }
+    }
+
+    async update(id: string, data: Partial<IUserUpdateInput>): Promise<User> {
+        return await this.model.update({ where: { id }, data });
+    }
+
+    async updateUserImage(userId: string, imageUrl: string): Promise<User> {
+        try {
+            console.log('ImageUrl in user service', imageUrl)
+            const updatedUser = await this.update(
+                userId, {
+                    image: imageUrl,
+                    updatedAt: new Date()
+                }
+            )
+            return updatedUser
+        } catch (error) {
+            console.error('[UPDATE_USER_IMAGE_ERROR]', error);
+            throw new Error('Failed to update user image')
+        }
+    }
+
+    async removeUserImage(userId: string): Promise<User> {
+        try {
+            const updatedUser = await this.update(
+                userId, {
+                    image: null,
+                    updatedAt: new Date()
+                }
+            )
+            return updatedUser
+        } catch (error) {
+            console.error('[REMOVE_USER_IMAGE_ERROR]', error);
+            throw new Error('Failed to remove user image')
         }
     }
 }

@@ -11,6 +11,8 @@
   "dependencies": {
     "@auth/core": "^0.37.4",
     "@auth/upstash-redis-adapter": "^2.7.4",
+    "@aws-sdk/client-s3": "^3.738.0",
+    "@aws-sdk/s3-request-presigner": "^3.738.0",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.1.0",
     "@radix-ui/react-avatar": "^1.1.2",
@@ -41,6 +43,7 @@
     "react-hook-form": "^7.54.2",
     "recharts": "^2.15.0",
     "sonner": "^1.7.1",
+    "swr": "^2.3.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.1",

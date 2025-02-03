@@ -8,22 +8,29 @@ export interface IUserCreateInput {
     emailVerified?: boolean;
     verificationToken?: string | null;
     resetToken?: string | null;
+    image?: string | null;
+    updatedAt?: Date;
     resetTokenExpires?: Date | null;
-  }
+}
+
+// Тип данных для обновления пользователя
+export interface IUserUpdateInput extends Partial<Omit<User, 'id' | 'createdAt'>> {
+    updatedAt?: Date;
+}
   
 // Тип параметров для поиска пользователей
 export interface IUserFindManyArgs {
-  where?: { email?: string; name?: string };
-  take?: number;
-  skip?: number;
+    where?: { email?: string; name?: string };
+    take?: number;
+    skip?: number;
 }
 
 // Интерфейс для дополнительных методов репозитория пользователя
 export interface IUserRepository {
-  getByEmail(email: string): Promise<User | null>;
-  getByToken(token: string): Promise<User | null>;
-  createResetToken(userId: string): Promise<string>;
-  verifyResetToken(token: string): Promise<string | null>; // Возвращает userId если токен валиден
-  updatePassword(userId: string, newPassword: string): Promise<User>;
-  sendPasswordResetEmail(email: string, token: string): Promise<void>;
+    getByEmail(email: string): Promise<User | null>;
+    getByToken(token: string): Promise<User | null>;
+    createResetToken(userId: string): Promise<string>;
+    verifyResetToken(token: string): Promise<string | null>; // Возвращает userId если токен валиден
+    updatePassword(userId: string, newPassword: string): Promise<User>;
+    sendPasswordResetEmail(email: string, token: string): Promise<void>;
 }

@@ -8,6 +8,8 @@ interface CustomToken {
   id?: string
   email?: string
   role?: Role
+  image?: string | null
+  name?: string | null
 }
 
 export const authConfig: NextAuthConfig = {
@@ -22,15 +24,27 @@ export const authConfig: NextAuthConfig = {
   },
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Если это первый вход пользователя
       if (user) {
         return {
           ...token,
           id: user.id,
           email: user.email,
-          role: (user as CustomUser).role
+          role: (user as CustomUser).role,
+          image: user.image || null,
+          name: user.name || null
         }
       }
+
+      // Если это обновление сессии через updateSession
+      if (trigger === "update" && session?.user) {
+        return {
+          ...token,
+          ...session.user
+        }
+      }
+
       return token
     },
 
@@ -43,9 +57,10 @@ export const authConfig: NextAuthConfig = {
           ...session.user,
           id: customToken.id!,
           email: customToken.email!,
-          role: customToken.role as Role
+          role: customToken.role as Role,
+          image: customToken.image || null
         }
-      } as CustomSession
+      }
     }
   },
 

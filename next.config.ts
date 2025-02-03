@@ -5,6 +5,16 @@ const withNextIntl = createNextIntlPlugin('./libs/i18n/request.ts');
 
 const nextConfig: NextConfig = {
    reactStrictMode: true,
+   images: {
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8081',
+        pathname: '/uploads/**',
+      },
+    ],
+   },
    webpack: (config, { isServer }) => {
       if (!isServer) {
         config.resolve.fallback = {
