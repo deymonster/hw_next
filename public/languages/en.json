@@ -160,6 +160,10 @@
 		"devices": {
 			"heading": "Devices",
 			"scan": "Scanning"
+		},
+		"confirmModal": {
+			"cancel": "Cancel",
+			"continue": "Continue"
 		}
 	}
 }

@@ -162,6 +162,10 @@
 		"devices": {
 			"heading": "Устройства",
 			"scan": "Сканирование"
+		},
+		"confirmModal": {
+			"cancel": "Отмена",
+			"continue": "Продолжить"
 		}
 	}
 }

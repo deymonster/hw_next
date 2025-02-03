@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
 import { useUser } from "@/hooks/useUser"
 import { Trash } from "lucide-react"
+import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
 
 
 export function ChangeAvatarForm() {
@@ -82,13 +83,19 @@ export function ChangeAvatarForm() {
                                             {t('updateButton')}
                                         </Button>
                                         {user?.image && (
-                                            <Button
-                                                variant='ghost'
-                                                size='lgIcon'
-                                                onClick={handleDeleteAvatar}
+                                            <ConfirmModal 
+                                                heading={t('confirmModal.heading')}
+                                                message={t('confirmModal.message')}  
+                                                onConfirm={handleDeleteAvatar}  
                                             >
-                                                <Trash className='size-4' />
-                                            </Button>
+                                                <Button
+                                                    variant='ghost'
+                                                    size='lgIcon'
+                                                    
+                                                >
+                                                    <Trash className='size-4' />
+                                                </Button>
+                                            </ConfirmModal>
                                         )}
                                     </div>
                                     <p className='text-sm text-muted-foreground'>{t('info')}</p>
