@@ -166,6 +166,40 @@
 					"errorMessage": "Error when updating profile"
 
 				}
+			},
+			"account": {
+				"header": {
+					"heading": "Account",
+					"description": "Change account settings here"
+				},
+				"email": {
+					"heading": "Email Address",
+					"emailLabel": "Email",
+					"emailDescription": "Enter your new email address. Make sure it's valid as a confirmation will be sent to it.",
+					"submitButton": "Save",
+					"verificationSentMessage": "Verification code has been sent to your current email",
+					"errorSendingVerification": "Failed to send verification code",
+					"codeVerifiedMessage": "Code successfully verified",
+					"errorVerifyingCode": "Error verifying code",
+					"verificationCodeLabel": "Verification code",
+					"verificationCodePlaceholder": "Enter 6-digit code",
+					"verificationCodeDescription": "Enter the verification code sent to your current email",
+					"sendVerificationButton": "Send code",
+					"cancelButton": "Cancel",
+					"verifyCodeButton": "Verify Code",
+					"successMessage": "Email successfuly updated",
+					"errorMessage": "Error updating email"
+				},
+				"password": {
+					"heading": "Account password",
+					"oldPasswordLabel": "Old password",
+					"oldPasswordDescription": "Enter your old password to verify your identity before changing your password. This is necessary to ensure the security of your account.",
+					"newPasswordLabel": "New password",
+					"newPasswordDescription": "Your new password must be at least 8 simbols long",
+					"submitButton": "Save",
+					"succesMessage": "Password successfuly updated",
+					"errorMessage": "Error during password update"
+				}
 			}
 		}
 	},
