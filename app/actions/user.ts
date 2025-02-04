@@ -6,6 +6,20 @@ import { StorageService } from '@/services/storage/storage.service';
 
 const storage = new StorageService()
 
+export async function updateUserName(userId: string, name: string): Promise<User | null> {
+    if (!userId || !name) return null
+    try {
+        const currentUser = await services.user.findById(userId);
+        if (currentUser) {
+                return await services.user.update(userId, { name })
+        }
+        return null
+    } catch (error) {
+        console.error(`[UPDATE_USER_INFO_ERROR]`, error)
+        return null
+    }
+}
+
 export async function getUserById(id: string): Promise<User | null> {
     if (!id) return null;
     try {
@@ -41,7 +55,7 @@ export async function updateUserAvatar(userId: string, file: File): Promise<User
                 allowedTypes: ['image/jpeg', 'image/png', 'image/gif']
             }
         )
-        console.log('Uploaded path:', uploadedPath) 
+        
 
         const currentUser = await services.user.findById(userId);
         if (currentUser?.image) {

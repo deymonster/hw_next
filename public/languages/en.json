@@ -152,6 +152,19 @@
 					"errorUpdateMessage": "Error when updating avatar",
 					"successRemoveMessage": "Avatar successfully removed",
 					"errorRemoveMessage": "Error when removing avatar"
+				},
+				"info": {
+					"heading": "Profile information",
+					"usernamelabel": "username",
+					"usernamePlaceholder": "User name",
+					"usernameDescription": "Your username",
+					"displayNameLabel": "Display name",
+					"displayNamePlaceholder": "User name",
+					"displayNameDescription": "Your display name",
+					"submitButton": "Update profile",
+					"succesMessage": "Profile successfully updated",
+					"errorMessage": "Error when updating profile"
+
 				}
 			}
 		}

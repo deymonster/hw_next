@@ -73,83 +73,83 @@ export function CreateAccountForm() {
       </Alert>
     ) : (
         <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-y-3">
-          <FormField 
-            control={form.control}
-            name="username"
-            render={({field}) => (
-              <FormItem>
-                <FormLabel>{t('usernameLabel')}</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="username"
-                    disabled={isPending}
-                    {...field}/> 
-                </FormControl>
-                <FormDescription>
-                  {t('usernameDescription')}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-y-3">
+            <FormField 
+              control={form.control}
+              name="username"
+              render={({field}) => (
+                <FormItem>
+                  <FormLabel>{t('usernameLabel')}</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="username"
+                      disabled={isPending}
+                      {...field}/> 
+                  </FormControl>
+                  <FormDescription>
+                    {t('usernameDescription')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField 
+              control={form.control}
+              name="email"
+              render={({field}) => (
+                <FormItem>
+                  <FormLabel>{t('emailLabel')}</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="username@example.com" 
+                      disabled={isPending}
+                      {...field}/> 
+                  </FormControl>
+                  <FormDescription>
+                    {t('emailDescription')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField 
+              control={form.control}
+              name="password"
+              render={({field}) => (
+                <FormItem>
+                  <FormLabel>{t('passwordLabel')}</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="********" 
+                      disabled={isPending}
+                      type="password"
+                      {...field}
+                    /> 
+                  </FormControl>
+                  <FormDescription>
+                    {t('passwordDescription')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {form.formState.errors.root && (
+              <div className="text-sm text-destructive">
+                {form.formState.errors.root.message}
+              </div>
             )}
-          />
 
-          <FormField 
-            control={form.control}
-            name="email"
-            render={({field}) => (
-              <FormItem>
-                <FormLabel>{t('emailLabel')}</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="username@example.com" 
-                    disabled={isPending}
-                    {...field}/> 
-                </FormControl>
-                <FormDescription>
-                  {t('emailDescription')}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField 
-            control={form.control}
-            name="password"
-            render={({field}) => (
-              <FormItem>
-                <FormLabel>{t('passwordLabel')}</FormLabel>
-                <FormControl>
-                  <Input 
-                    placeholder="********" 
-                    disabled={isPending}
-                    type="password"
-                    {...field}
-                  /> 
-                </FormControl>
-                <FormDescription>
-                  {t('passwordDescription')}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {form.formState.errors.root && (
-            <div className="text-sm text-destructive">
-              {form.formState.errors.root.message}
-            </div>
-          )}
-
-          <Button 
-            className="mt-2 w-full" 
-            disabled={!isValid || isPending}
-            type="submit"
-          >
-            {isPending ? t('registeringButton') : t('submitButton')}
-          </Button>
-        </form>
+            <Button 
+              className="mt-2 w-full" 
+              disabled={!isValid || isPending}
+              type="submit"
+            >
+              {isPending ? t('registeringButton') : t('submitButton')}
+            </Button>
+          </form>
       </Form>
     )}
   </AuthWrapper>

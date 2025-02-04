@@ -154,6 +154,19 @@
 					"errorUpdateMessage": "Ошибка при обновлении изображения профиля",
 					"successRemoveMessage": "Изображение профиля успешно удалено",
 					"errorRemoveMessage": "Ошибка при удалении изображения профиля"
+				},
+				"info": {
+					"heading": "Настройки профиля",
+					"usernamelabel": "Имя пользователя",
+					"usernamePlaceholder": "username",
+					"usernameDescription": "Ваше отображаемое имя пользователя. Используйте только латинские буквы",
+					"displayNameLabel": "Отображаемое имя",
+					"displayNamePlaceholder": "User name",
+					"displayNameDescription": "Как вы хотите видеть себя в приложении",
+					"submitButton": "Сохранить изменения",
+					"succesMessage": "Профиль успешно обновлен",
+					"errorMessage": "Ошибка при обновлении профиля"
+
 				}
 			}
 		}

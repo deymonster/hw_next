@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { type ChangeEvent, useRef } from "react"
 import { useForm } from "react-hook-form"
 import { useTranslations } from "use-intl"
-import { TypeUploadFileSchema, UploadFileSchema } from "@/schemas/upload-file.schema"
+import { type TypeUploadFileSchema, UploadFileSchema } from "@/schemas/upload-file.schema"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { getMediaSource } from "@/utils/get-media-source"
 import { FormWrapper } from "@/components/ui/elements/FormWrapper"
@@ -30,22 +30,28 @@ export function ChangeAvatarForm() {
         const file = event.target.files?.[0]
 
         if (file) {
-            try {
-                await updateAvatar(file)
-                toast.success(t('successUpdateMessage'))
-            } catch (error) {
-                toast.error(t('errorUpdateMessage'))
-            }
+            await updateAvatar(file, {
+                onSuccess: () => {
+                    toast.success(t('successUpdateMessage'))
+                },
+                onError: () => {
+                    toast.error(t('errorUpdateMessage'))
+                }
+            })    
         }
     }
 
     async function handleDeleteAvatar() {
-        try {
-            await deleteAvatar()
-            toast.success(t('successRemoveMessage'))
-        } catch (error) {
-            toast.error(t('errorRemoveMessage'))
-        }
+       
+        await deleteAvatar({
+            onSuccess: () => {
+                toast.success(t('successRemoveMessage'))
+            },
+            onError: () => {
+                toast.error(t('errorRemoveMessage'))
+            }
+
+        })
     }
 
     if (loading) return <ChangeAvatarFormSkeleton />

@@ -1,14 +1,19 @@
 import { useSession } from 'next-auth/react'
 import { useCallback } from 'react'
-import { deleteUserAvatar, updateUserAvatar } from '@/app/actions/user'
+import { deleteUserAvatar, updateUserAvatar, updateUserName } from '@/app/actions/user'
 
 export function useUser() {
   const { data: session, status, update: updateSession } = useSession()
   const user = session?.user
   const isAuthenticated = status === "authenticated"
 
-  const updateAvatar = useCallback(async (file: File) => {
-    console.log('User in hook useUser', user)
+  const updateAvatar = useCallback(async (
+      file: File, 
+      { onSuccess, onError}: {
+        onSuccess?: () => void,
+        onError?:(error: unknown) => void
+      } = {} ) => {
+    
     if (!user?.id) return null
 
     try {
@@ -21,17 +26,24 @@ export function useUser() {
             image: updatedUser.image
           }
         })
+        onSuccess?.()
         return updatedUser
       }
       return null
     } catch (error) {
       console.error('[UPDATE_AVATAR_ERROR]', error)
+      onError?.(error) 
       return null
     }
   }, [user?.id, session?.user, updateSession])
 
-  const deleteAvatar = useCallback(async () => {
-    console.log('Deleting avatar for user:', user?.id)
+  const deleteAvatar = useCallback(async (
+    { onSuccess, onError}: {
+      onSuccess?: () => void,
+      onError?:(error: unknown) => void
+    } = {}
+  ) => {
+    
     if (!user?.id) return null
 
     try {
@@ -45,20 +57,54 @@ export function useUser() {
             image: null
           }
         })
+        onSuccess?.()
         return updatedUser
       }
       return null
     } catch (error) {
       console.error('[DELETE_AVATAR_ERROR]', error)
+      onError?.(error)
       return null
     }
   }, [user?.id, session?.user, updateSession])
+
+  const updateName = useCallback(async (
+    name: string,
+    { onSuccess, onError}: {
+      onSuccess?: () => void,
+      onError?:(error: unknown) => void
+    } = {}
+  ) => {
+    if (!user?.id) return null
+    try {
+      const updatedUser = await updateUserName(user.id, name)
+      if (updatedUser) {
+        // Update session with new name
+        await updateSession({
+          user: {
+            ...session?.user,
+            name: updatedUser.name
+          }
+        })
+        onSuccess?.()
+        return updatedUser
+      }
+      return null
+    } catch (error) {
+      console.error('[UPDATE_NAME_ERROR]', error)
+      onError?.(error)
+      return null
+    }
+  }, [user?.id, session?.user, updateSession])
+
+
 
   return {
     user,
     loading: status === "loading",
     isAuthenticated,
     updateAvatar,
-    deleteAvatar
+    deleteAvatar,
+    updateName
   }
 }
