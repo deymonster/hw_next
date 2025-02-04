@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTranslations } from "use-intl"
 import { ChangeAvatarForm } from "./profile/ChangeAvatarForm"
 import { ChangeInfoForm } from "./profile/ChangeInfoForm"
+import { ChangeEmailForm } from "./account/ChangeEmailForm"
 
 export function UserSettings() {
     const t = useTranslations('dashboard.settings')
@@ -25,7 +26,8 @@ export function UserSettings() {
                 </TabsList>
                 <TabsContent value='profile'>
                     <div className='mt-5 space-y-6 mb-4'>
-                        <Heading title={t('profile.header.heading')} description={t('profile.header.description')}/>
+                        <Heading title={t('profile.header.heading')} 
+                        description={t('profile.header.description')}/>
                     </div>
                     <div className='space-y-6'>
                         <ChangeAvatarForm />
@@ -33,7 +35,13 @@ export function UserSettings() {
                     </div>
                     
                 </TabsContent>
-                <TabsContent value='account'>Аккаунт</TabsContent>
+                <TabsContent value='account'>
+                    <div className='mt-5 space-y-6'>
+                    <Heading title={t('account.header.heading')} 
+                    description={t('account.header.description')}/>
+                        <ChangeEmailForm />
+                    </div>
+                </TabsContent>
                 <TabsContent value='appearance'>Внешний вид</TabsContent>
                 <TabsContent value='notifications'>Уведомления</TabsContent>
                 <TabsContent value='sessions'>Сессии</TabsContent>

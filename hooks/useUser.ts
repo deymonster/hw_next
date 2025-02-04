@@ -1,103 +1,191 @@
 import { useSession } from 'next-auth/react'
 import { useCallback } from 'react'
-import { deleteUserAvatar, updateUserAvatar, updateUserName } from '@/app/actions/user'
+import { 
+  deleteUserAvatar, 
+  updateUserAvatar, 
+  updateUserName, 
+  updateUserEmail,
+  initiateEmailChange,
+  verifyEmailChangeCode,
+  confirmEmailChange
+} from '@/app/actions/user'
+
+interface CallbackOptions {
+  onSuccess?: () => void;
+  onError?: (error: unknown) => void;
+}
 
 export function useUser() {
   const { data: session, status, update: updateSession } = useSession()
   const user = session?.user
   const isAuthenticated = status === "authenticated"
 
-  const updateAvatar = useCallback(async (
-      file: File, 
-      { onSuccess, onError}: {
-        onSuccess?: () => void,
-        onError?:(error: unknown) => void
-      } = {} ) => {
-    
-    if (!user?.id) return null
-
-    try {
-      const updatedUser = await updateUserAvatar(user.id, file)
-      if (updatedUser) {
-        // Обновляем сессию с новым изображением
-        await updateSession({
-          user: {
-            ...session?.user,
-            image: updatedUser.image
-          }
-        })
-        onSuccess?.()
-        return updatedUser
-      }
-      return null
-    } catch (error) {
-      console.error('[UPDATE_AVATAR_ERROR]', error)
-      onError?.(error) 
-      return null
-    }
-  }, [user?.id, session?.user, updateSession])
-
-  const deleteAvatar = useCallback(async (
-    { onSuccess, onError}: {
-      onSuccess?: () => void,
-      onError?:(error: unknown) => void
-    } = {}
+  const initiateChangeEmail = useCallback(async (
+    newEmail: string,
+    { onSuccess, onError }: CallbackOptions = {}
   ) => {
-    
-    if (!user?.id) return null
+    if (!user?.id || !user?.email) return false;
 
     try {
-      const updatedUser = await deleteUserAvatar(user.id)
-      console.log('Updated user after delete:', updatedUser)
+      const success = await initiateEmailChange(user.id, user.email, newEmail);
+      if (success) {
+        onSuccess?.();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[INITIATE_EMAIL_CHANGE_ERROR]', error);
+      onError?.(error);
+      return false;
+    }
+  }, [user?.id, user?.email]);
+
+  const verifyEmailCode = useCallback(async (
+    verificationCode: string,
+    { onSuccess, onError }: CallbackOptions = {}
+  ) => {
+    if (!user?.id) return null;
+
+    try {
+      const result = await verifyEmailChangeCode(user.id, verificationCode);
+      if (result) {
+        onSuccess?.();
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('[VERIFY_EMAIL_CODE_ERROR]', error);
+      onError?.(error);
+      return null;
+    }
+  }, [user?.id]);
+
+  const confirmEmailUpdate = useCallback(async (
+    { onSuccess, onError }: CallbackOptions = {}
+  ) => {
+    if (!user?.id) return null;
+
+    try {
+      const updatedUser = await confirmEmailChange(user.id);
       if (updatedUser) {
-        // Обновляем сессию, удаляя изображение
         await updateSession({
           user: {
             ...session?.user,
-            image: null
+            email: updatedUser.email
           }
-        })
-        onSuccess?.()
-        return updatedUser
+        });
+        onSuccess?.();
+        return updatedUser;
       }
-      return null
+      return null;
     } catch (error) {
-      console.error('[DELETE_AVATAR_ERROR]', error)
-      onError?.(error)
-      return null
+      console.error('[CONFIRM_EMAIL_CHANGE_ERROR]', error);
+      onError?.(error);
+      return null;
     }
-  }, [user?.id, session?.user, updateSession])
+  }, [user?.id, session?.user, updateSession]);
+
+  const updateEmail = useCallback(async (
+    email: string,
+    { onSuccess, onError }: CallbackOptions = {}
+  ) => {
+    if (!user?.id) return null;
+
+    try {
+      const updatedUser = await updateUserEmail(user.id, email);
+      if (updatedUser) {
+        await updateSession({
+          user: {
+            ...session?.user,
+            email: updatedUser.email
+          }
+        });
+        onSuccess?.();
+        return updatedUser;
+      }
+      return null;
+    } catch (error) {
+      console.error('[UPDATE_EMAIL_ERROR]', error);
+      onError?.(error);
+      return null;
+    }
+  }, [user?.id, session?.user, updateSession]);
 
   const updateName = useCallback(async (
     name: string,
-    { onSuccess, onError}: {
-      onSuccess?: () => void,
-      onError?:(error: unknown) => void
-    } = {}
+    { onSuccess, onError }: CallbackOptions = {}
   ) => {
-    if (!user?.id) return null
+    if (!user?.id) return null;
     try {
-      const updatedUser = await updateUserName(user.id, name)
+      const updatedUser = await updateUserName(user.id, name);
       if (updatedUser) {
-        // Update session with new name
         await updateSession({
           user: {
             ...session?.user,
             name: updatedUser.name
           }
-        })
-        onSuccess?.()
-        return updatedUser
+        });
+        onSuccess?.();
+        return updatedUser;
       }
-      return null
+      return null;
     } catch (error) {
-      console.error('[UPDATE_NAME_ERROR]', error)
-      onError?.(error)
-      return null
+      console.error('[UPDATE_NAME_ERROR]', error);
+      onError?.(error);
+      return null;
     }
-  }, [user?.id, session?.user, updateSession])
+  }, [user?.id, session?.user, updateSession]);
 
+  const updateAvatar = useCallback(async (
+    file: File,
+    { onSuccess, onError }: CallbackOptions = {}
+  ) => {
+    if (!user?.id) return null;
 
+    try {
+      const updatedUser = await updateUserAvatar(user.id, file);
+      if (updatedUser) {
+        await updateSession({
+          user: {
+            ...session?.user,
+            image: updatedUser.image
+          }
+        });
+        onSuccess?.();
+        return updatedUser;
+      }
+      return null;
+    } catch (error) {
+      console.error('[UPDATE_AVATAR_ERROR]', error);
+      onError?.(error);
+      return null;
+    }
+  }, [user?.id, session?.user, updateSession]);
+
+  const deleteAvatar = useCallback(async (
+    { onSuccess, onError }: CallbackOptions = {}
+  ) => {
+    if (!user?.id) return null;
+
+    try {
+      const updatedUser = await deleteUserAvatar(user.id);
+      if (updatedUser) {
+        await updateSession({
+          user: {
+            ...session?.user,
+            image: null
+          }
+        });
+        onSuccess?.();
+        return updatedUser;
+      }
+      return null;
+    } catch (error) {
+      console.error('[DELETE_AVATAR_ERROR]', error);
+      onError?.(error);
+      return null;
+    }
+  }, [user?.id, session?.user, updateSession]);
 
   return {
     user,
@@ -105,6 +193,10 @@ export function useUser() {
     isAuthenticated,
     updateAvatar,
     deleteAvatar,
-    updateName
+    updateName,
+    updateEmail,
+    initiateChangeEmail,
+    verifyEmailCode,
+    confirmEmailUpdate
   }
 }

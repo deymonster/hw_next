@@ -168,6 +168,41 @@
 					"errorMessage": "Ошибка при обновлении профиля"
 
 				}
+			},
+			"account": {
+				"header": {
+					"heading": "Аккаунт",
+					"description": "Управляйте настройками вашего аккаунта"
+				},
+				"email": {
+					"heading": "Адрес электронной почты",
+					"emailLabel": "Почта",
+					"emailDescription": "Введите ваш новый адрес электронной почты. Убедитесь, что он действующий, так как на него будет отправлено подтверждение.",
+					"submitButton": "Сохранить",
+					"verificationSentMessage": "Код подверждения отправлен на текущий email",
+					"errorSendingVerification": "Не удалось отправить код подтверждения",
+					"codeVerifiedMessage": "Код успешно подтвержден",
+					"errorVerifyingCode": "Ошибка подтверждения кода",
+					"verificationCodeLabel": "Код подтверждения",
+					"verificationCodePlaceholder": "Введите 6-значный код",
+					"verificationCodeDescription": "Введите код подтверждения, отправленный на текущий email",
+					"sendVerificationButton": "Отправить код",
+					"cancelButton": "Отмена",
+					"verifyCodeButton": "Проверить код",
+					"successMessage": "Почта успешно обновлена",
+					"errorMessage": "Ошибка при обновлении почты"
+					
+				},
+				"password": {
+					"heading": "Пароль от аккаунта",
+					"oldPasswordLabel": "Старый пароль",
+					"oldPasswordDescription": "Введите старый пароль, чтобы подтвердить вашу личность перед изменением пароля.",
+					"newPasswordLabel": "Новый пароль",
+					"newPasswordDescription": "Ваш новый пароль должен содержать не менее 8 символов",
+					"submitButtom": "Сохранить",
+					"succesMessage": "Пароль успешно обновлен",
+					"errorMessage": "Ошибка при обновлении пароля"
+				}
 			}
 		}
 	},
