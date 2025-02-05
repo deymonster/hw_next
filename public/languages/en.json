@@ -200,6 +200,17 @@
 					"succesMessage": "Password successfuly updated",
 					"errorMessage": "Error during password update"
 				}
+			},
+			"appearance": {
+				"header": {
+					"heading": "Appearance",
+					"description": "Change appearance settings here"
+				},
+				"theme": {
+					"heading": "Theme",
+					"description": "Change the theme of the application",
+					"succesMessage": "Theme successfully updated"
+				}
 			}
 		}
 	},

@@ -25,6 +25,7 @@ export class TelegramService extends BaseNotificationService {
                     }),
                 }
             );
+            
 
             if (!response.ok) {
                 throw new Error('Failed to send Telegram message');

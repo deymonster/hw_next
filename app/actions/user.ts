@@ -112,7 +112,7 @@ export async function confirmEmailChange(userId: string): Promise<User | null> {
         if (process.env.ADMIN_TELEGRAM_CHAT_ID) {
             await services.notifications.telegram.sendNotification(
                 process.env.ADMIN_TELEGRAM_CHAT_ID,
-                `Пользователь ${changeData.currentEmail} сменил email на ${changeData.newEmail}`
+                `Пользователь ${updatedUser.name} ${changeData.currentEmail} сменил email на ${changeData.newEmail}`
             );
         }
 

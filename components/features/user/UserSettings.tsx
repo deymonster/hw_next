@@ -7,6 +7,7 @@ import { ChangeAvatarForm } from "./profile/ChangeAvatarForm"
 import { ChangeInfoForm } from "./profile/ChangeInfoForm"
 import { ChangeEmailForm } from "./account/ChangeEmailForm"
 import { ChangePasswordForm } from "./account/ChangePasswordForm"
+import { ChangeThemeForm } from "./appearance/ChangeTheme"
 
 export function UserSettings() {
     const t = useTranslations('dashboard.settings')
@@ -38,13 +39,23 @@ export function UserSettings() {
                 </TabsContent>
                 <TabsContent value='account'>
                     <div className='mt-5 space-y-6'>
-                    <Heading title={t('account.header.heading')} 
-                    description={t('account.header.description')}/>
+                    <Heading 
+                        title={t('account.header.heading')} 
+                        description={t('account.header.description')}
+                    />
                         <ChangeEmailForm />
                         <ChangePasswordForm />
                     </div>
                 </TabsContent>
-                <TabsContent value='appearance'>Внешний вид</TabsContent>
+                <TabsContent value='appearance'>
+                    <div className='mt-5 space-y-6'>
+                        <Heading 
+                            title={t('appearance.header.heading')} 
+                            description={t('appearance.header.description')}
+                        />
+                        <ChangeThemeForm />
+                    </div>
+                </TabsContent>
                 <TabsContent value='notifications'>Уведомления</TabsContent>
                 <TabsContent value='sessions'>Сессии</TabsContent>
             </Tabs>

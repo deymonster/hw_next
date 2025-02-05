@@ -24,7 +24,7 @@ export function ProfileMenu() {
     const {exit} = useAuth()
     const {user, loading} = useUser()
 
-    console.log('ProfileMenu user:', user)
+    
 
     const handleLogout = async () => {
         try {
