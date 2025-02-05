@@ -214,3 +214,22 @@ export async function deleteUserAvatar(userId: string): Promise<User | null> {
         return null;
     }
 }
+
+export async function updateUserPassword(userId: string, oldPassword: string, newPassword: string): Promise<User | null> {
+    if (!userId ) return null;
+
+    try {
+        const isPasswordValid = await services.user.verifyPassword(userId, oldPassword);
+        
+        if (isPasswordValid) {
+            const updatedUser = await services.user.updatePassword(userId, newPassword);
+            return updatedUser; 
+        }
+
+        return null
+        
+    } catch(error) {
+        console.error(`[UPDATE_USER_PASSWORD_ERROR]`, error)
+        throw error
+    }
+}

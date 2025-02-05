@@ -6,6 +6,7 @@ import { useTranslations } from "use-intl"
 import { ChangeAvatarForm } from "./profile/ChangeAvatarForm"
 import { ChangeInfoForm } from "./profile/ChangeInfoForm"
 import { ChangeEmailForm } from "./account/ChangeEmailForm"
+import { ChangePasswordForm } from "./account/ChangePasswordForm"
 
 export function UserSettings() {
     const t = useTranslations('dashboard.settings')
@@ -40,6 +41,7 @@ export function UserSettings() {
                     <Heading title={t('account.header.heading')} 
                     description={t('account.header.description')}/>
                         <ChangeEmailForm />
+                        <ChangePasswordForm />
                     </div>
                 </TabsContent>
                 <TabsContent value='appearance'>Внешний вид</TabsContent>

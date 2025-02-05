@@ -7,7 +7,8 @@ import {
   updateUserEmail,
   initiateEmailChange,
   verifyEmailChangeCode,
-  confirmEmailChange
+  confirmEmailChange,
+  updateUserPassword
 } from '@/app/actions/user'
 
 interface CallbackOptions {
@@ -84,6 +85,27 @@ export function useUser() {
       return null;
     }
   }, [user?.id, session?.user, updateSession]);
+
+  const updatePassword = useCallback(async (
+    oldPassword: string,
+    newPassword: string,
+    { onSuccess, onError }: CallbackOptions = {}
+  ) => {
+    if (!user?.id) return null;
+
+    try {
+      const updatedUser = await updateUserPassword(user.id, oldPassword, newPassword);
+      if (updatedUser) {
+        onSuccess?.();
+        return updatedUser;
+      }
+      return null
+    } catch (error)  {
+      console.error('[UPDATE_PASSWORD_ERROR]', error);
+      onError?.(error);
+      return null;
+    }
+  }, [user?.id])
 
   const updateEmail = useCallback(async (
     email: string,
@@ -197,6 +219,7 @@ export function useUser() {
     updateEmail,
     initiateChangeEmail,
     verifyEmailCode,
-    confirmEmailUpdate
+    confirmEmailUpdate,
+    updatePassword
   }
 }

@@ -143,6 +143,19 @@ export class UserService
       });
     }
 
+    async verifyPassword(userId: string, password: string): Promise<boolean> {
+
+        const user = await this.findById(userId)
+        if (!user) {
+            throw new Error('User not found');
+        }
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            throw new Error('Invalid password');
+        }
+        return true;
+    }
+
     async sendPasswordResetEmail(email: string, token: string): Promise<void> {
         const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/account/recovery/${token}`;
         

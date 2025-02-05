@@ -199,7 +199,7 @@
 					"oldPasswordDescription": "Введите старый пароль, чтобы подтвердить вашу личность перед изменением пароля.",
 					"newPasswordLabel": "Новый пароль",
 					"newPasswordDescription": "Ваш новый пароль должен содержать не менее 8 символов",
-					"submitButtom": "Сохранить",
+					"submitButton": "Сохранить",
 					"succesMessage": "Пароль успешно обновлен",
 					"errorMessage": "Ошибка при обновлении пароля"
 				}
