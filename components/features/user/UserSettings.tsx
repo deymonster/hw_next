@@ -8,6 +8,8 @@ import { ChangeInfoForm } from "./profile/ChangeInfoForm"
 import { ChangeEmailForm } from "./account/ChangeEmailForm"
 import { ChangePasswordForm } from "./account/ChangePasswordForm"
 import { ChangeThemeForm } from "./appearance/ChangeTheme"
+import { ChangeLanguageForm } from "./appearance/ChangeLanguageForm"
+import { ChangeColorForm } from "./appearance/ChangeColorForm"
 
 export function UserSettings() {
     const t = useTranslations('dashboard.settings')
@@ -54,6 +56,8 @@ export function UserSettings() {
                             description={t('appearance.header.description')}
                         />
                         <ChangeThemeForm />
+                        <ChangeLanguageForm />
+                        <ChangeColorForm />
                     </div>
                 </TabsContent>
                 <TabsContent value='notifications'>Уведомления</TabsContent>

@@ -1,7 +1,7 @@
 'use client'
 
 import { ToggleCard } from "@/components/ui/elements/ToggleCard"
-import { Form, FormField, FormItem } from "@/components/ui/form"
+import { Form, FormField } from "@/components/ui/form"
 import { type TypeChangeThemeSchema, changeThemeSchema } from "@/schemas/user/change-theme.schema"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"

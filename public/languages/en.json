@@ -210,6 +210,17 @@
 					"heading": "Theme",
 					"description": "Change the theme of the application",
 					"succesMessage": "Theme successfully updated"
+				},
+				"language": {
+					"heading": "Language",
+					"description": "Change the language of the application",
+					"selectPlaceholder": "Select language",
+					"succesMessage": "Language successfully updated"
+				},
+				"color": {
+					"heading": "Color scheme",
+					"description": "Select the color scheme for the panel",
+					"succesMessage": "Color scheme successfully updated"
 				}
 			}
 		}

@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+
 import '@/styles/globals.css';
+import '@/styles/themes.css'
+
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import {GeistSans} from 'geist/font/sans';
@@ -7,6 +10,9 @@ import { ThemeProvider } from "@/providers/Themeprovider";
 import { ToastProvider } from "@/providers/ToastProvider";
 import { SessionProvider } from "next-auth/react";
 import { SWRProvider } from '@/providers/SWRProvider';
+import { ColorSwitcher } from "@/components/ui/elements/ColorSwitcher";
+
+
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +32,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className={GeistSans.variable}>
+        <ColorSwitcher />
         <NextIntlClientProvider messages={messages} locale={locale}>
         <SessionProvider> 
           <ThemeProvider 
@@ -33,6 +40,7 @@ export default async function RootLayout({
             defaultTheme="dark"
             disableTransitionOnChange
           >
+            
             <ToastProvider />
               <SWRProvider>
               {children}
