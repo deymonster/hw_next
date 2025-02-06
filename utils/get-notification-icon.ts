@@ -1,17 +1,17 @@
-import { NotificationType } from '@prisma/client'
+import { EventType } from '@prisma/client'
 import { Bell, CheckIcon, HardDrive, Info, AlertTriangle, Settings, User, type LucideIcon } from 'lucide-react'
 
-export function getNotificationIcon(type: NotificationType): LucideIcon {
+export function getNotificationIcon(type: EventType): LucideIcon {
   switch (type) {
-    case NotificationType.SYSTEM:
+    case EventType.SYSTEM:
       return CheckIcon
-    case NotificationType.USER:
+    case EventType.USER:
       return User
-    case NotificationType.DEVICE:
+    case EventType.DEVICE:
         return HardDrive
-    case NotificationType.ALERT:
+    case EventType.ALERT:
       return AlertTriangle
-    case NotificationType.INFO:
+    case EventType.INFO:
       return Info
     default:
       return Bell

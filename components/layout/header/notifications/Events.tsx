@@ -1,13 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import { getUnreadNotificationsCount } from '@/app/actions/notifications';
+import { getUnreadEventCount } from '@/app/actions/event';
 import { useCurrentSession } from '@/hooks/useCurrentSession';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell } from 'lucide-react';
-import { NotificationsList } from './NotificationsList';
+import { EventsList } from './EventsList';
 
-export function Notifications() {
+export function Events() {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isOpen, setIsOpen] = useState(false);
   const { user, loading } = useCurrentSession();
@@ -18,12 +18,17 @@ export function Notifications() {
   useEffect(() => {
     async function fetchUnreadCount() {
       if (user?.id) {
-        const count = await getUnreadNotificationsCount(user.id);
+        const count = await getUnreadEventCount(user.id);
         setUnreadCount(count);
       }
     }
     
     fetchUnreadCount();
+
+    // Устанавливаем интервал для периодического обновления
+    const interval = setInterval(fetchUnreadCount, 30000); // Обновляем каждые 30 секунд
+
+    return () => clearInterval(interval);
   }, [user?.id, isOpen]); // Обновляем счетчик при изменении isOpen
 
   if (loading) return null;
@@ -42,7 +47,7 @@ export function Notifications() {
         </div>
       </PopoverTrigger>
       <PopoverContent align="end" className="max-h-[500px] w-[320px] overflow-y-auto">
-        <NotificationsList onRead={() => setUnreadCount(0)} />
+        <EventsList onRead={() => setUnreadCount(0)} />
       </PopoverContent>
     </Popover>
   );

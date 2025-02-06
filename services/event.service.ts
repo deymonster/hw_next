@@ -1,16 +1,16 @@
-import { Notification, PrismaClient } from "@prisma/client";
+import { Event, PrismaClient } from "@prisma/client";
 import { BaseRepository } from "./base.service";
-import { INotificationCreateInput, INotificationFindManyArgs, INotificationRepository } from './notification.interfaces';
+import { IEventCreateInput, IEventFindManyArgs, IEventRepository } from './event.interfaces';
 
-export class NotificationService 
-    extends BaseRepository<Notification, INotificationCreateInput, INotificationFindManyArgs, PrismaClient['notification'], string>
-    implements INotificationRepository
+export class EventService 
+    extends BaseRepository<Event, IEventCreateInput, IEventFindManyArgs, PrismaClient['event'], string>
+    implements IEventRepository
 {
     constructor(prisma: PrismaClient) {
-        super(prisma, (p) => p.notification);
+        super(prisma, (p) => p.event);
     }
 
-    async findUnreadByUserId(userId: string): Promise<Notification[]> {
+    async findUnreadByUserId(userId: string): Promise<Event[]> {
         return await this.model.findMany({
             where: { 
                 userId,
@@ -20,7 +20,7 @@ export class NotificationService
         });
     }
 
-    async findByUserId(userId: string, take: number = 10): Promise<Notification[]> {
+    async findByUserId(userId: string, take: number = 10): Promise<Event[]> {
         return await this.model.findMany({
             where: { userId },
             orderBy: { createdAt: 'desc' },
@@ -28,11 +28,11 @@ export class NotificationService
         });
     }
 
-    async findAndMarkAsRead(userId: string, take: number = 10): Promise<Notification[]> {
+    async findAndMarkAsRead(userId: string, take: number = 10): Promise<Event[]> {
         // Транзакция для атомарного получения и обновления
         return await this.prisma.$transaction(async (tx) => {
             // Получаем уведомления
-            const notifications = await tx.notification.findMany({
+            const notifications = await tx.event.findMany({
                 where: { userId },
                 orderBy: { createdAt: 'desc' },
                 take
@@ -40,7 +40,7 @@ export class NotificationService
 
             // Обновляем статус непрочитанных уведомлений
             if (notifications.length > 0) {
-                await tx.notification.updateMany({
+                await tx.event.updateMany({
                     where: { 
                         userId,
                         isRead: false,
@@ -54,17 +54,17 @@ export class NotificationService
         });
     }
 
-    async findAndMarkAsReadAll(userId: string): Promise<{ notifications: Notification[], unreadCount: number }> {
+    async findAndMarkAsReadAll(userId: string): Promise<{ events: Event[], unreadCount: number }> {
         // Транзакция для атомарного получения и обновления
         return await this.prisma.$transaction(async (tx) => {
             // Получаем все уведомления пользователя
-            const notifications = await tx.notification.findMany({
+            const events = await tx.event.findMany({
                 where: { userId },
                 orderBy: { createdAt: 'desc' }
             });
 
             // Обновляем статус непрочитанных уведомлений
-            const updateResult = await tx.notification.updateMany({
+            const updateResult = await tx.event.updateMany({
                 where: { 
                     userId,
                     isRead: false
@@ -73,7 +73,7 @@ export class NotificationService
             });
 
             return {
-                notifications,
+                events,
                 unreadCount: updateResult.count // количество обновленных (бывших непрочитанных) уведомлений
             };
         });
@@ -88,7 +88,7 @@ export class NotificationService
         });
     }
 
-    async markAsRead(id: string): Promise<Notification> {
+    async markAsRead(id: string): Promise<Event> {
         try {
             const notification = await this.model.update({
                 where: {id},

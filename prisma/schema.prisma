@@ -27,7 +27,12 @@ model User {
   resetTokenExpires DateTime? // Время истечения токена
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  notifications     Notification[] // Связь с уведомлениями
+
+  events                Event[] // Связь с событиями
+  notificationSettings  NotificationSettings?
+  smtpSettings          SmtpSettings?  
+  telegramSettings      TelegramSettings?           
+
 }
 
 enum Role {
@@ -36,7 +41,7 @@ enum Role {
 }
 
 
-enum NotificationType {
+enum EventType {
   SYSTEM        // Системные уведомления (обновления, maintenance и т.д.)
   USER          // Уведомления связанные с пользователем (смена пароля, email и т.д.)
   DEVICE        // Уведомления от устройств
@@ -45,20 +50,20 @@ enum NotificationType {
 }
 
 // Уровни важности уведомлений
-enum NotificationSeverity {
+enum EventSeverity {
   LOW
   MEDIUM
   HIGH
   CRITICAL
 }
 
-model Notification {
+model Event {
   id        String   @id @default(uuid()) // Уникальный идентификатор
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  type      NotificationType
-  severity  NotificationSeverity @default(LOW)
+  type      EventType
+  severity  EventSeverity @default(LOW)
   title     String
   message   String
   isRead    Boolean @default(false)
@@ -70,6 +75,75 @@ model Notification {
   @@index([type])
   @@index([createdAt])
 }
+
+model NotificationSettings {
+  id          String    @id @default(uuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  emailNotification     Boolean @default(true)
+  siteNotification      Boolean @default(true)
+  telegramNotification  Boolean @default(false)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @unique
+
+  @@index([userId])
+}
+
+model TelegramSettings {
+  id          String @id  @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  botToken             String
+  telegramChatId       String?
+  isActive             Boolean @default(false) // Активирован ли бот
+  lastInteractionAt    DateTime? // Последнее взаимодействие с ботом
+
+  username             String?
+  firstName            String?
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String  @unique
+
+  @@index([userId])
+
+}
+
+model SmtpSettings {
+  id          String @id @default(uuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  host        String
+  port        Int 
+  secure      Boolean @default(false)
+  username    String
+  password    String
+  fromEmail   String
+  fromName    String?
+
+  provider    SmtpProvider @default(CUSTOM)
+  isVerified  Boolean      @default(false)
+  lastTestAt  DateTime?
+
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String  @unique
+
+  @@index([userId])
+
+
+}
+
+enum SmtpProvider {
+  GMAIL
+  YANDEX
+  MAIL
+  CUSTOM
+}
+
+
 
 
 model Device {

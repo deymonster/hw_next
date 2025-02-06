@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Notifications } from "./notifications/Notifications"
+import { Events } from "./notifications/Events"
 
 export function ProfileMenu() {
     const t = useTranslations('layout.header.headerMenu.profileMenu')
@@ -43,7 +43,7 @@ export function ProfileMenu() {
         <Loader2 className='size-6 animate-spin text-muted-foreground' /> 
     ) : (
         <>
-            <Notifications/>
+            <Events/>
             <DropdownMenu>
                 <DropdownMenuTrigger>
                     <UserAvatar profile={{

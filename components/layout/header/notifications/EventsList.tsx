@@ -1,20 +1,20 @@
 'use client'
 
 import { Fragment, useEffect, useState } from 'react'
-import { findAndMarkAllAsRead } from '@/app/actions/notifications'
+import { findAndMarkAllAsRead } from '@/app/actions/event'
 import { useCurrentSession } from '@/hooks/useCurrentSession'
-import { Notification } from '@prisma/client'
+import { Event } from '@prisma/client'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Separator } from '@/components/ui/separator'
 import { getNotificationIcon } from '@/utils/get-notification-icon'
 
-interface NotificationsListProps {
+interface EventsListProps {
   onRead?: () => void;
 }
 
-export function NotificationsList({ onRead }: NotificationsListProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+export function EventsList({ onRead }: EventsListProps) {
+  const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useCurrentSession()
@@ -31,9 +31,14 @@ export function NotificationsList({ onRead }: NotificationsListProps) {
         
         if (result.error) {
           setError(result.error)
-        } else if (result.notifications) {
-          setNotifications(result.notifications)
-          onRead?.()
+        } else {
+          if (result.events) {
+            setEvents(result.events)
+          }
+          // Вызываем onRead если есть непрочитанные сообщения
+          if (result.unreadCount && result.unreadCount > 0) {
+            onRead?.()
+          }
         }
       } catch (error) {
         setError('Failed to load notifications')
@@ -59,14 +64,14 @@ export function NotificationsList({ onRead }: NotificationsListProps) {
         <div className="p-4 text-center text-sm text-destructive">
           {error}
         </div>
-      ) : notifications.length === 0 ? (
+      ) : events.length === 0 ? (
         <div className="p-4 text-center text-sm text-muted-foreground">
           {t('empty')}
         </div>
       ) : (
         <div className="flex flex-col gap-2 p-2">
-          {notifications.map((notification, index) => {
-            const Icon = getNotificationIcon(notification.type)
+          {events.map((event, index) => {
+            const Icon = getNotificationIcon(event.type)
             
             return (
 
@@ -75,9 +80,9 @@ export function NotificationsList({ onRead }: NotificationsListProps) {
                   <div className="rounded-full bg-foreground p-2">
                         <Icon className="size-6 text-secondary"/>
                   </div>
-                  <div>{notification.message}</div>
+                  <div>{event.message}</div>
                 </div>
-                {index < notifications.length - 1 && (
+                {index < events.length - 1 && (
                   <Separator className="my-3" />
                 )}
                 

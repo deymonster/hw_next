@@ -1,4 +1,4 @@
-import { PrismaClient, NotificationType, NotificationSeverity } from '@prisma/client'
+import { PrismaClient, EventType, EventSeverity } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -16,56 +16,56 @@ async function main() {
         {
             title: 'Welcome!',
             message: 'Welcome to HW Monitor. Start monitoring your devices now.',
-            type: NotificationType.SYSTEM,
-            severity: NotificationSeverity.LOW,
+            type: EventType.SYSTEM,
+            severity: EventSeverity.LOW,
             isRead: false,
             userId: user.id
         },
         {
             title: 'New Device Alert',
             message: 'Temperature sensor detected high CPU temperature',
-            type: NotificationType.ALERT,
-            severity: NotificationSeverity.HIGH,
+            type: EventType.DEVICE,
+            severity: EventSeverity.HIGH,
             isRead: false,
             userId: user.id
         },
         {
             title: 'Profile Updated',
             message: 'Your profile settings have been successfully updated',
-            type: NotificationType.USER,
-            severity: NotificationSeverity.LOW,
+            type: EventType.USER,
+            severity: EventSeverity.LOW,
             isRead: false,
             userId: user.id
         },
         {
             title: 'Profile Updated',
             message: 'Your profile settings have been successfully updated',
-            type: NotificationType.USER,
-            severity: NotificationSeverity.LOW,
+            type: EventType.USER,
+            severity: EventSeverity.LOW,
             isRead: false,
             userId: user.id
         },
         {
             title: 'Profile Updated',
             message: 'Your profile settings have been successfully updated',
-            type: NotificationType.USER,
-            severity: NotificationSeverity.LOW,
+            type: EventType.USER,
+            severity: EventSeverity.LOW,
             isRead: false,
             userId: user.id
         },
         {
             title: 'Profile Updated',
             message: 'Your profile settings have been successfully updated',
-            type: NotificationType.USER,
-            severity: NotificationSeverity.LOW,
+            type: EventType.USER,
+            severity: EventSeverity.LOW,
             isRead: false,
             userId: user.id
         },
         {
             title: 'Profile Updated',
             message: 'Your profile settings have been successfully updated',
-            type: NotificationType.USER,
-            severity: NotificationSeverity.LOW,
+            type: EventType.USER,
+            severity: EventSeverity.LOW,
             isRead: false,
             userId: user.id
         }
@@ -73,7 +73,7 @@ async function main() {
 
     // Создаем уведомления в БД
     for (const notification of notifications) {
-        await prisma.notification.create({
+        await prisma.event.create({
             data: notification
         })
     }
