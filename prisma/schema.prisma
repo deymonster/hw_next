@@ -81,7 +81,7 @@ model NotificationSettings {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  emailNotification     Boolean @default(true)
+  
   siteNotification      Boolean @default(true)
   telegramNotification  Boolean @default(false)
 
