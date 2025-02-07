@@ -222,6 +222,22 @@
 					"description": "Select the color scheme for the panel",
 					"succesMessage": "Color scheme successfully updated"
 				}
+			},
+			"notifications": {
+				"header": {
+					"heading": "Notifications",
+					"description": "Change notification settings here"
+				},
+				"siteNotifications": {
+					"heading": "Panel notifications",
+					"description": "If you disable this option, you will not receive notifications about events in the panel."
+				},
+				"telegramNotifications": {
+					"heading": "Telegram notifications",
+					"description": "If you enable this option, you will receive notifications about events in the Telegram app."
+				},
+				"succesMessage": "Notifications successfully updated",
+				"errorMessage": "Error during notifications update"
 			}
 		}
 	},

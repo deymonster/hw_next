@@ -51,6 +51,7 @@ export const authConfig: NextAuthConfig = {
     async session({ session, token }): Promise<CustomSession> {
       const customToken = token as CustomToken;
       
+      
       return {
         ...session,
         user: {

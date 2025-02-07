@@ -10,6 +10,7 @@ declare module "next-auth" {
             email: string
             role: Role
             image?: string | null
+            
         } & DefaultSession["user"]
     }
 }
@@ -30,6 +31,7 @@ export interface CustomSession extends DefaultSession {
         email: string
         role: Role
         image?: string | null
+        
     } & DefaultSession["user"]
 }
 

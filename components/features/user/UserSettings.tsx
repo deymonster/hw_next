@@ -10,6 +10,7 @@ import { ChangePasswordForm } from "./account/ChangePasswordForm"
 import { ChangeThemeForm } from "./appearance/ChangeTheme"
 import { ChangeLanguageForm } from "./appearance/ChangeLanguageForm"
 import { ChangeColorForm } from "./appearance/ChangeColorForm"
+import { ChangeNotificationsForm } from "./notifications/ChangeNotificationsForm"
 
 export function UserSettings() {
     const t = useTranslations('dashboard.settings')
@@ -60,7 +61,15 @@ export function UserSettings() {
                         <ChangeColorForm />
                     </div>
                 </TabsContent>
-                <TabsContent value='notifications'>Уведомления</TabsContent>
+                <TabsContent value='notifications'>
+                    <div className='mt-5 space-y-6'>
+                        <Heading 
+                                title={t('notifications.header.heading')} 
+                                description={t('notifications.header.description')}
+                        />
+                        <ChangeNotificationsForm />
+                    </div>
+                </TabsContent>
                 <TabsContent value='sessions'>Сессии</TabsContent>
             </Tabs>
         </div>
