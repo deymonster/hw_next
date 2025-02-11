@@ -6,62 +6,41 @@ import { CacheService } from './cache/cache.service';
 import { SmtpSettingsService} from './smtp-settings/smtp-settings.service';
 import { TelegramSettingsService} from './telegram-settings/telegram-settings.service';
 import { NotificationSettingsService } from './notification-settings/notification-settings.service'
- 
+import type { IServices, IDataServices, IInfrastructureServices } from './types'
 
 class ServiceFactory {
     private static instance: ServiceFactory;
-    private readonly _user: UserService;
-    private readonly _event: EventService;
-    private readonly _notifications: NotificationFactory;
-    private readonly _cache: CacheService;
-    private readonly _smtp_settings: SmtpSettingsService;
-    private readonly _telegram_settings: TelegramSettingsService;
-    private readonly _notification_settings: NotificationSettingsService;
+    private readonly dataServices: IDataServices
+    private readonly infrastructureServices: IInfrastructureServices
+    
 
     private constructor() {
-        this._user = new UserService(prisma);
-        this._event = new EventService(prisma);
-        this._notifications = new NotificationFactory();
-        this._cache = new CacheService();
-        this._smtp_settings = new SmtpSettingsService(prisma);
-        this._telegram_settings = new TelegramSettingsService(prisma);
-        this._notification_settings = new NotificationSettingsService(prisma);
+        
+        this.dataServices = {
+            user: new UserService(prisma),
+            event: new EventService(prisma),
+            smtp_settings: new SmtpSettingsService(prisma),
+            telegram_settings: new TelegramSettingsService(prisma),
+            notification_settings: new NotificationSettingsService(prisma)
+        }
+
+        this.infrastructureServices = {
+            cache: new CacheService(),
+            notifications: new NotificationFactory()
+        }
     }
 
-    public static getInstance(): ServiceFactory {
+    public static getInstance(): IServices {
         if (!ServiceFactory.instance) {
             ServiceFactory.instance = new ServiceFactory();
         }
-        return ServiceFactory.instance;
+        return {
+            data: ServiceFactory.instance.dataServices,
+            infrastructure: ServiceFactory.instance.infrastructureServices
+        }
     }
 
-    get user() {
-        return this._user;
-    }
 
-    get event() {
-        return this._event;
-    }
-
-    get notifications() {
-        return this._notifications;
-    }
-
-    get cache() {
-        return this._cache;
-    }
-
-    get smtp_settings() {
-        return this._smtp_settings;
-    }
-
-    get telegram_settings() {
-        return this._telegram_settings;
-    }
-
-    get notification_settings() {
-        return this._notification_settings;
-    }
 }
 
 // Экспортируем единый экземпляр фабрики сервисов

@@ -241,7 +241,61 @@
 				},
 				"succesMessage": "Настройки уведомлений успешно изменены",
 				"errorMessage": "Ошибка при обновлении настроек уведомлений"
+
+			},
+			"smtpSettings": {
+				"header": {
+					"heading": "Настройки SMTP",
+					"description": "Настройте SMTP для отправки уведомлений"
+				},
+				"smtpHost": {
+					"heading": "Хост SMTP",
+					"description": "Введите хост SMTP сервера"
+				},
+				"provider": {
+					"heading": "Провайдер SMTP",
+					"description": "Выберите провайдера SMTP с предустановленными настройками",
+					"selectPlaceholder": "Выберите провайдера SMTP"
+				},
+				"smtpPort": {
+					"heading": "Порт SMTP",
+					"description": "Введите порт SMTP сервера"
+				},
+				"security": {
+					"heading": "SSL/TLS шифрование",
+					"description": "Использовать защищенное SSL/TLS соединение для SMTP"
+				},
+				"smtpUsername": {
+					"heading": "Имя пользователя SMTP",
+					"description": "Введите имя пользователя SMTP сервера"
+				},
+				"smtpPassword": {
+					"heading": "Пароль SMTP",
+					"description": "Введите пароль SMTP сервера"
+				},
+				"smtpName": {
+					"heading": "Имя отправителя",
+					"description": "Укажите имя отправителя"
+				},
+				"smtpSenderEmail": {
+					"heading": "Email отправителя",
+					"description": "Введите email отправителя"
+				},
+				"save": {
+					"heading": "Сохранение настроек",
+					"description": "Сохраните настройки SMTP для применения изменений"
+				},
+				"test": {
+					"heading": "Проверка настроек SMTP",
+					"description": "Будет отправлено тестовое сообщения для проверки настроек",
+					"testButton": "Проверка"
+				},
+				"submitButton": "Сохранить",
+				"testButton": "Проверка",
+				"succesMessage": "Настройки SMTP успешно изменены",
+				"errorMessage": "Ошибка при обновлении настроек SMTP"
 			}
+	
 		}
 	},
 	"components": {

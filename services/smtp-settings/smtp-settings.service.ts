@@ -1,6 +1,7 @@
 import { SmtpSettings, PrismaClient } from "@prisma/client";
 import { BaseRepository } from "@/services/base.service";
 import { ISmtpSettingsCreateInput, ISmtpSettingsRepository, ISmtpSettingsFindManyArgs } from "./smtp-settiings.constants";
+import { encrypt, decrypt } from "@/utils/crypto/crypto";
 
 export class SmtpSettingsService
     extends BaseRepository<SmtpSettings, ISmtpSettingsCreateInput, ISmtpSettingsFindManyArgs, PrismaClient['smtpSettings'], string>
@@ -17,9 +18,18 @@ export class SmtpSettingsService
     }
 
     async update(userId: string, data: Partial<ISmtpSettingsCreateInput>): Promise<SmtpSettings> {
+        if (data.password) {
+            data.password = encrypt(data.password);
+        }
         return this.model.update({
             where: { userId },
             data
         });
+    }
+
+    async getDecryptedPassword(userId: string): Promise<string | null> {
+        const settings = await this.findByUserId(userId);
+        if (!settings) return null;
+        return decrypt(settings.password);
     }
 }

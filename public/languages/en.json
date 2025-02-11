@@ -238,6 +238,57 @@
 				},
 				"succesMessage": "Notifications successfully updated",
 				"errorMessage": "Error during notifications update"
+			},
+			"smtpSettings": {
+				"header": {
+					"heading": "SMTP settings",
+					"description": "Change SMTP settings here"
+				},
+				"smtpHost": {
+					"heading": "SMTP host",
+					"description": "Enter the SMTP host address"
+				},
+				"provider": {
+					"heading": "SMTP provider",
+					"description": "Select the SMTP provider",
+					"selectPlaceholder": "Select provider"
+				},
+				"smtpPort": {
+					"heading": "SMTP port",
+					"description": "Enter the SMTP port"
+				},
+				"security": {
+					"heading": "SSL/TLS security",
+					"description": "Select the SSL/TLS security"
+				},
+				"smtpUsername": {
+					"heading": "SMTP username",
+					"description": "Enter the SMTP username"
+				},
+				"smtpPassword": {
+					"heading": "SMTP password",
+					"description": "Enter the SMTP password"
+				},
+				"smtpName": {
+					"heading": "Sender name",
+					"description": "Enter the sender name"
+				},
+				"smtpSenderEmail": {
+					"heading": "Sender email",
+					"description": "Enter the sender email"
+				},
+				"save": {
+					"heading": "Save SMTP settings",
+					"description": "Press save button to apply changes"
+				},
+				"test": {
+					"heading": "Test SMTP settings",
+					"description": "Press test button to test SMTP settings"
+				},
+				"submitButton": "Save",
+				"testButton": "Test",
+				"succesMessage": "SMTP settings successfully updated",
+				"errorMessage": "Error during SMTP settings update"
 			}
 		}
 	},

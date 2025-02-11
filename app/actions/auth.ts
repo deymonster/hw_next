@@ -11,12 +11,12 @@ import { AUTH_ERRORS } from '@/libs/auth/constants';
 export async function updatePasswordWithToken(token: string, data: TypeNewPasswordSchema) {
   try {
     // 1. Проверяем токен на валидность
-    const userId = await services.user.verifyResetToken(token);
+    const userId = await services.data.user.verifyResetToken(token);
     if (!userId) {
       return { error: AUTH_ERRORS.INVALID_TOKEN };
     }
     // 2. Обновляем пароль пользователя
-    await services.user.updatePassword(userId, data.password);
+    await services.data.user.updatePassword(userId, data.password);
     return { success: true, message: "Пароль успешно обновлен" };
   } catch (error) {
     console.error("[UPDATE_PASSWORD_ACTION_ERROR]", error);
@@ -28,16 +28,16 @@ export async function resetPassword(data: TypeResetPasswordSchema) {
   try {
     const { email } = data;
     // 1. Находим пользователя по email
-    const user = await services.user.getByEmail(email);
+    const user = await services.data.user.getByEmail(email);
     if (!user) {
       return { error: AUTH_ERRORS.USER_NOT_FOUND };
     }
 
     // 2. Создаем токен для сброса пароля
-    const resetToken = await services.user.createResetToken(user.id);
+    const resetToken = await services.data.user.createResetToken(user.id);
 
     // 3. Отправляем письмо с ссылкой для сброса пароля
-    await services.user.sendPasswordResetEmail(email, resetToken);
+    await services.data.user.sendPasswordResetEmail(email, resetToken);
 
     return { success: true, message: "Письмо с инструкцией по сбросу пароля отправлено на ваш email" };
 
@@ -50,7 +50,7 @@ export async function resetPassword(data: TypeResetPasswordSchema) {
 
 export async function createUser(data: TypeCreateAccountSchema) {
   try {
-    const result = await services.user.createUser(data);
+    const result = await services.data.user.createUser(data);
     if ('error' in result) {
       return { error: result.error };
     }
@@ -117,7 +117,7 @@ export async function getCurrentUser(forceRefetch = false): Promise<GetCurrentUs
 
     // Получаем актуальные данные из БД
     try {
-      const user = await services.user.findById(session.user.id);
+      const user = await services.data.user.findById(session.user.id);
       
       if (!user) {
         return {

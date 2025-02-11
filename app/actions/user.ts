@@ -23,7 +23,7 @@ export async function initiateEmailChange(
 
     try {
         // Проверяем, не занят ли новый email
-        const existingUser = await services.user.getByEmail(newEmail);
+        const existingUser = await services.data.user.getByEmail(newEmail);
         if (existingUser) {
             throw new Error('Email already taken');
         }
@@ -32,7 +32,7 @@ export async function initiateEmailChange(
         const verificationCode = Math.random().toString(36).slice(-6).toUpperCase();
         
         // Сохраняем данные для смены в кэше
-        await services.cache.set(
+        await services.infrastructure.cache.set(
             `email_change_${userId}`,
             {
                 currentEmail,
@@ -44,7 +44,7 @@ export async function initiateEmailChange(
         );
 
         // Отправляем код на текущий email
-        await services.notifications.email.sendChangeEmailVerification(
+        await services.infrastructure.notifications.email.sendChangeEmailVerification(
             currentEmail,
             newEmail,
             verificationCode
@@ -64,13 +64,13 @@ export async function verifyEmailChangeCode(
     if (!userId || !verificationCode) return null;
 
     try {
-        const changeData = await services.cache.get(`email_change_${userId}`) as EmailChangeData;
+        const changeData = await services.infrastructure.cache.get(`email_change_${userId}`) as EmailChangeData;
         if (!changeData || changeData.code !== verificationCode) {
             throw new Error('Invalid or expired code');
         }
 
         // Помечаем в кэше что код подтвержден
-        await services.cache.set(
+        await services.infrastructure.cache.set(
             `email_change_${userId}`,
             {
                 ...changeData,
@@ -94,23 +94,23 @@ export async function confirmEmailChange(userId: string): Promise<User | null> {
     if (!userId) return null;
 
     try {
-        const changeData = await services.cache.get(`email_change_${userId}`) as EmailChangeData;
+        const changeData = await services.infrastructure.cache.get(`email_change_${userId}`) as EmailChangeData;
         if (!changeData || changeData.step !== 'verified') {
             throw new Error('Invalid or expired verification');
         }
 
         // Обновляем email пользователя
-        const updatedUser = await services.user.update(userId, {
+        const updatedUser = await services.data.user.update(userId, {
             email: changeData.newEmail,
             emailVerified: true
         });
 
         // Очищаем кэш
-        await services.cache.delete(`email_change_${userId}`);
+        await services.infrastructure.cache.delete(`email_change_${userId}`);
 
         // Отправляем уведомление в Telegram
         if (process.env.ADMIN_TELEGRAM_CHAT_ID) {
-            await services.notifications.telegram.sendNotification(
+            await services.infrastructure.notifications.telegram.sendNotification(
                 process.env.ADMIN_TELEGRAM_CHAT_ID,
                 `Пользователь ${updatedUser.name} ${changeData.currentEmail} сменил email на ${changeData.newEmail}`
             );
@@ -126,9 +126,9 @@ export async function confirmEmailChange(userId: string): Promise<User | null> {
 export async function updateUserEmail(userId: string, email: string): Promise<User | null> {
     if (!userId || !email) return null
     try {
-        const currentUser = await services.user.findById(userId)
+        const currentUser = await services.data.user.findById(userId)
         if (currentUser) {
-            return await services.user.update(userId, { email })
+            return await services.data.user.update(userId, { email })
         }
         return null
     } catch (error) {
@@ -140,9 +140,9 @@ export async function updateUserEmail(userId: string, email: string): Promise<Us
 export async function updateUserName(userId: string, name: string): Promise<User | null> {
     if (!userId || !name) return null
     try {
-        const currentUser = await services.user.findById(userId);
+        const currentUser = await services.data.user.findById(userId);
         if (currentUser) {
-                return await services.user.update(userId, { name })
+                return await services.data.user.update(userId, { name })
         }
         return null
     } catch (error) {
@@ -154,7 +154,7 @@ export async function updateUserName(userId: string, name: string): Promise<User
 export async function getUserById(id: string): Promise<User | null> {
     if (!id) return null;
     try {
-        return await services.user.findById(id);
+        return await services.data.user.findById(id);
     } catch (error) {
         console.error(`[GET_USER_BY_ID_ERROR]`, error);
         return null;
@@ -164,7 +164,7 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function getUserByEmail(email: string): Promise<User | null> {
     if (!email) return null;
     try {
-        return await services.user.getByEmail(email);
+        return await services.data.user.getByEmail(email);
     } catch (error) {
         console.error(`[GET_USER_BY_EMAIL_ERROR]`, error);
         return null;
@@ -186,13 +186,13 @@ export async function updateUserAvatar(userId: string, file: File): Promise<User
             }
         )
 
-        const currentUser = await services.user.findById(userId);
+        const currentUser = await services.data.user.findById(userId);
         if (currentUser?.image) {
             await storage.deleteFile(currentUser.image)
             console.log('file deleted', currentUser.image)
         }
 
-        return await services.user.updateUserImage(userId, uploadedPath);
+        return await services.data.user.updateUserImage(userId, uploadedPath);
     } catch (error) {
         console.error(`[UPDATE_USER_AVATAR_ERROR]`, error);
         return null;
@@ -202,12 +202,12 @@ export async function updateUserAvatar(userId: string, file: File): Promise<User
 export async function deleteUserAvatar(userId: string): Promise<User | null> {
     if (!userId) return null;
     try {
-        const currentUser = await services.user.findById(userId)
+        const currentUser = await services.data.user.findById(userId)
         if (currentUser?.image) {
             await storage.deleteFile(currentUser.image)
         }
 
-        const updatedUser = await services.user.removeUserImage(userId);
+        const updatedUser = await services.data.user.removeUserImage(userId);
         return updatedUser;
     } catch (error) {
         console.error(`[DELETE_USER_AVATAR_ERROR]`, error);
@@ -219,10 +219,10 @@ export async function updateUserPassword(userId: string, oldPassword: string, ne
     if (!userId ) return null;
 
     try {
-        const isPasswordValid = await services.user.verifyPassword(userId, oldPassword);
+        const isPasswordValid = await services.data.user.verifyPassword(userId, oldPassword);
         
         if (isPasswordValid) {
-            const updatedUser = await services.user.updatePassword(userId, newPassword);
+            const updatedUser = await services.data.user.updatePassword(userId, newPassword);
             return updatedUser; 
         }
 

@@ -5,7 +5,7 @@ import {
     updateNotificationSettings,
     createDefaultNotificationSettings
 } from '@/app/actions/notificationSettings'
-import type { NotificationServicesState, UpdateNotificationSettingsInput } from '@/app/actions/notificationSettings';
+import type { NotificationSettingsState, UpdateNotificationSettingsInput } from '@/app/actions/notificationSettings';
 
 interface CallbackOptions {
   onSuccess?: () => void;
@@ -18,7 +18,7 @@ export function useNotificationSettings() {
   const isSessionLoading = status === 'loading'
   
 
-  const [settings, setSettings] = useState<NotificationServicesState | null>(null);
+  const [settings, setSettings] = useState<NotificationSettingsState | null>(null);
  
 
 

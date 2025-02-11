@@ -11,6 +11,8 @@ import { ChangeThemeForm } from "./appearance/ChangeTheme"
 import { ChangeLanguageForm } from "./appearance/ChangeLanguageForm"
 import { ChangeColorForm } from "./appearance/ChangeColorForm"
 import { ChangeNotificationsForm } from "./notifications/ChangeNotificationsForm"
+import { ChangeSmtpSettingsForm } from "./notifications/ChangeSmtpSettingsForm"
+import { Separator } from "@/components/ui/separator"
 
 export function UserSettings() {
     const t = useTranslations('dashboard.settings')
@@ -68,6 +70,14 @@ export function UserSettings() {
                                 description={t('notifications.header.description')}
                         />
                         <ChangeNotificationsForm />
+                    </div>
+                    
+                    <div className='mt-5 space-y-6'>
+                        {/* <Heading
+                            title={t('smtpSettings.header.heading')}
+                            description={t('smtpSettings.header.description')}
+                        /> */}
+                        <ChangeSmtpSettingsForm />
                     </div>
                 </TabsContent>
                 <TabsContent value='sessions'>Сессии</TabsContent>

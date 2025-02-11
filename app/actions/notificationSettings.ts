@@ -6,7 +6,6 @@ import { services } from '@/services/index';
 export interface NotificationSettingsState {
         siteNotification: boolean;
         telegramNotification: boolean;
-    
 
 }
 
@@ -16,7 +15,7 @@ export interface UpdateNotificationSettingsInput {
 }
 
 export async function getNotificationSettings(userId: string): Promise<NotificationSettingsState | null> {
-    const notificationSettings = await services.notification_settings.findByUserId(userId)
+    const notificationSettings = await services.data.notification_settings.findByUserId(userId)
 
     if (!notificationSettings) {
         return null
@@ -39,8 +38,8 @@ export async function updateNotificationSettings(userId: string,data: UpdateNoti
                 error: 'No settings provided for update'
             }
         }
-        
-        await services.notification_settings.update(userId, data)
+
+        await services.data.notification_settings.update(userId, data)
         return {
             success: true,
         }
@@ -55,7 +54,7 @@ export async function updateNotificationSettings(userId: string,data: UpdateNoti
 
 export async function createDefaultNotificationSettings(userId: string): Promise<NotificationSettingsState> {
     
-    const existingSettings = await services.notification_settings.findByUserId(userId);
+    const existingSettings = await services.data.notification_settings.findByUserId(userId);
     
 
     if (!existingSettings) {
@@ -64,7 +63,7 @@ export async function createDefaultNotificationSettings(userId: string): Promise
             telegramNotification: false,
             userId
         };
-        await services.notification_settings.create(defaultNotificationSettings)
+        await services.data.notification_settings.create(defaultNotificationSettings)
     
     }
     
@@ -75,3 +74,4 @@ export async function createDefaultNotificationSettings(userId: string): Promise
     
     return settings;
 }
+

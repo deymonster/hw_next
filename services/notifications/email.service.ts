@@ -1,10 +1,10 @@
 import nodemailer from 'nodemailer';
 import { BaseNotificationService } from './base.notification.service';
-import { EmailPayload } from './types';
+import { EmailPayload, NotificationPayload, SmtpConfig } from './types';
+import { decrypt } from '@/utils/crypto/crypto';
 
 export class EmailService extends BaseNotificationService {
-    private transporter: nodemailer.Transporter;
-    private fromEmail: string;
+    
     private fromName: string;
 
     constructor() {
@@ -16,31 +16,56 @@ export class EmailService extends BaseNotificationService {
         if (!process.env.SMTP_PASSWORD) throw new Error('SMTP_PASSWORD is not defined');
         if (!process.env.SMTP_FROM_EMAIL) throw new Error('SMTP_FROM_EMAIL is not defined');
         
-        this.fromEmail = process.env.SMTP_FROM_EMAIL;
+        
         this.fromName = process.env.SMTP_FROM_NAME || 'NITRINOnet Monitoring System';
-
-        this.transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT),
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASSWORD,
-            },
-        });
+        
     }
 
-    async send(payload: EmailPayload): Promise<boolean> {
+    private async createTransporter(config: SmtpConfig) {
+        const decryptedPassword = decrypt(config.auth.encryptedPassword)
+        return nodemailer.createTransport({
+            service: undefined,
+            port: config.port,
+            host: config.host,
+            secure: config.secure,
+            auth: {
+                user: config.auth.user,
+                pass: decryptedPassword
+            }
+        } as nodemailer.TransportOptions)
+    }
+
+    async send(payload: NotificationPayload): Promise<boolean> {
         try {
-            await this.transporter.sendMail({
-                from: {
-                    name: this.fromName,
-                    address: this.fromEmail
+            if (!('to' in payload)) {
+                console.error('[EMAIL_SERVICE_ERROR] No recipient specified');
+                return false;
+            }
+            const emailPayload = payload as EmailPayload;
+            
+            // Используем системные настройки из .env
+            const systemConfig: SmtpConfig = {
+                host: process.env.SMTP_HOST!,
+                port: Number(process.env.SMTP_PORT!),
+                secure: process.env.SMTP_SECURE === 'true',
+                auth: {
+                    user: process.env.SMTP_USER!,
+                    encryptedPassword: process.env.SMTP_PASSWORD!
                 },
-                to: payload.to,
-                subject: payload.subject,
-                text: payload.text,
-                html: payload.html,
+                fromEmail: process.env.SMTP_FROM_EMAIL!,
+                fromName: process.env.SMTP_FROM_NAME || this.fromName
+            };
+
+            const transporter = await this.createTransporter(systemConfig);
+            await transporter.sendMail({
+                from: {
+                    name: systemConfig.fromName || this.fromName,
+                    address: systemConfig.fromEmail
+                },
+                to: emailPayload.to,
+                subject: emailPayload.subject || '',
+                text: emailPayload.text,
+                html: emailPayload.html || emailPayload.text,
             });
             return true;
         } catch (error) {
@@ -83,5 +108,31 @@ export class EmailService extends BaseNotificationService {
             text: `Ваш код проверки: ${code}`,
             html,
         });
+    }
+
+    async verifyConnection(config: {
+        host: string
+        port: number
+        secure: boolean
+        auth: {
+            user: string
+            encryptedPassword: string
+        }
+    }): Promise<boolean> {
+        try {
+            const decryptedPassword = decrypt(config.auth.encryptedPassword)
+            const testTransporter = nodemailer.createTransport({
+                ...config,
+                auth: {
+                    user: config.auth.user,
+                    pass: decryptedPassword
+                }
+            })
+            await testTransporter.verify()
+            return true
+        } catch (error) {
+            console.error('[SMTP_VERIFY_ERROR]', error)
+            return false
+        }
     }
 }

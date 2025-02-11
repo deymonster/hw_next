@@ -7,7 +7,7 @@ export async function getUnreadEventCount(userId: string): Promise<number> {
     if (!userId) return 0;
 
     try {
-        return await services.event.getUnreadCount(userId);
+        return await services.data.event.getUnreadCount(userId);
     } catch (error) {
         console.error(`[GET_UNREAD_EVENT_COUNT_ERROR]`, error);
         return 0;
@@ -20,7 +20,7 @@ export async function findUnreadEvents(userId: string): Promise<{ events?: Event
     }
 
     try {
-        const events = await services.event.findUnreadByUserId(userId);
+        const events = await services.data.event.findUnreadByUserId(userId);
         return { events };
     } catch (error) {
         console.error(`[GET_UNREAD_EVENTS_ERROR]`, error);
@@ -38,7 +38,7 @@ export async function findAndMarkAllAsRead(userId: string): Promise<{
     }
 
     try {
-        const result = await services.event.findAndMarkAsReadAll(userId);
+        const result = await services.data.event.findAndMarkAsReadAll(userId);
         return { 
             events: result.events,
             unreadCount: result.unreadCount
