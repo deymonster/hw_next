@@ -12,6 +12,7 @@ import { ChangeLanguageForm } from "./appearance/ChangeLanguageForm"
 import { ChangeColorForm } from "./appearance/ChangeColorForm"
 import { ChangeNotificationsForm } from "./notifications/ChangeNotificationsForm"
 import { ChangeSmtpSettingsForm } from "./notifications/ChangeSmtpSettingsForm"
+import { ChangeTelegramSettingsForm } from "./notifications/ChangeTelegramSettingsForm"
 
 
 export function UserSettings() {
@@ -78,6 +79,10 @@ export function UserSettings() {
                             description={t('smtpSettings.header.description')}
                         /> */}
                         <ChangeSmtpSettingsForm />
+                    </div>
+
+                    <div className='mt-5 space-y-6'>
+                        <ChangeTelegramSettingsForm />
                     </div>
                 </TabsContent>
                 <TabsContent value='sessions'>Сессии</TabsContent>

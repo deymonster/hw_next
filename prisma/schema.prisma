@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,63 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id                String   @id @default(uuid()) // Уникальный идентификатор
-  email             String   @unique
-  name              String?
-  image             String?  // URL аватара пользователя
-  password          String           // Хранение хэша пароля
-  role              Role     @default(USER) // Роль пользователя
-  emailVerified     Boolean  @default(false) // Статус подтверждения email
-  verificationToken String?  @unique // Токен для подтверждения email
-  resetToken        String?   @unique // Токен для сброса пароля
-  resetTokenExpires DateTime? // Время истечения токена
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  events                Event[] // Связь с событиями
-  notificationSettings  NotificationSettings?
-  smtpSettings          SmtpSettings?  
-  telegramSettings      TelegramSettings?           
-
-}
-
-enum Role {
-  USER
-  ADMIN
-}
-
-
-enum EventType {
-  SYSTEM        // Системные уведомления (обновления, maintenance и т.д.)
-  USER          // Уведомления связанные с пользователем (смена пароля, email и т.д.)
-  DEVICE        // Уведомления от устройств
-  ALERT         // Тревожные уведомления (критические показатели устройств)
-  INFO          // Информационные уведомления
-}
-
-// Уровни важности уведомлений
-enum EventSeverity {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
+  id                   String                @id @default(uuid())
+  email                String                @unique
+  name                 String?
+  password             String
+  role                 Role                  @default(USER)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  emailVerified        Boolean               @default(false)
+  verificationToken    String?               @unique
+  resetToken           String?               @unique
+  resetTokenExpires    DateTime?
+  image                String?
+  events               Event[]
+  notificationSettings NotificationSettings?
+  smtpSettings         SmtpSettings?
+  telegramSettings     TelegramSettings?
 }
 
 model Event {
-  id        String   @id @default(uuid()) // Уникальный идентификатор
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id        String        @id @default(uuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   type      EventType
   severity  EventSeverity @default(LOW)
   title     String
   message   String
-  isRead    Boolean @default(false)
-
-  user      User @relation(fields: [userId], references: [id])
+  isRead    Boolean       @default(false)
   userId    String
+  user      User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([type])
@@ -77,63 +44,100 @@ model Event {
 }
 
 model NotificationSettings {
-  id          String    @id @default(uuid())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  
-  siteNotification      Boolean @default(true)
-  telegramNotification  Boolean @default(false)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String @unique
+  id                   String   @id @default(uuid())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  siteNotification     Boolean  @default(true)
+  telegramNotification Boolean  @default(false)
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model TelegramSettings {
-  id          String @id  @default(uuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  botToken             String
-  telegramChatId       String?
-  isActive             Boolean @default(false) // Активирован ли бот
-  lastInteractionAt    DateTime? // Последнее взаимодействие с ботом
-
-  username             String?
-  firstName            String?
-
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String  @unique
+  id                String    @id @default(uuid())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  botToken          String
+  telegramChatId    String?
+  isActive          Boolean   @default(false)
+  lastInteractionAt DateTime?
+  username          String?
+  firstName         String?
+  userId            String    @unique
+  botUsername       String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-
 }
 
 model SmtpSettings {
-  id          String @id @default(uuid())
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  host        String
-  port        Int 
-  secure      Boolean @default(false)
-  username    String
-  password    String
-  fromEmail   String
-  fromName    String?
-
-  provider    SmtpProvider @default(CUSTOM)
-  isVerified  Boolean      @default(false)
-  lastTestAt  DateTime?
-
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String  @unique
+  id         String       @id @default(uuid())
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  host       String
+  port       Int
+  secure     Boolean      @default(false)
+  username   String
+  password   String
+  fromEmail  String
+  fromName   String?
+  provider   SmtpProvider @default(CUSTOM)
+  isVerified Boolean      @default(false)
+  lastTestAt DateTime?
+  userId     String       @unique
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
 
+model Device {
+  id             String       @id @default(uuid())
+  uniqueId       String?      @unique
+  serialNumber   String?
+  warrantyStatus DateTime?
+  lastUpdate     DateTime     @updatedAt
+  status         DeviceStatus @default(ACTIVE)
+  type           DeviceType   @default(WINDOWS)
+  locationId     String?
+  deviceTag      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  location       Location?    @relation("LocationDevices", fields: [locationId], references: [id])
 
+  @@index([status])
+  @@index([uniqueId])
+  @@index([type])
+}
+
+model Location {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  devices     Device[] @relation("LocationDevices")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum EventType {
+  SYSTEM
+  USER
+  DEVICE
+  ALERT
+  INFO
+}
+
+enum EventSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }
 
 enum SmtpProvider {
@@ -143,46 +147,14 @@ enum SmtpProvider {
   CUSTOM
 }
 
-
-
-
-model Device {
-  id              String    @id @default(uuid()) // Уникальный идентификатор
-  uniqueId        String?   @unique // UUID от экспортера
-  serialNumber    String?     // Серийный номер устройства
-  warrantyStatus  DateTime?   // Дата окончания гарантии
-  lastUpdate      DateTime    @updatedAt // Время последнего обновления
-  status          DeviceStatus @default(ACTIVE) // Статус устройства
-  type            DeviceType  @default(WINDOWS) // Тип устройства (Windows, Linux)
-  locationId      String?     // Идентификатор местоположения
-  location        Location?   @relation("LocationDevices", fields: [locationId], references: [id], onDelete: SetNull)
-  deviceTag       String?     //  Тег устройства для идентификации
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-
-  @@index([status])
-  @@index([uniqueId])
-  @@index([type])
-
-}
-
 enum DeviceStatus {
-  ACTIVE         // Устройство активно и мониторится
-  INACTIVE       // Устройство временно неактивно
-  PENDING        // Устройство ожидает подтверждения
-  DECOMMISSIONED // Устройство снято с эксплуатации
+  ACTIVE
+  INACTIVE
+  PENDING
+  DECOMMISSIONED
 }
 
 enum DeviceType {
   WINDOWS
   LINUX
-}
-
-model Location {
-  id          String    @id @default(uuid()) // Уникальный идентификатор
-  name        String    // Название местоположения
-  description String?  // Описание местоположения
-  devices     Device[]  @relation("LocationDevices")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 }

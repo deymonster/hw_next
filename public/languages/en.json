@@ -287,6 +287,8 @@
 				},
 				"submitButton": "Save",
 				"testButton": "Test",
+				"testSuccess": "All Smtp settings are correct",
+				"testError": "Smtp settings not correctly",
 				"succesMessage": "SMTP settings successfully updated",
 				"errorMessage": "Error during SMTP settings update"
 			}
