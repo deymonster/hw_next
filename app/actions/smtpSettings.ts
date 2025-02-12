@@ -89,7 +89,7 @@ export async function verifySmtpConnection(config: Pick<SmtpSettings, 'host' | '
 
         return {
             success: isValid,
-            error: isValid ? undefined : 'Failed to connect to SMTP server'
+            error: isValid ? undefined : 'Ошибка при подключении к SMTP-серверу'
         }
     } catch (error) {
         console.error('[VERIFY_SMTP_CONNECTION_ERROR]', error)
@@ -97,19 +97,19 @@ export async function verifySmtpConnection(config: Pick<SmtpSettings, 'host' | '
             if (error.message.includes('ECONNREFUSED')) {
                 return {
                     success: false,
-                    error: 'Could not connect to SMTP server. Please check host and port'
+                    error: 'Ошибка подключения. Проверьте настройки SMTP-сервера'
                 }
             }
             if (error.message.includes('Invalid login')) {
                 return {
                     success: false,
-                    error: 'Invalid SMTP credentials. Please check username and password'
+                    error: 'Неверные учетные данные. Пожалуйста, проверьте имя пользователя и пароль'
                 }
             }
             if (error.message.includes('certificate')) {
                 return {
                     success: false,
-                    error: 'SSL/TLS certificate error. Try changing the "secure" option'
+                    error: 'Ошибка сертификата. Пожалуйста, проверьте настройки SMTP-сервера'
                 }
             }
             // Возвращаем оригинальное сообщение об ошибке, если оно есть
@@ -120,7 +120,7 @@ export async function verifySmtpConnection(config: Pick<SmtpSettings, 'host' | '
         }
         return {
             success: false,
-            error: 'Failed to verify SMTP connection'
+            error: 'Ошибка при проверке соединения'
         }
     }
 }
