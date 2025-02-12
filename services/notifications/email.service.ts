@@ -1,7 +1,9 @@
 import nodemailer from 'nodemailer';
 import { BaseNotificationService } from './base.notification.service';
-import { EmailPayload, NotificationPayload, SmtpConfig } from './types';
+import { EmailPayload, SmtpConfig } from './types';
 import { decrypt } from '@/utils/crypto/crypto';
+import { changeEmailTemplate } from './templates/changeEmail'
+import { verifyEmailTemplate } from './templates/verifyEmail'
 
 export class EmailService extends BaseNotificationService {
     
@@ -20,30 +22,15 @@ export class EmailService extends BaseNotificationService {
         this.fromName = process.env.SMTP_FROM_NAME || 'NITRINOnet Monitoring System';
         
     }
-
-    private async createTransporter(config: SmtpConfig) {
-        const decryptedPassword = decrypt(config.auth.encryptedPassword)
-        return nodemailer.createTransport({
-            service: undefined,
-            port: config.port,
-            host: config.host,
-            secure: config.secure,
-            auth: {
-                user: config.auth.user,
-                pass: decryptedPassword
-            }
-        } as nodemailer.TransportOptions)
-    }
-
-    async send(payload: NotificationPayload): Promise<boolean> {
+    // Метод для отправки с системными настройками из env
+    async send(payload: EmailPayload): Promise<boolean> {
         try {
             if (!('to' in payload)) {
                 console.error('[EMAIL_SERVICE_ERROR] No recipient specified');
                 return false;
             }
-            const emailPayload = payload as EmailPayload;
-            
-            // Используем системные настройки из .env
+            const emailPayload = payload as EmailPayload
+
             const systemConfig: SmtpConfig = {
                 host: process.env.SMTP_HOST!,
                 port: Number(process.env.SMTP_PORT!),
@@ -54,20 +41,48 @@ export class EmailService extends BaseNotificationService {
                 },
                 fromEmail: process.env.SMTP_FROM_EMAIL!,
                 fromName: process.env.SMTP_FROM_NAME || this.fromName
-            };
+            }
 
-            const transporter = await this.createTransporter(systemConfig);
+            return this.sendWithConfig(systemConfig, emailPayload)
+        } catch (error) {
+            console.error('[EMAIL_SERVICE_ERROR]', error)
+            return false
+        }
+    }
+
+    private async createTransporter(config: SmtpConfig) {
+        const decryptedPassword = decrypt(config.auth.encryptedPassword)
+        return nodemailer.createTransport({
+            
+            port: config.port,
+            host: config.host,
+            secure: config.secure,
+            auth: {
+                user: config.auth.user,
+                pass: decryptedPassword
+            }
+        } as nodemailer.TransportOptions)
+    }
+
+
+    async sendWithConfig(config: SmtpConfig, payload: EmailPayload): Promise<boolean> {
+        try {
+
+            const transporter = await this.createTransporter(config)
+            
             await transporter.sendMail({
                 from: {
-                    name: systemConfig.fromName || this.fromName,
-                    address: systemConfig.fromEmail
+                    name: config.fromName || this.fromName,
+                    address: config.fromEmail
                 },
-                to: emailPayload.to,
-                subject: emailPayload.subject || '',
-                text: emailPayload.text,
-                html: emailPayload.html || emailPayload.text,
-            });
-            return true;
+                to: payload.to,
+                subject: payload.subject || '',
+                text: payload.text,
+                html: payload.html || payload.text,
+            })
+
+            return true
+            
         } catch (error) {
             console.error('[EMAIL_SERVICE_ERROR]', error);
             return false;
@@ -79,35 +94,36 @@ export class EmailService extends BaseNotificationService {
         newEmail: string,
         code: string
     ): Promise<boolean> {
-        const html = `
-            <h1>Запрос на смену email</h1>
-            <p>Вами было запрошено изменение адреса электронной почты  с ${currentEmail} на ${newEmail}.</p>
-            <p>Ваш код проверки: <strong>${code}</strong></p>
-            <p>Код действителен в течении 15 минут.</p>
-            <p>Если вы не запрашивали смены адреса почты,  пожалуйста проигнорируйте данное сообщение.</p>
-        `;
-
         return this.send({
-            to: currentEmail,
-            subject: 'Уведомление о смене адреса почты',
+            to: newEmail,
+            subject: 'Изменение email',
             text: `Ваш код проверки: ${code}`,
-            html,
+            html: changeEmailTemplate(currentEmail, newEmail, code),
         });
     }
 
     async sendEmailVerification(email: string, code: string): Promise<boolean> {
-        const html = `
-            <h1>Проверка email</h1>
-            <p>Ваш код проверки: <strong>${code}</strong></p>
-            <p>Код действителен в течении 15 минут.</p>
-        `;
-
         return this.send({
             to: email,
-            subject: 'Проверка email',
+            subject: 'Подтверждение email',
             text: `Ваш код проверки: ${code}`,
-            html,
+            html: verifyEmailTemplate(code),
         });
+    }
+
+    async sendCustomEmail(
+        config: SmtpConfig,
+        to: string,
+        subject: string,
+        text: string,
+        html?: string
+    ): Promise<boolean> {
+        return this.sendWithConfig(config, {
+            to,
+            subject,
+            text,
+            html: html || text
+        })
     }
 
     async verifyConnection(config: {
@@ -120,6 +136,18 @@ export class EmailService extends BaseNotificationService {
         }
     }): Promise<boolean> {
         try {
+            console.log('[VERIFY_CONNECTION_INPUT]', {
+                host: config.host,
+                port: config.port,
+                secure: config.secure,
+                auth: {
+                    user: config.auth.user,
+                    // логируем длину зашифрованного пароля
+                    passwordLength: config.auth.encryptedPassword?.length,
+                    // первые несколько символов для проверки формата
+                    passwordStart: config.auth.encryptedPassword?.substring(0, 10)
+                }
+            });
             const decryptedPassword = decrypt(config.auth.encryptedPassword)
             const testTransporter = nodemailer.createTransport({
                 ...config,
@@ -132,7 +160,7 @@ export class EmailService extends BaseNotificationService {
             return true
         } catch (error) {
             console.error('[SMTP_VERIFY_ERROR]', error)
-            return false
+            throw error instanceof Error ? error : new Error('SMTP verification failed')
         }
     }
 }

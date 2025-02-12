@@ -14,7 +14,7 @@ export const SMTP_PROVIDER_DEFAULTS: Record<SmtpProvider, Required<Pick<ISmtpSet
     GMAIL: {
         host: 'smtp.gmail.com',
         port: 587,
-        secure: true
+        secure: false
     },
     YANDEX: {
         host: 'smtp.yandex.ru',

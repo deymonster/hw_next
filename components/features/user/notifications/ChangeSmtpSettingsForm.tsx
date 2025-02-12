@@ -4,7 +4,6 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } fr
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
 
-
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
 import { useSmtpSettings } from '@/hooks/useSmtpSettings'
@@ -13,7 +12,7 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { useEffect, useState } from 'react'
 import { SmtpProvider } from '@prisma/client'
-import { CardContainer } from '@/components/ui/elements/CardContainer'
+
 
 import { SMTP_PROVIDER_DEFAULTS } from '@/services/smtp-settings/smtp-settiings.constants'
 import { Button } from '@/components/ui/button'
@@ -33,7 +32,7 @@ const providers  = {
 
 export function ChangeSmtpSettingsForm() {
     const t = useTranslations('dashboard.settings.smtpSettings')
-    const { settings, isLoading, fetchSettings, updateSettings } = useSmtpSettings()
+    const { settings, isLoading, fetchSettings, updateSettings, testConnection } = useSmtpSettings()
     const [isTestingEmail, setIsTestingEmail] = useState(false)
     
     const form = useForm<TypeChangeSmtpSettingsSchema>({
@@ -82,6 +81,36 @@ export function ChangeSmtpSettingsForm() {
                 toast.error(t('errorMessage'))
             }
         })
+    }
+
+    async function handleTestConnection() {
+        const formData = form.getValues()
+        setIsTestingEmail(true)
+
+        try {
+                await testConnection({
+                        host: formData.host,
+                        port: formData.port,
+                        secure: formData.secure,
+                        username: formData.username,
+                        password: formData.password
+                },
+                {
+                    onSuccess: () => {
+                        toast.success(t('testSuccess'))
+                    },
+                    onError: (error) => {
+                        if (error instanceof Error) {
+                            toast.error(error.message)
+                        } else {
+                            toast.error(t('testError'))
+                        }
+                    }
+                }
+            )
+        } finally {
+            setIsTestingEmail(false)
+        }
     }
     
     return (
@@ -280,11 +309,12 @@ export function ChangeSmtpSettingsForm() {
                     <div className='flex justify-end gap-4 p-5'>
                         
                         <Button
-                            type="submit"
+                            type="button"
                             variant="outline"
-                            disabled={!form.formState.isValid || isLoading}
+                            onClick={handleTestConnection}
+                            disabled={!form.formState.isValid || isLoading || isTestingEmail}
                         >
-                            {isLoading ? (
+                            {isTestingEmail ? (
                                 <Loader2 className='animate-spin h-4 w-4 mr-2'/>
                             ) : (
                                 t('testButton')

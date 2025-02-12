@@ -292,6 +292,8 @@
 				},
 				"submitButton": "Сохранить",
 				"testButton": "Проверка",
+				"testSuccess": "Настройки SMTP корректны",
+				"testError": "Настройки SMTP неккоректны!",
 				"succesMessage": "Настройки SMTP успешно изменены",
 				"errorMessage": "Ошибка при обновлении настроек SMTP"
 			}

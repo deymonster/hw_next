@@ -5,11 +5,13 @@ import {
     getSmtpSettings,
     updateSmtpSettings,
     createDefaultSmtpSettings,
+    verifySmtpConnection
 } from '@/app/actions/smtpSettings'
 
 import {SMTP_PROVIDER_DEFAULTS} from '@/services/smtp-settings/smtp-settiings.constants'
 
 import type { SmtpSettings, SmtpProvider } from "@prisma/client"
+
 
 interface CallbackOptions {
   onSuccess?: () => void;
@@ -92,12 +94,42 @@ export function useSmtpSettings() {
         }
     }, [user?.id, fetchSettings])
 
+    const testConnection = useCallback(async (
+        config: Pick<SmtpSettings, 'host' | 'port' | 'secure' | 'username' | 'password'>,
+        {onSuccess, onError}: CallbackOptions = {}
+    ) => {
+        try {
+            const result = await verifySmtpConnection({
+                ...config
+            })
+            if (result.success) {
+                await updateSettings({
+                    isVerified: true,
+                    lastTestAt: new Date()
+                })
+                onSuccess?.()
+            } else {
+                const errorMessage = result.error || 'Failed to test SMTP connection';
+                onError?.(new Error(errorMessage));
+            }
+            return result
+        } catch (error) {
+            console.error('[SMTP_CONNECTION_TEST_ERROR]', error)
+            onError?.(error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to test SMTP connection'
+            };
+        }
+    }, [updateSettings]) 
+
     return {
         settings,
         isLoading: isSessionLoading,
         fetchSettings,
         updateSettings,
-        updateProvider
+        updateProvider,
+        testConnection
     }
 
 }

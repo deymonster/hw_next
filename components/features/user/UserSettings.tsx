@@ -12,7 +12,7 @@ import { ChangeLanguageForm } from "./appearance/ChangeLanguageForm"
 import { ChangeColorForm } from "./appearance/ChangeColorForm"
 import { ChangeNotificationsForm } from "./notifications/ChangeNotificationsForm"
 import { ChangeSmtpSettingsForm } from "./notifications/ChangeSmtpSettingsForm"
-import { Separator } from "@/components/ui/separator"
+
 
 export function UserSettings() {
     const t = useTranslations('dashboard.settings')

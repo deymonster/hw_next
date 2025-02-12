@@ -1,6 +1,7 @@
 'use server'
 
 import { services } from "@/services"
+import { encrypt } from '@/utils/crypto/crypto';
 import type { SmtpProvider, SmtpSettings } from "@prisma/client"
 import {  
     ISmtpSettingsCreateInput, 
@@ -26,6 +27,9 @@ export async function updateSmtpSettings(userId: string, data: Partial<Omit<Smtp
                 success: false,
                 error: 'No data provided'
             }
+        }
+        if (data.password) {
+            data.password = encrypt(data.password)
         }
         await services.data.smtp_settings.update(userId, data)
         return {
@@ -71,13 +75,15 @@ export async function createDefaultSmtpSettings(userId: string, provider: SmtpPr
 
 export async function verifySmtpConnection(config: Pick<SmtpSettings, 'host' | 'port' | 'secure' | 'username' | 'password'>): Promise<{success:  boolean, error?: string}> {
     try {
+
+        const encryptedPassword = encrypt(config.password);
         const isValid = await services.infrastructure.notifications.email.verifyConnection({
             host: config.host,
             port: config.port,
             secure: config.secure,
             auth: {
                 user: config.username,
-                pass: config.password
+                encryptedPassword: encryptedPassword
             }
         })
 
