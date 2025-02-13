@@ -43,34 +43,29 @@ export function ChangeTelegramSettingsForm() {
         try {
             
             const result = await verifyBot(values.botToken, {
-                onSuccess: () => toast.success(t('success.verify')),
                 onError: () => toast.error(t('errors.verify'))
             })
 
-            
-
             if (result?.isValid && result.username) {
-
-                window.open(`https://t.me/${result.username}`, '_blank')
 
                 await saveSettings({
                     botToken: values.botToken,
-                    botUsername: result.username
+                    botUsername: result.username,
+                    isActive: false,
+                    telegramChatId: null
                 },{
-                    onSuccess: () => toast.success(t('success.save')),
-                    onError: () => toast.error(t('errors.save'))
-                }
-                )
-                
-                await startBot({
                     onSuccess: () => {
-                        toast.success(t('success.start')) 
-                        
+                        toast.success(t('success.save')),
+                        toast.info('Press start to activate Bot!')
+                        window.open(`https://t.me/${result.username}`, '_blank')
                     },
-                    onError: () => toast.error(t('errors.start'))
+                    onError: () => toast.error(t('errors.save'))
                 })
                 
-                
+                await startBot({
+                    onSuccess: () => toast.success(t('success.start')),
+                    onError: () => toast.error(t('errors.start'))
+                })
                 
             }
         } catch (error) {
@@ -104,7 +99,7 @@ export function ChangeTelegramSettingsForm() {
             }, {
                 onError: () => toast.error(t('errors.save'))
             })
-            // setStep('input')
+            
             form.reset()
         } catch (error) {
             console.error('[TELEGRAM_FORM] Reset error:', error)
@@ -115,7 +110,7 @@ export function ChangeTelegramSettingsForm() {
         <FormWrapper heading={t('header.heading')}>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleVerify)} className="grid gap-y-3">
-                    {!isConnected ? (
+                    {!settings?.botUsername ? (
                         <>
                             <FormField
                                 control={form.control}
@@ -146,12 +141,43 @@ export function ChangeTelegramSettingsForm() {
                                 </Button>
                             </div>
                         </>
+                    ) : !settings.isActive ? (
+                        <div className="px-5 pb-5 space-y-4">
+                            <FormDescription>
+                                {t('connectDescription')}
+                            </FormDescription>
+                            <div className="flex justify-end gap-2">
+                                <Button 
+                                    variant="outline"
+                                    onClick={handleReconfigure}
+                                >
+                                    {t('reconfigure')}
+                                </Button>
+                                <Button 
+                                    variant="secondary"
+                                    onClick={() => window.open(`https://t.me/${settings.botUsername}`, '_blank')}
+                                >
+                                    {t('openChat')}
+                                </Button>
+                            </div>
+                        </div>
                     ) : (
                         <div className="px-5 pb-5 space-y-4">
                             <div className="flex items-center gap-2">
-                                <FormDescription className="text-green-600">
-                                    {t('connected')} @{settings?.botUsername}
-                                </FormDescription>
+                                <div className="flex items-center gap-2 text-green-600">
+                                    <div className="flex items-center gap-2">
+                                        <span>✅</span>
+                                        <span>Подключен бот:</span>
+                                        <a 
+                                            href={`https://t.me/${settings.botUsername}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="font-medium hover:underline"
+                                        >
+                                            @{settings.botUsername}
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                             <div className="flex justify-end gap-2">
                                 <Button 
@@ -177,4 +203,7 @@ export function ChangeTelegramSettingsForm() {
             </Form>
         </FormWrapper>
     )
+    
 }
+     
+    
