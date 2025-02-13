@@ -291,6 +291,33 @@
 				"testError": "Smtp settings not correctly",
 				"succesMessage": "SMTP settings successfully updated",
 				"errorMessage": "Error during SMTP settings update"
+			},
+			"telegramSettings": {
+				"header": {
+				"heading": "Telegram Bot Settings"
+				},
+				"botToken": {
+				"heading": "Bot Token",
+				"description": "Enter the token received from @BotFather"
+				},
+				"verify": "Verify",
+				"reconfigure": "Reconfigure",
+				"openChat": "Open Chat",
+				"connected": "Bot successfully connected!",
+				"sendTest": "Send Test Message",
+				"connectDescription": "Bot successfully verified! Now open the chat with the bot and press /start",
+				"errors": {
+				"verify": "Error verifying bot settings",
+				"save": "Error saving bot settings",
+				"start": "Error starting bot",
+				"testMessage": "Error sending test message"
+				},
+				"success": {
+					"testMessage": "Test message sent",
+					"verify": "Bot successfully verified! Now open the chat with the bot and press /start",
+					"save": "Bot settings successfully saved",
+					"start": "Bot successfully started"
+				}
 			}
 		}
 	},

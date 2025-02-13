@@ -103,13 +103,15 @@ export class TelegramService extends BaseNotificationService {
                 if (onStart) {
                     await onStart(chatId, username, firstName);
                 }
-                ctx.reply(`
-                    ✅ Успешное подключение!
-                    \n\nChat ID: ${chatId}
-                    \nUsername: ${username || 'не указан'}
-                    \nИмя: ${firstName || 'не указано'}
-                    \n\nТеперь вы будете получать уведомления от системы мониторинга.
-                    `)
+                ctx.reply(`✅ NITRINOnet Monitoring
+
+🤖 Бот успешно активирован и настроен для получения уведомлений!
+
+👤 Информация о подключении:
+• Username: ${username || 'не указан'}
+• Имя: ${firstName || 'не указано'}
+
+Вы будете получать уведомления о важных событиях системы мониторинга.`)
     
                 console.log('[TELEGRAM_BOT] Stopping bot after successful connection');
                 await this.stopBot();
