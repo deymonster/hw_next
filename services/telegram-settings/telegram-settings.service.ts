@@ -17,9 +17,19 @@ export class TelegramSettingsService
     }
 
     async update(userId: string, data: Partial<ITelegramSettingsCreateInput>): Promise<TelegramSettings> {
-        return this.model.update({
+        return this.model.upsert({
             where: { userId },
-            data
+            create: {
+                userId,
+                botToken: data.botToken ?? '',
+                botUsername: data.botUsername || '',
+                isActive: data.isActive ?? false,
+                telegramChatId: data.telegramChatId ?? null,
+                username: data.username ?? '',
+                firstName: data.firstName ?? '',
+                lastInteractionAt: data.lastInteractionAt?? null,
+            },
+            update: data,
         });
     }
 }

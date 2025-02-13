@@ -34,12 +34,15 @@ export class TelegramService extends BaseNotificationService {
         try{
             const tempBot = new Telegraf(token);
             const botInfo = await tempBot.telegram.getMe();
-            tempBot.stop();
-
-            return {
+            
+            const result = {
                 isValid: true,
-                username: botInfo.username
-            }
+                username: botInfo.username,
+                firstName: botInfo.first_name
+            };
+
+
+            return result
         } catch (error) {
             console.error('[TELEGRAM_VERIFY_ERROR]', error);
             return {
@@ -79,28 +82,45 @@ export class TelegramService extends BaseNotificationService {
     }
 
     async startBot(userId: string, onStart?: (chatId: string, username?: string, firstName?: string) => Promise<void>): Promise<void> {
-        if (!this.bot) {
-            await this.initBot(userId);
-        }
-
-        if (!this.bot) {
-            throw new Error('Bot not initialized');
-        }
-
-        this.bot.command('start', async (ctx) => {
-            const chatId = ctx.chat.id.toString();
-            const username = ctx.from.username;
-            const firstName = ctx.from.first_name;
-
-            if (onStart) {
-                await onStart(chatId, username, firstName);
+        
+        try {
+            if (!this.bot) {
+                await this.initBot(userId);
             }
 
-            await ctx.reply('Welcome to NITRINOnet Monitoring Bot! Your chat has been successfully connected.')
-        })
+            if (!this.bot) {
+                throw new Error('Bot not initialized');
+            }
+            console.log('[TELEGRAM_BOT] Starting bot...');
 
-        await this.bot.launch();
-
+            this.bot.command('start', async (ctx) => {
+                const chatId = ctx.chat.id.toString();
+                const username = ctx.from.username;
+                const firstName = ctx.from.first_name;
+    
+                console.log('[TELEGRAM_BOT] Received /start command:', { chatId, username, firstName });
+    
+                if (onStart) {
+                    await onStart(chatId, username, firstName);
+                }
+                ctx.reply(`
+                    ✅ Успешное подключение!
+                    \n\nChat ID: ${chatId}
+                    \nUsername: ${username || 'не указан'}
+                    \nИмя: ${firstName || 'не указано'}
+                    \n\nТеперь вы будете получать уведомления от системы мониторинга.
+                    `)
+    
+                console.log('[TELEGRAM_BOT] Stopping bot after successful connection');
+                await this.stopBot();
+            })
+            await this.bot.launch();
+            console.log('[TELEGRAM_BOT] Bot launched successfully');
+        } catch (error) {
+            console.error('[TELEGRAM_BOT_ERROR]', error);
+            throw error;
+        }
+                
         process.once('SIGINT', () => this.bot?.stop('SIGINT'));
         process.once('SIGTERM', () => this.bot?.stop('SIGTERM'));
     }
