@@ -64,3 +64,43 @@ export async function sendTelegramMessage(userId: string, message: string) {
         message
     )
 }
+
+export async function checkTelegramAvailability(userId: string): Promise<{
+    isAvailable: boolean,
+    error?: string
+}> {
+    try {
+        const settings = await services.data.telegram_settings.findByUserId(userId)
+
+        if (!settings) {
+            return {
+                isAvailable: false,
+                error: 'Telegram settings not found'
+            }
+        }
+
+        // check all nessesary fields
+        const missingFileds = []
+        if (!settings.isActive) missingFileds.push('bot is not activa')
+        if (!settings.telegramChatId) missingFileds.push('chat is not connected')
+        if (!settings.botToken) missingFileds.push('bot token is missing')
+        
+        if (missingFileds.length > 0) {
+        return {
+            isAvailable: false,
+            error: `Telegram bot is not configured properly: ${missingFileds.join(', ')}`
+        }
+        }
+
+        
+        return {
+            isAvailable: true
+        }
+    } catch (error) {
+        console.error('[CHECK_TELEGRAM_AVAILABILITY_ERROR]', error)
+        return {
+            isAvailable:  false,
+            error: 'Failed to check Telegram availability'
+        }
+    }
+}

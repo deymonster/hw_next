@@ -3,6 +3,7 @@
 import { ToggleCard, ToggleCardSkeleton } from "@/components/ui/elements/ToggleCard"
 import { Form, FormField } from "@/components/ui/form"
 import { useNotificationSettings } from "@/hooks/useNotificationSettings"
+import { useTelegram } from "@/hooks/useTelegram"
 import { type TypeChangeNotificationsSettingsSchema, changeNotificationsSchema } from "@/schemas/user/change-notifications.schema"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useTranslations } from "next-intl"
@@ -12,7 +13,8 @@ import { toast } from "sonner"
 
 export function ChangeNotificationsForm() {
     const t = useTranslations('dashboard.settings.notifications')
-
+    
+    const { checkAvailability } = useTelegram();
     const { settings, isLoading: loadingProfile, fetchSettings, updateSettings } = useNotificationSettings()
 
     useEffect(() => {
@@ -32,17 +34,48 @@ export function ChangeNotificationsForm() {
 
     })
 
-    function onChange(field: keyof TypeChangeNotificationsSettingsSchema, 
+    async function onChange(field: keyof TypeChangeNotificationsSettingsSchema, 
         value: boolean) {
+
+            if (field !== 'telegramNotifications' || !value) {
+                form.setValue(field, value)
+
+                const fieldMapping = {
+                    siteNotifications: 'siteNotification',
+                    telegramNotifications:'telegramNotification',
+                } as const
+
+                updateSettings({
+                    [fieldMapping[field]]: value,
+                }, {
+                    onSuccess: () => {
+                        toast.success(t('succesMessage'))
+                    },
+                    onError: () => {
+                        toast.error(t('errorMessage'))
+                    }
+                })
+                return
+
+            }
+
+            // Check telegram settings before enable it
+            const result = await checkAvailability({
+                onError: (error) => {
+                    toast.error(error instanceof Error ? error.message : t('errors.telegramCheck'))
+                }
+            })
+            
+            if (!result?.isAvailable) {
+                form.setValue(field, false)
+                toast.error(t('errors.telegramNotConfigured'))
+                return
+            }
+
+            // if isAvailable 
             form.setValue(field, value)
-
-            const fieldMapping = {
-                siteNotifications: 'siteNotification',
-                telegramNotifications:'telegramNotification',
-            } as const
-
-            updateSettings({
-                [fieldMapping[field]]: value,
+            await updateSettings({
+                telegramNotification: value
             }, {
                 onSuccess: () => {
                     toast.success(t('succesMessage'))
@@ -51,6 +84,10 @@ export function ChangeNotificationsForm() {
                     toast.error(t('errorMessage'))
                 }
             })
+
+            
+
+            
             
     }
     return loadingProfile ? (

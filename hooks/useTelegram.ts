@@ -7,7 +7,8 @@ import {
     saveTelegramSettings,
     startTelegramBot,
     sendTelegramMessage,
-    getTelegramSettings
+    getTelegramSettings,
+    checkTelegramAvailability
 } from '@/app/actions/telegramService'
 
 
@@ -167,12 +168,29 @@ export function useTelegram() {
 
     }, [user?.id])
 
+    const checkAvailability = useCallback(async (options?: CallbackOptions) => {
+        if (!user?.id) return null;
+
+        try {
+            const result = await checkTelegramAvailability(user.id);
+            if (!result.isAvailable && result.error) {
+                options?.onError?.(new Error(result.error));
+            }
+            return result;
+        } catch (error) {
+            options?.onError?.(error);
+            return null;
+        }
+    }, [user?.id]);
+
+
     return {
         verifyBot,
         saveSettings,
         startBot,
         sendTestMessage,
         sendMessage,
+        checkAvailability,
         isVerifying,
         isSaving,
         isStarting,
