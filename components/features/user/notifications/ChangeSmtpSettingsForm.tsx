@@ -73,6 +73,8 @@ export function ChangeSmtpSettingsForm() {
     }
 
     async function onSubmit(data: TypeChangeSmtpSettingsSchema) {
+        console.log('[SMTP_FORM] Submitting form with password length:', data.password?.length)
+        console.log('[SMTP_FORM] Submitting form with password:', data.password);
         await updateSettings(data, {
             onSuccess: () => {
                 toast.success(t('succesMessage'))

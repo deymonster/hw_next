@@ -14,14 +14,14 @@ export async function GET(request: Request) {
     }
 
     try {
-        const user = await services.user.getByToken(token);
+        const user = await services.data.user.getByToken(token);
         if (!user) {
             return NextResponse.json(
               { success: false, message: AUTH_ERRORS.INVALID_TOKEN },
               { status: 400 }
             );
         }
-        await services.user.update(user.id, {
+        await services.data.user.update(user.id, {
             emailVerified: true,
             verificationToken: null, 
           });

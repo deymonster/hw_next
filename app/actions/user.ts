@@ -47,7 +47,8 @@ export async function initiateEmailChange(
         await services.infrastructure.notifications.email.sendChangeEmailVerification(
             currentEmail,
             newEmail,
-            verificationCode
+            verificationCode,
+            userId
         );
 
         return true;
@@ -105,14 +106,33 @@ export async function confirmEmailChange(userId: string): Promise<User | null> {
             emailVerified: true
         });
 
+        // Сбрасываем SMTP настройки
+        const smtpSettings = await services.data.smtp_settings.findByUserId(userId);
+        if (smtpSettings) {
+            console.log('[CONFIRM_EMAIL] Resetting SMTP settings after email change');
+            // Создаем дефолтные настройки с тем же провайдером
+            await services.data.smtp_settings.update(userId, {
+                isVerified: false, 
+                username: '', 
+                password: '', 
+                fromEmail: '', 
+                fromName: null, 
+                lastTestAt: null 
+            });
+        }
+
         // Очищаем кэш
         await services.infrastructure.cache.delete(`email_change_${userId}`);
 
+        // Получаем настроки пользователя
+        const telegramSettings = await services.data.telegram_settings.findByUserId(userId)
+
         // Отправляем уведомление в Telegram
-        if (process.env.ADMIN_TELEGRAM_CHAT_ID) {
+        if (telegramSettings?.isActive && telegramSettings.telegramChatId) {
             await services.infrastructure.notifications.telegram.sendNotification(
-                process.env.ADMIN_TELEGRAM_CHAT_ID,
-                `Пользователь ${updatedUser.name} ${changeData.currentEmail} сменил email на ${changeData.newEmail}`
+                userId,
+                telegramSettings.telegramChatId,
+                `Email успешно изменен с ${changeData.currentEmail} на ${changeData.newEmail}. Пожалуйста, настройте SMTP для отправки уведомлений.`
             );
         }
 

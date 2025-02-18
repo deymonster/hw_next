@@ -37,7 +37,7 @@ export const providers = [
           throw new AuthError('INVALID_CREDENTIALS')
         }
 
-        const user = await services.user.getByEmail(email)
+        const user = await services.data.user.getByEmail(email)
 
         if (!user) {
           throw new AuthError('USER_NOT_FOUND')

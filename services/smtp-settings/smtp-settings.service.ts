@@ -19,7 +19,9 @@ export class SmtpSettingsService
 
     async update(userId: string, data: Partial<ISmtpSettingsCreateInput>): Promise<SmtpSettings> {
         if (data.password) {
+            console.log('[SMTP_SERVICE] Before encryption password:', data.password);
             data.password = encrypt(data.password);
+            console.log('[SMTP_SERVICE] After encryption password:', data.password);
         }
         return this.model.update({
             where: { userId },
@@ -30,6 +32,7 @@ export class SmtpSettingsService
     async getDecryptedPassword(userId: string): Promise<string | null> {
         const settings = await this.findByUserId(userId);
         if (!settings) return null;
+        
         return decrypt(settings.password);
     }
 }

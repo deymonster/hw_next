@@ -29,7 +29,15 @@ export async function updateSmtpSettings(userId: string, data: Partial<Omit<Smtp
             }
         }
         if (data.password) {
-            data.password = encrypt(data.password)
+            console.log('[DEBUG] Original password length:', data.password.length);
+            console.log('[DEBUG] Original password first 4 chars:', data.password.substring(0, 4) + '...');
+
+
+            console.log('[DEBUG] Encrypted password format:', {
+                length: data.password.length,
+                containsIV: data.password.includes(':'),
+                firstPart: data.password.split(':')[0]?.substring(0, 10) + '...'
+            });
         }
         await services.data.smtp_settings.update(userId, data)
         return {
@@ -76,14 +84,14 @@ export async function createDefaultSmtpSettings(userId: string, provider: SmtpPr
 export async function verifySmtpConnection(config: Pick<SmtpSettings, 'host' | 'port' | 'secure' | 'username' | 'password'>): Promise<{success:  boolean, error?: string}> {
     try {
 
-        const encryptedPassword = encrypt(config.password);
+        
         const isValid = await services.infrastructure.notifications.email.verifyConnection({
             host: config.host,
             port: config.port,
             secure: config.secure,
             auth: {
                 user: config.username,
-                encryptedPassword: encryptedPassword
+                encryptedPassword: config.password
             }
         })
 
