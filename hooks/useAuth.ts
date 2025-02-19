@@ -36,13 +36,11 @@ export function useAuth(): {
         try {
             // Очищаем серверную сессию
             await clearSession()
+
             // Очищаем клиентское состояние
             store.clear()
-            // Выходим через NextAuth
-            await nextAuthSignOut({
-                redirect: true,
-                callbackUrl: "/account/login"
-            })
+
+            
         } catch (error) {
             console.error('Logout error:', error)
             throw error

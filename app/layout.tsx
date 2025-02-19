@@ -1,18 +1,9 @@
 import type { Metadata } from "next";
-
+import { RootLayoutClient } from './RootLayoutClient';
+import { AbstractIntlMessages } from 'next-intl';
 import '@/styles/globals.css';
 import '@/styles/themes.css'
-
-import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import {GeistSans} from 'geist/font/sans';
-import { ThemeProvider } from "@/providers/Themeprovider";
-import { ToastProvider } from "@/providers/ToastProvider";
-import { SessionProvider } from "next-auth/react";
-import { SWRProvider } from '@/providers/SWRProvider';
-import { ColorSwitcher } from "@/components/ui/elements/ColorSwitcher";
-
-
 
 export const dynamic = 'force-dynamic';
 
@@ -27,28 +18,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const locale = await getLocale()
-  const messages = await getMessages()
+  const messages = await getMessages() as AbstractIntlMessages
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body className={GeistSans.variable}>
-        <ColorSwitcher />
-        <NextIntlClientProvider messages={messages} locale={locale}>
-        <SessionProvider> 
-          <ThemeProvider 
-            attribute="class"
-            defaultTheme="dark"
-            disableTransitionOnChange
-          >
-            
-            <ToastProvider />
-              <SWRProvider>
-              {children}
-              </SWRProvider>
-          </ThemeProvider>
-        </SessionProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
-  );
+    <RootLayoutClient 
+      locale={locale} 
+      messages={messages} 
+      timeZone="Europe/Moscow" 
+    >
+      {children}
+    </RootLayoutClient>
+  )
 }

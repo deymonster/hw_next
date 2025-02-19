@@ -66,7 +66,7 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    const callbackUrl = prevState || '/settings'
+    const callbackUrl = prevState || '/dashboard/settings'
 
     await signIn('credentials', {
       email: formData.get('email'),
@@ -86,6 +86,8 @@ export async function authenticate(
   }
 }
 
+
+
 // Тип для возвращаемого значения getCurrentUser
 type GetCurrentUserReturn = {
   user: any;  
@@ -97,7 +99,7 @@ type GetCurrentUserReturn = {
 export async function getCurrentUser(forceRefetch = false): Promise<GetCurrentUserReturn> {
   try {
     const session = await auth()
-    console.log('Session', session)
+    
     if (!session?.user?.id) {
       return {
         user: null,
@@ -152,11 +154,40 @@ export async function getCurrentUser(forceRefetch = false): Promise<GetCurrentUs
 
 // Action для удаления сессии
 export async function clearSession() {
-  try {
-    await signOut()
-  } catch (error) {
+    try{
+      const session = await auth()
+    
+      if (session?.user?.id && session?.user?.sessionId) {
+        // Удаляем сессию из Redis
+        const response = await fetch(`${process.env.NEXTAUTH_URL}/api/auth/session-check/delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            userId: session.user.id, 
+            sessionId: session.user.sessionId 
+          }),
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete Redis session')
+        }
+      }
+      await signOut({ 
+        redirect: true,
+        redirectTo: '/account/login'
+      }) 
+      
+    } catch (error) {
     console.error('[CLEAR_SESSION_ERROR]', error)
+    if (error instanceof Error && error.message === 'Failed to delete Redis session') {
+      console.error('[CLEAR_SESSION_ERROR]', error)
+      throw error
+    }
+    return
   }
+  
 }
 
 export async function logout() {

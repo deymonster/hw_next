@@ -10,7 +10,7 @@ declare module "next-auth" {
             email: string
             role: Role
             image?: string | null
-            
+            sessionId?: string
         } & DefaultSession["user"]
     }
 }
@@ -22,6 +22,7 @@ export interface CustomUser {
   role: Role
   name?: string | null
   image?: string | null
+  sessionId?: string 
 }
 
 // Расширяем тип Session
@@ -31,7 +32,7 @@ export interface CustomSession extends DefaultSession {
         email: string
         role: Role
         image?: string | null
-        
+        sessionId?: string
     } & DefaultSession["user"]
 }
 
@@ -40,11 +41,12 @@ export interface CustomJWT extends JWT {
   id: string
   email: string
   role: Role
+  sessionId?: string
 }
 
 // Тип для ответа аутентификации
 export interface AuthResponse {
   success: boolean
   message?: string
-  user?: User
+  user?: CustomUser
 }
