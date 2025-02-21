@@ -4,6 +4,8 @@ import { KEY_PREFIXES, TTL } from './constants'
 import type { UserSession } from './types'
 
 
+
+
 export class RedisService {
   private readonly client: Redis;  
   private static instance: RedisService | null = null;
@@ -37,38 +39,6 @@ export class RedisService {
     return RedisService.instance;
   }
 
-  // async setSession(sessionId: string, data: SessionData): Promise<void> {
-  //   const key = `${KEY_PREFIXES.SESSION}${sessionId}`
-  //   await this.client.set(key, JSON.stringify(data), 'EX', TTL.SESSION);
-  // }
-
-  // async getSession(sessionId: string): Promise<SessionData | null> {
-  //   const key = `${KEY_PREFIXES.SESSION}${sessionId}`
-  //   const data = await this.client.get(key)
-  //   return data ? JSON.parse(data) : null
-  // }
-
-  // async deleteSession(sessionId: string): Promise<void> {
-  //   const key = `${KEY_PREFIXES.SESSION}${sessionId}`
-  //   await this.client.del(key)
-  // }
-
-  // // Новые методы для работы с кэшем пользователя
-  // async setUserCache(userId: string, data: any): Promise<void> {
-  //   const key = `${KEY_PREFIXES.USER_CACHE}${userId}`
-  //   await this.client.set(key, JSON.stringify(data), 'EX', TTL.USER_CACHE);
-  // }
-
-  // async getUserCache(userId: string): Promise<any | null> {
-  //   const key = `${KEY_PREFIXES.USER_CACHE}${userId}`
-  //   const data = await this.client.get(key)
-  //   return data ? JSON.parse(data) : null
-  // }
-
-  // async deleteUserCache(userId: string): Promise<void> {
-  //   const key = `${KEY_PREFIXES.USER_CACHE}${userId}`
-  //   await this.client.del(key)
-  // }
 
   private convertToRedisHash(data: Record<string, any>): Record<string, string> {
     return Object.entries(data).reduce((acc, [key, value]) => ({
@@ -78,12 +48,37 @@ export class RedisService {
   }
 
   private convertFromRedisHash(hash: Record<string, string>): UserSession {
-    return {
+    const session = {
       ...hash,
       lastActive: parseInt(hash.lastActive),
       createdAt: parseInt(hash.createdAt),
-      isActive: hash.isActive === 'true'
+      isActive: hash.isActive === 'true',
+      metadata: hash.metadata ? JSON.parse(hash.metadata) : undefined
     } as UserSession;
+    return session;
+  }
+
+  private getBrowserInfo(ua: string): { name: string, version: string } {
+    if (ua.includes('Firefox/')) return { name: 'Firefox', version: ua.split('Firefox/')[1].split(' ')[0] }
+    if (ua.includes('Chrome/')) return { name: 'Chrome', version: ua.split('Chrome/')[1].split(' ')[0] }
+    if (ua.includes('Safari/')) return { name: 'Safari', version: ua.split('Version/')[1]?.split(' ')[0] || 'Unknown' }
+    if (ua.includes('Edge/')) return { name: 'Edge', version: ua.split('Edge/')[1].split(' ')[0] }
+    return { name: 'Unknown', version: 'Unknown' }
+  }
+
+  private getOSInfo(ua: string): { name: string, version: string } {
+    if (ua.includes('Windows NT')) return { name: 'Windows', version: ua.split('Windows NT ')[1].split(';')[0] }
+    if (ua.includes('Mac OS X')) return { name: 'MacOS', version: ua.split('Mac OS X ')[1].split(')')[0] }
+    if (ua.includes('Linux')) return { name: 'Linux', version: 'Unknown' }
+    if (ua.includes('Android')) return { name: 'Android', version: ua.split('Android ')[1].split(';')[0] }
+    if (ua.includes('iOS')) return { name: 'iOS', version: ua.split('OS ')[1].split(' ')[0] }
+    return { name: 'Unknown', version: 'Unknown' }
+  }
+
+  private getDeviceType(ua: string): string {
+    if (ua.includes('Mobile')) return 'mobile'
+    if (ua.includes('Tablet')) return 'tablet'
+    return 'desktop'
   }
 
   async createUserSession(userId: string, 
@@ -93,15 +88,29 @@ export class RedisService {
   }): Promise<string> {
       const sessionId = this.generateUUID()
       console.log('[Redis] Creating new session:', sessionId)
-
+      
+      const browser = data.userAgent ? this.getBrowserInfo(data.userAgent) : { name: 'Unknown', version: 'Unknown' }
+      const os = data.userAgent ? this.getOSInfo(data.userAgent) : { name: 'Unknown', version: 'Unknown' }
+      
       const session: UserSession = {
         sessionId,
         userId,
-        userAgent: data.userAgent,
-        ip: data.ip,
         lastActive: Date.now(),
         isActive: true,
         createdAt: Date.now(),
+        metadata: {
+          device: {
+            browser: browser.name,
+            browserVersion: browser.version,
+            os: os.name,
+            osVersion: os.version,
+            type: data.userAgent? this.getDeviceType(data.userAgent) : 'Unknown',
+            userAgent: data.userAgent || 'Unknown'
+          },
+          network: {
+            ip: data.ip || 'Unknown'
+          }
+        }
       }
 
       const key = `${KEY_PREFIXES.SESSION_INFO}${sessionId}`

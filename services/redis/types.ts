@@ -26,10 +26,21 @@ export interface SessionData {
 export interface UserSession {
   sessionId: string
   userId: string
-  userAgent?: string
-  ip?: string
   lastActive: number
   isActive: boolean
   createdAt: number
+  metadata?: {
+    device?: {
+      browser: string
+      browserVersion: string
+      os: string
+      osVersion: string
+      type: string
+      userAgent: string
+    }
+    network?: {
+      ip: string
+    }
+  }
 }
 

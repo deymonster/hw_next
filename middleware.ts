@@ -103,7 +103,7 @@ export default async function middleware(request: NextRequest) {
 // Защищаем все роуты кроме публичных
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|images).*)',
+    '/((?!api/metadata|api|_next/static|_next/image|favicon.ico|images).*)',
     '/api/auth/signout'
   ]
 }

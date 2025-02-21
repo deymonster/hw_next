@@ -327,6 +327,36 @@
 				"save": "Настройки бота успешно сохранены",
 				"start": "Бот успешно запущен"
 				}
+			},
+			"sessions": {
+				"header": {
+					"heading": "Сессии",
+					"description": "Сессии - это устройства, которые вы используете или которые вы использовали для входа в вашу учетную запись NITRINO Monitoring"
+				},
+				"info": {
+					"current": "Текущая сессия",
+					"active": "Активные сессии",
+					"notFound": "Активных сессий не найдено"
+				},
+				"sessionItem": {
+					"deleteButton": "Удалить",
+					"detailButton": "Подробнее",
+					"confirmModal": {
+						"heading": "Удаление сессии",
+						"message": "Вы уверены, что хотите удалить эту сессию?"
+					},
+					"succesMessage": "Сессия успешно удалена",
+					"errorMessage": "Ошибка удаления сессии"
+				},
+				"sessionModal": {
+					"heading": "Информация о сессии",
+					"device": "Устройство",
+					"browser": "Браузер",
+					"os": "Операционная система",
+					"osVersion": "Версия операционной системы",
+					"ipAddress": "IP-адрес",
+					"createdAt": "Дата создания"
+				}
 			}
 	
 		}
@@ -339,6 +369,24 @@
 		"confirmModal": {
 			"cancel": "Отмена",
 			"continue": "Продолжить"
+		}
+	},
+	"utils": {
+		"formatDate": {
+			"months": {
+				"january": "января",
+				"february": "февраля",
+				"march": "марта",
+				"april": "апреля",
+				"may": "мая",
+				"june": "июня",
+				"july": "июля",
+				"august": "августа",
+				"september": "сентября",
+				"october": "октября",
+				"november": "ноября",
+				"december": "декабря"
+			}
 		}
 	}
 }

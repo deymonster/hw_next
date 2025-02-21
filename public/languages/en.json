@@ -318,6 +318,36 @@
 					"save": "Bot settings successfully saved",
 					"start": "Bot successfully started"
 				}
+			},
+			"sessions": {
+				"header": {
+					"heading": "Sessions",
+					"description": "Sessions are devices that are currently logged in NITRINOnet Monitoring Dashboard. You can manage them here."
+				},
+				"info": {
+					"current": "Current session",
+					"active": "Active sessions",
+					"notFound": "Active sessions not found"
+				},
+				"sessionItem": {
+					"deleteButton": "Delete",
+					"detailButton": "Details",
+					"confirmModal": {
+						"heading": "Delete session",
+						"message": "Are you sure you want to delete this session? This action cannot be undone."
+					},
+					"succesMessage": "Session successfully deleted",
+					"errorMessage": "Error deleting session"
+				},
+				"sessionModal": {
+					"heading": "Session details",
+					"device": "Device",
+					"browser": "Browser",
+					"os": "Operating system",
+					"osVersion": "OS version",
+					"ipAddress": "IP-address",
+					"createdAt": "Created at"
+				}
 			}
 		}
 	},
@@ -329,6 +359,24 @@
 		"confirmModal": {
 			"cancel": "Cancel",
 			"continue": "Continue"
+		}
+	},
+	"utils": {
+		"formatDate": {
+			"months": {
+				"january": "january",
+				"february": "february",
+				"march": "march",
+				"april": "april",
+				"may": "may",
+				"june": "june",
+				"july": "july",
+				"august": "august",
+				"september": "september",
+				"october": "october",
+				"november": "november",
+				"december": "december"
+			}
 		}
 	}
 }
