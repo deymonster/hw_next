@@ -94,7 +94,9 @@ model SmtpSettings {
 
 model Device {
   id             String       @id @default(uuid())
-  uniqueId       String?      @unique
+  name           String
+  ipAddress      String   
+  agentKey       String?      @unique
   serialNumber   String?
   warrantyStatus DateTime?
   lastUpdate     DateTime     @updatedAt
@@ -104,10 +106,11 @@ model Device {
   deviceTag      String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  lastSeen       DateTime? 
   location       Location?    @relation("LocationDevices", fields: [locationId], references: [id])
 
   @@index([status])
-  @@index([uniqueId])
+  @@index([agentKey])
   @@index([type])
 }
 

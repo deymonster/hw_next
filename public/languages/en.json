@@ -359,6 +359,12 @@
 		"confirmModal": {
 			"cancel": "Cancel",
 			"continue": "Continue"
+		},
+		"copyButton": {
+			"succesMessage": "Copied"
+		},
+		"dataTable": {
+			"notFound": "Nothing found"
 		}
 	},
 	"utils": {

@@ -6,6 +6,8 @@ import { CacheService } from './cache/cache.service';
 import { SmtpSettingsService} from './smtp-settings/smtp-settings.service';
 import { TelegramSettingsService} from './telegram-settings/telegram-settings.service';
 import { NotificationSettingsService } from './notification-settings/notification-settings.service'
+import { DeviceService } from './device/device.service';
+import { NetworkScannerService } from './network-scanner/network-scanner.service';
 import type { IServices, IDataServices, IInfrastructureServices } from './types'
 
 class ServiceFactory {
@@ -15,18 +17,20 @@ class ServiceFactory {
     
 
     private constructor() {
-        
+        const deviceService = new DeviceService(prisma)
         this.dataServices = {
             user: new UserService(prisma),
             event: new EventService(prisma),
             smtp_settings: new SmtpSettingsService(prisma),
             telegram_settings: new TelegramSettingsService(prisma),
-            notification_settings: new NotificationSettingsService(prisma)
+            notification_settings: new NotificationSettingsService(prisma),
+            device: deviceService
         }
 
         this.infrastructureServices = {
             cache: new CacheService(),
-            notifications: new NotificationFactory()
+            notifications: new NotificationFactory(),
+            network_scanner: new NetworkScannerService(deviceService)
         }
     }
 

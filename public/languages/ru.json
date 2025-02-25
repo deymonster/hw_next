@@ -359,6 +359,26 @@
 				}
 			}
 	
+		},
+		"devices": {
+			"header":{
+				"heading": "Устройства",
+				"description": "Управляйте устройствами, которые вы мониторите в NITRINO Monitoring"
+			},
+			"columns": {
+				"name": "Название",
+				"ipAddress": "IP-адрес",
+				"status": "Статус",
+				"actions": "Действия",
+				"tag": "Тег"
+			},
+			"scanModal": {
+				"heading": "Сканирование устройств",
+				"description": "Сканируйте устройства, которые вы хотите мониторить в NITRINO Monitoring",
+				"scanButton": "Сканировать",
+				"addButton": "Добавить",
+				"cancelButton": "Отмена"
+			}
 		}
 	},
 	"components": {
@@ -369,6 +389,12 @@
 		"confirmModal": {
 			"cancel": "Отмена",
 			"continue": "Продолжить"
+		},
+		"copyButton": {
+			"succesMessage": "Скопировано"
+		},
+		"dataTable": {
+			"notFound": "Ничего не найдено"
 		}
 	},
 	"utils": {
