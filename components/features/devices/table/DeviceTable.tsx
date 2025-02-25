@@ -1,3 +1,5 @@
+'use client'
+
 import { Heading } from "@/components/ui/elements/Heading";
 import { useTranslations } from "next-intl";
 

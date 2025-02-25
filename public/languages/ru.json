@@ -373,11 +373,17 @@
 				"tag": "Тег"
 			},
 			"scanModal": {
-				"heading": "Сканирование устройств",
-				"description": "Сканируйте устройства, которые вы хотите мониторить в NITRINO Monitoring",
+				"trigger":  "Поиск устройств",
+				"heading": "Поиск устройств",
+				"subnetLabel": "Подсеть",
 				"scanButton": "Сканировать",
+				"successScanMessage": "Сканирование устройств успешно завершено",
+				"errorScanMessage": "Ошибка при сканирование устройств",
+				"subnetError": "Возникла ошибка при определении подсети",
 				"addButton": "Добавить",
-				"cancelButton": "Отмена"
+				"cancelButton": "Отмена",
+				"succesAddMessage": "Выбранное устройство добавлено в мониторинг",
+				"errorAddMessage": "Ошибка добавления устройства в мониторинг"
 			}
 		}
 	},
