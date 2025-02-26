@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import { NetworkDiscoveredAgent, NetworkScannerOptions } from '@/services/network-scanner/network-scanner.interfaces'
 import { scanNetwork, findAgentByKey, getCurrentSubnet } from '@/app/actions/network-scanner'
-import { services } from '@/services'
 
 
 interface ScannerCallbacks {

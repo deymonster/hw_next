@@ -383,7 +383,13 @@
 				"addButton": "Добавить",
 				"cancelButton": "Отмена",
 				"succesAddMessage": "Выбранное устройство добавлено в мониторинг",
-				"errorAddMessage": "Ошибка добавления устройства в мониторинг"
+				"errorAddMessage": "Ошибка добавления устройства в мониторинг",
+				"scanColumns": {
+					"ipAddress": "IP-адрес",
+					"agentKey": "Ключ агента",
+					"status": "Статус"
+
+				}
 			}
 		}
 	},

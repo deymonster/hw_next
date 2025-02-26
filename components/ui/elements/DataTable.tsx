@@ -20,11 +20,19 @@ import { useTranslations } from "next-intl"
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  onRowClick?: (row: TData) => void
+  rowClassName?: string
+  enableRowSelection?: boolean
+  onRowSelectionChange?: (selectedRows: string[]) => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  onRowClick,
+  rowClassName,
+  enableRowSelection,
+  onRowSelectionChange
 }: DataTableProps<TData, TValue>) {
   
   const t = useTranslations('components.dataTable')
@@ -32,6 +40,17 @@ export function DataTable<TData, TValue>({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    enableRowSelection: enableRowSelection,
+    onRowSelectionChange: onRowSelectionChange ? 
+      (updater) => {
+        const selectedRows = typeof updater === 'function' 
+          ? updater(table.getState().rowSelection) 
+          : updater;
+        onRowSelectionChange(
+          Object.keys(selectedRows).filter(key => selectedRows[key])
+        );
+      } 
+      : undefined,
   })
 
   return (
@@ -40,18 +59,16 @@ export function DataTable<TData, TValue>({
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                return (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                )
-              })}
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                </TableHead>
+              ))}
             </TableRow>
           ))}
         </TableHeader>
@@ -61,6 +78,12 @@ export function DataTable<TData, TValue>({
               <TableRow
                 key={row.id}
                 data-state={row.getIsSelected() && "selected"}
+                className={rowClassName}
+                onClick={(e) => {
+                  if (!enableRowSelection) {
+                    onRowClick?.(row.original)
+                  }
+                }}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
