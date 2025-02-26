@@ -7,8 +7,8 @@ import { IServices } from '../types'
 export class NetworkScannerService {
     private readonly defaultOptions: 
         NetworkScannerOptions = {
-            timeout: 1000,
-            concurrency: 50,
+            timeout: 3000,
+            concurrency: 25,
             agentPort: 9182
         }
     constructor(private readonly services: IServices) {}
@@ -27,43 +27,37 @@ export class NetworkScannerService {
     }
 
     async scanNetwork(options?: NetworkScannerOptions): Promise<NetworkDiscoveredAgent[]> {
+        console.log('[SCAN_NETWORK] Starting network scan...')
         const opts = { ...this.defaultOptions, ...options }
         const subnet = options?.subnet || await this.getCurrentSubnet()
+
         const baseIp = subnet.split('/')[0]
         const agents: NetworkDiscoveredAgent[] = []
 
         const ips = Array.from({ length: 254 }, (_, i) => baseIp.replace(/\.0$/, `.${i + 1}`))
-
+        
         // Разбиваем на чанки для параллельного сканирования
         const chunks = this.chunkArray(ips, opts.concurrency!)
+        
 
         for (const chunk of chunks) {
             const promises = chunk.map(ip => this.checkAndGetAgent(ip, opts))
             const results = await Promise.all(promises)
             const foundAgents = results.filter(Boolean) as NetworkDiscoveredAgent[]
-        
+            
+
             // Если ищем конкретного агента и нашли его - сразу возвращаем
             if (opts.targetAgentKey) {
                 const targetAgent = foundAgents.find(agent => agent.agentKey === opts.targetAgentKey)
                 if (targetAgent) {
-                    return [{ ...targetAgent, isRegistered: true }]
+                    console.log('[SCAN_NETWORK] Found target agent:', targetAgent)
+                    return [targetAgent]
                 }
             }
             agents.push(...foundAgents)
         }
-        if (opts.targetAgentKey) {
-            return []
-        }
-
-        // Проверяем, какие агенты уже зарегистрированы
-        const agentKeys = agents.map(agent => agent.agentKey)
-        const registeredAgents = await this.services.data.device.findManyByAgentKeys(agentKeys)
-        const registeredKeys = new Set(registeredAgents.map(device => device.agentKey))
-        
-        return agents.map(agent => ({
-            ...agent,
-            isRegistered: registeredKeys.has(agent.agentKey)
-        }))
+        console.log('Founded agents: ', agents)
+        return agents
     }
 
     async findAgentNewIp(targetAgentKey: string, options?: Omit<NetworkScannerOptions, 'targetAgentKey'>): Promise<string | null> {
@@ -78,57 +72,48 @@ export class NetworkScannerService {
 
     private async checkAndGetAgent(ip: string, options: NetworkScannerOptions): Promise<NetworkDiscoveredAgent | null> {
         try {
+            
             const response = await axios.get(`http://${ip}:${options.agentPort}/metrics`, {
                 timeout: options.timeout,
                 headers: {
                     'X-Agent-Handshake-Key': process.env.AGENT_HANDSHAKE_KEY || 'VERY_SECRET_KEY'
                 }
-            })
+            }).catch((error) => {
+                // Детальное логирование ошибки
+                console.log(`[CHECK_AGENT] [${ip}] Error type: ${error.code || 'unknown'}`)
+                console.log(`[CHECK_AGENT] [${ip}] Full error:`, error.message)
+                throw error; // Перебрасываем ошибку дальше
+            });
 
             if (response.status === 200) {
+                
                 const metrics = response.data as string
 
                 // Получаем UUID системы
                 const uuidMatch = metrics.match(/UNIQUE_ID_SYSTEM{uuid="([^"]+)"}/)
-                if (!uuidMatch) return null
-
-                // Получаем информацию о системе
-                const sysInfoMatch = metrics.match(/system_information{([^}]+)}/)
-                if (!sysInfoMatch) return null
+                if (!uuidMatch) {
+                    return null
+                }
 
                 // Парсим параметры system_information
-                const sysInfoParams = sysInfoMatch[1].split(',').reduce((acc, param) => {
-                    const [key, value] = param.split('=')
-                    acc[key] = value.replace(/"/g, '')
-                    return acc
-                }, {} as Record<string, string>)
-
-
-
+                
                 return {
                     ipAddress: ip,
                     agentKey: uuidMatch[1],
-                    type: sysInfoParams.os_version.toLowerCase().includes('windows') ? 'WINDOWS' : 'LINUX',
-                    isRegistered: false,
-                    systemInfo: {
-                        manufacturer: sysInfoParams.manufacturer,
-                        model: sysInfoParams.model,
-                        name: sysInfoParams.name,
-                        osArchitecture: sysInfoParams.os_architecture,
-                        osVersion: sysInfoParams.os_version
-                    }
+                    isRegistered: false
                 }
             }
         } catch (error) {
-            // Игнорируем ошибки - это нормально при сканировании
+            const errorMessage = (error as Error).message
+            console.log(`[CHECK_AGENT] Failed checking ${ip}:`, {
+                message: errorMessage,
+                timestamp: new Date().toISOString()
+            })
         }
         return null
     }
 
-    private determineDeviceType(headers: Record<string, string>): DeviceType {
-        const osInfo = headers['x-agent-os']?.toLowerCase() || ''
-        return osInfo.includes('windows') ? 'WINDOWS' : 'LINUX'
-    }
+ 
 
     private chunkArray<T>(array: T[], size: number): T[][] {
         const chunks: T[][] = []

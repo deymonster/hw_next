@@ -2,11 +2,13 @@ import { PropsWithChildren, type ReactNode } from "react"
 import { Card } from "../card"
 import type { LucideIcon } from "lucide-react"
 import type { IconType } from "react-icons"
+import { cn } from "@/utils/tw-merge"
 
 interface CardContainerProps {
     heading: string
-    description: string
+    description?: string
     Icon?: IconType | LucideIcon
+    isRightContentFull?: boolean
     rightContent?: ReactNode
 }
 
@@ -15,6 +17,7 @@ export function CardContainer({
     description, 
     Icon,
     rightContent, 
+    isRightContentFull,
     children
 }: PropsWithChildren<CardContainerProps>) {
     return <Card className='p-4'>
@@ -27,10 +30,13 @@ export function CardContainer({
                 )}
                 <div className='space-y-1'>
                     <h2 className='font-semibold tracking-wide'>{heading}</h2>
-                    <p className='max-width-4xl text-sm text-muted-foreground'>{description}</p>
+                    {description && (
+                            <p className='max-width-4xl text-sm text-muted-foreground'>{description}</p>
+                    )}
+                    
                 </div>
             </div>
-            {rightContent && <div>{rightContent}</div>}
+            {rightContent && <div className={cn(isRightContentFull && 'ml-6 w-full')}>{rightContent}</div>}
         </div>
         {children && <div className='mt-4'>{children}</div>}
     </Card>

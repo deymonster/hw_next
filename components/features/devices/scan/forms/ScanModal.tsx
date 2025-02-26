@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { useNetworkScanner } from "@/hooks/useNetworkScanner"
 import { type TypeScanDeviceSchema, scanDeviceSchema } from "@/schemas/scan/scan.schema"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
@@ -50,6 +51,7 @@ export function ScanModal() {
             {subnet: data.subnet},
             {
                 onSuccess: () => {
+                    console.log('Discovered agents:', discoveredAgents)
                     toast.success(t('successScanMessage'))
                 },
                 onError: () => {
@@ -87,15 +89,26 @@ export function ScanModal() {
                                     </FormItem>
                                 )}
                             />
-
-                            
+              
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button type="button" variant='outline'>
+                                    {t('cancelButton')}
+                                </Button>
+                            </DialogClose>
+                            <Button
+                                type='submit'
+                                disabled={!isValid || isScanning}
+                            >
+                                {isScanning ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    t('scanButton')
+                                )}
+                            </Button>
+                        </DialogFooter>
                         </form>
-                </Form> 
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button variant='outline'>{t('cancelButton')}</Button>
-                        </DialogClose>
-                    </DialogFooter>
+                </Form>
             </DialogContent>
         </Dialog>
     )

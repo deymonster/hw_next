@@ -1,6 +1,6 @@
-import { Device, PrismaClient, DeviceStatus } from "@prisma/client"
+import { Device, PrismaClient, DeviceStatus, DeviceType } from "@prisma/client"
 import { BaseRepository } from "../base.service"
-import { IDeviceCreateInput, IDeviceFindManyArgs, IDeviceRepository } from './device.interfaces'
+import { IDeviceCreateInput, IDeviceFindManyArgs, IDeviceRepository, DeviceFilterOptions } from './device.interfaces'
 
 export class DeviceService 
     extends BaseRepository<Device, IDeviceCreateInput, IDeviceFindManyArgs, PrismaClient['device'], string>
@@ -16,12 +16,44 @@ export class DeviceService
         })
     }
 
-    async findManyByAgentKeys(agentKeys: string[]): Promise<Device[]> {
+    async findAll(options?: DeviceFilterOptions): Promise<Device[]> {
         return await this.model.findMany({
             where: {
-                agentKey: {
-                    in: agentKeys
-                }
+                ...(options?.status && { status: { in: options.status } }),
+                ...(options?.type && { type: options.type }),
+                ...(options?.locationId && { locationId: options.locationId })
+            },
+            orderBy: options?.orderBy 
+                ? { [options.orderBy.field]: options.orderBy.direction }
+                : { lastUpdate: 'desc' } 
+        })
+    }
+
+    async getDeviceStats(): Promise<{
+        total: number
+        byStatus: Record<DeviceStatus, number>
+        byType: Record<DeviceType, number>
+    }> {
+        const devices = await this.model.findMany()
+        return {
+            total: devices.length,
+            byStatus: devices.reduce((acc, device) => ({
+                ...acc,
+                [device.status]: (acc[device.status] || 0) + 1
+            }), {} as Record<DeviceStatus, number>),
+            byType: devices.reduce((acc, device) => ({
+                ...acc,
+                [device.type]: (acc[device.type] || 0) + 1
+            }), {} as Record<DeviceType, number>)
+        }
+    }
+
+    async updateIpAddress(id: string, ipAddress: string): Promise<Device> {
+        return await this.model.update({
+            where: {id },
+            data: {
+                ipAddress,
+                lastUpdate: new Date()
             }
         })
     }

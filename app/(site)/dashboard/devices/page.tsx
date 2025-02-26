@@ -23,7 +23,7 @@ export default function DevicesPage() {
   return (
     <>
     <DeviceScan />
-    {/* <DevicesTable /> */}
+    <DevicesTable />
     </>
     
   )

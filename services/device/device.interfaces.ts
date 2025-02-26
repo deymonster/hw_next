@@ -5,7 +5,17 @@
 //       '/Users/deymonster/My projects/HW monitor NextJS/hw-monitor/prometheus/targets/windows_targets.json',
 //     PROMETHEUS_RELOAD_URL: 'http://localhost:9090/-/reload',
 //   };
-import { Device, DeviceStatus, DeviceType, Prisma } from '@prisma/client'
+import { Device, DeviceStatus, DeviceType } from '@prisma/client'
+
+export interface DeviceFilterOptions {
+    status?: DeviceStatus[]
+    type?: DeviceType
+    locationId?: string
+    orderBy?: {
+        field: 'name' | 'lastUpdate' | 'lastSeen'
+        direction: 'asc' | 'desc'
+    }
+}
 
 export interface IDeviceCreateInput {
     name: string
