@@ -369,7 +369,6 @@
 				"name": "Название",
 				"ipAddress": "IP-адрес",
 				"status": "Статус",
-				"actions": "Действия",
 				"tag": "Тег"
 			},
 			"scanModal": {
@@ -388,8 +387,12 @@
 					"ipAddress": "IP-адрес",
 					"agentKey": "Ключ агента",
 					"status": "Статус"
-
+				},
+				"status": {
+					"new": "Новое",
+					"registered": "Зарегистрирован"
 				}
+
 			}
 		}
 	},
@@ -406,7 +409,12 @@
 			"succesMessage": "Скопировано"
 		},
 		"dataTable": {
-			"notFound": "Ничего не найдено"
+			"notFound": "Ничего не найдено",
+			"previous": "Назад",
+			"next": "Вперед",
+			"page": "страница",
+			"of": "из"
+
 		}
 	},
 	"utils": {

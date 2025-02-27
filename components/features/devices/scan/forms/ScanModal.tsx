@@ -12,12 +12,15 @@ import { useTranslations } from "next-intl"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
+import { ScanTable } from "../../table/ScanTable"
 
 
 export function ScanModal() {
     const t = useTranslations('dashboard.devices.scanModal')
     const { startScan, discoveredAgents, isScanning, error, getSubnet } = useNetworkScanner()
     const [isOpen, setIsOpen ] = useState(false)
+    const [selectedDevices, setSelectedDevices] = useState<string[]>([])
+    const [scanResults, setScanResults] = useState<Array<any>>([])
 
     const form = useForm<TypeScanDeviceSchema>({
         resolver: zodResolver(scanDeviceSchema),
@@ -28,6 +31,13 @@ export function ScanModal() {
     })
 
     const { isValid } = form.formState
+
+    const handleModalClose = () => {
+        setScanResults([])
+        setSelectedDevices([])
+        form.reset()
+        setIsOpen(false)
+    }
 
     useEffect(() =>{
         if (isOpen) {
@@ -47,10 +57,14 @@ export function ScanModal() {
     }, [isOpen, form, getSubnet, t])
 
     async function onSubmit(data: TypeScanDeviceSchema) {
+        setScanResults([])
+        setSelectedDevices([])
+
         await startScan(
             {subnet: data.subnet},
             {
                 onSuccess: () => {
+                    setScanResults(discoveredAgents || [])
                     console.log('Discovered agents:', discoveredAgents)
                     toast.success(t('successScanMessage'))
                 },
@@ -62,7 +76,7 @@ export function ScanModal() {
     }
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger asChild onClick={() => setIsOpen(true)}>
                 <Button>{t('trigger')}</Button>
             </DialogTrigger>
             <DialogContent className='max-h-[80vh] max-w-[800px] overflow-y-auto'>
@@ -71,31 +85,50 @@ export function ScanModal() {
                 </DialogHeader>
                 <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-                            <FormField
-                                control={form.control}
-                                name='subnet'
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>
-                                            {t('subnetLabel')}
-                                        </FormLabel>
-                                        <FormControl>
-                                            <Input 
-                                                {...field}
-                                                placeholder="192.168.1.0/24"
-                                                disabled={isScanning}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
+                            <div className='w-full max-w-[720px] mx-auto'>
+                                <FormField
+                                    control={form.control}
+                                    name='subnet'
+                                    render={({ field }) => (
+                                        <FormItem className='w-full'>
+                                            <FormLabel>
+                                                {t('subnetLabel')}
+                                            </FormLabel>
+                                            <FormControl>
+                                                <Input 
+                                                    {...field}
+                                                    className='w-full'
+                                                    placeholder="192.168.1.0/24"
+                                                    disabled={isScanning}
+                                                />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className='mt-5 w-full max-w-[720px] mx-auto'>
+                                <ScanTable
+                                    data={discoveredAgents || []}
+                                    isLoading={isScanning}
+                                    onRowSelectionChange={setSelectedDevices}
+                                />
+                            </div>
               
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button type="button" variant='outline'>
-                                    {t('cancelButton')}
+                        <DialogFooter className='gap-2'>
+                            
+                            {discoveredAgents && discoveredAgents.length > 0 && (
+                                <Button
+                                    type='button'
+                                    variant='default'
+                                    disabled={selectedDevices.length === 0}
+                                    onClick={() => {
+                                        console.log('Adding devices:', selectedDevices)
+                                    }}
+                                >
+                                    Добавить
                                 </Button>
-                            </DialogClose>
+                            )}
+
                             <Button
                                 type='submit'
                                 disabled={!isValid || isScanning}
@@ -106,6 +139,7 @@ export function ScanModal() {
                                     t('scanButton')
                                 )}
                             </Button>
+                            
                         </DialogFooter>
                         </form>
                 </Form>
