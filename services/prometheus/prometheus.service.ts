@@ -1,9 +1,15 @@
 import { PrometheusTarget, PrometheusServiceConfig, PrometheusApiResponse } from "./prometheus.interfaces";
 import path from 'path'
 import fs from 'fs/promises'
+import { PrometheusParser } from "./prometheus.parser";
 
 export class PrometheusService {
     private readonly config: PrometheusServiceConfig
+
+    private async getParser(ipAddress: string): Promise<PrometheusParser> {
+        const response = await this.getMetricsByIp(ipAddress)
+        return new PrometheusParser(response)
+    }
 
     constructor(config: PrometheusServiceConfig) {
         this.config = config
@@ -46,5 +52,35 @@ export class PrometheusService {
         } catch (error) {
             throw new Error(`Failed to get metrics: ${error}`)
         }
+    }
+
+    async getSystemInfo(ipAddress: string) {
+        const parser = await this.getParser(ipAddress)
+        return parser.getSystemInfo()
+    }
+
+    async getHardwareInfo(ipAddress: string) {
+        const parser = await this.getParser(ipAddress)
+        return parser.getHardwareInfo()
+    }
+
+    async getProcessorMetrics(ipAddress: string) {
+        const parser = await this.getParser(ipAddress)
+        return parser.getProcessorMetrics()
+    }
+
+    async getNetworkMetrics(ipAddress: string) {
+        const parser = await this.getParser(ipAddress)
+        return parser.getNetworkMetrics()
+    }
+
+    async getDiskMetrics(ipAddress: string) {
+        const parser = await this.getParser(ipAddress)
+        return parser.getDiskMetrics()
+    }
+
+    async getProcessList(ipAddress: string) {
+        const parser = await this.getParser(ipAddress)
+        return parser.getProcessList()
     }
 }
