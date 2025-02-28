@@ -12,6 +12,7 @@ interface UseDevicesOptions {
 }
 
 
+
 export function useDevices(options?: UseDevicesOptions) {
     const [devices, setDevices] = useState<Device[]>([])
     const [stats, setStats] = useState<{
@@ -79,6 +80,7 @@ export function useDevices(options?: UseDevicesOptions) {
             setIsLoading(false)
         }
     }, [options, fetchDevices])
+
 
     return {
         devices,

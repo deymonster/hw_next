@@ -1,12 +1,10 @@
 'use client'
 
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable } from "@/components/ui/elements/DataTable";
-import { ColumnDef } from "@tanstack/react-table";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { createScanDeviceColumns } from "./ScanDeviceColumns";
+import { useDevices } from "@/hooks/useDevices";
 
 
 interface ScanDevice {
