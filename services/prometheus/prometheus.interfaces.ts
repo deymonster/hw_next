@@ -12,17 +12,17 @@ export interface PrometheusServiceConfig {
 }
 
 // Базовая структура метрики
-interface MetricBase {
+export interface MetricBase {
     instance: string
     job: string
 }
 
-interface UUIDMetric extends MetricBase {
+export interface UUIDMetric extends MetricBase {
     __name__: 'UNIQUE_ID_SYSTEM'
     uuid: string
 }
 
-interface SystemInformation extends MetricBase {
+export interface SystemInformation extends MetricBase {
     __name__: 'system_information'
     manufacturer: string
     model: string
@@ -31,61 +31,61 @@ interface SystemInformation extends MetricBase {
     os_version: string
 }
 
-interface SerialNumber extends MetricBase {
+export interface SerialNumber extends MetricBase {
     __name__: 'device_serial_number_info'
     device_tag: string
     location: string
     serial_number: string
 }
 
-interface ActiveProcessList extends MetricBase {
+export interface ActiveProcessList extends MetricBase {
     __name__: 'active_proccess_list'
 }
 
-interface ActiveProcessMemoryUsage extends MetricBase {
+export interface ActiveProcessMemoryUsage extends MetricBase {
     __name__: 'active_proccess_memory_usage'
     pid: string
     process: string
 }
 
 
-interface ProccessCpuUsagePercent extends MetricBase {
+export interface ProccessCpuUsagePercent extends MetricBase {
     __name__: 'proccess_cpu_usage_percent'
     pid: string
     process: string
 }
 
 
-interface NetworkStatus extends MetricBase {
+export interface NetworkStatus extends MetricBase {
     __name__: 'network_status'
     interface: string
 }
 
-interface NetworkRXPerSecond extends MetricBase {
+export interface NetworkRXPerSecond extends MetricBase {
     __name__: 'network_rx_bytes_per_second'
     interface: string
 }
 
 
-interface NetworkTXPerSecond extends MetricBase {
+export interface NetworkTXPerSecond extends MetricBase {
     __name__: 'network_tx_bytes_per_second'
     interface: string
 }
 
 
-interface NetworkErrors extends MetricBase {
+export interface NetworkErrors extends MetricBase {
     __name__: 'network_errors'
     interface: string
 }
 
 
-interface NetworkDroppedPackets extends MetricBase {
+export interface NetworkDroppedPackets extends MetricBase {
     __name__: 'network_dropped_packets'
     interface: string
 }
 
 
-interface MotherBoardInfo extends MetricBase {
+export interface MotherBoardInfo extends MetricBase {
     __name__: 'motherboard_info'
     manufacturer: string
     product: string
@@ -94,7 +94,7 @@ interface MotherBoardInfo extends MetricBase {
 }
 
 
-interface MemoryInfo extends MetricBase {
+export interface MemoryInfo extends MetricBase {
     __name__: 'memory_module_info'
     capacity: string
     manufacturer: string
@@ -103,72 +103,72 @@ interface MemoryInfo extends MetricBase {
     speed: string
 }
 
-interface TotalMemoryBytes extends MetricBase {
+export interface TotalMemoryBytes extends MetricBase {
     __name__: 'total_memory_bytes'
 }
 
-interface UsedMemoryBytes extends MetricBase {
+export interface UsedMemoryBytes extends MetricBase {
     __name__: 'used_memory_bytes'
 }
 
-interface FreeMemoryBytes extends MetricBase {
+export interface FreeMemoryBytes extends MetricBase {
     __name__: 'free_memory_bytes'
 }
 
 
-interface GpuInfo extends MetricBase {
+export interface GpuInfo extends MetricBase {
     __name__: 'gpu_info'
     name: string
 }
 
-interface GpuMemoryBytes extends MetricBase {
+export interface GpuMemoryBytes extends MetricBase {
     __name__: 'gpu_memory_bytes'
     name: string
 }
 
-interface DiskHealthStatus extends MetricBase {
+export interface DiskHealthStatus extends MetricBase {
     __name__: 'disk_health_status'
     disk: string
     size: string
     status: string
     type: string
 }
-
-interface DiskUsageBytes extends MetricBase {
+ 
+export interface DiskUsageBytes extends MetricBase {
     __name__: 'disk_usage_bytes'
     disk: string
     type: string
 }
 
-interface DiskUsagePercent extends MetricBase {
+export interface DiskUsagePercent extends MetricBase {
     __name__: 'disk_usage_percent'
     disk: string
 }
 
-interface DiskReadBytesPerSecond extends MetricBase {
+export interface DiskReadBytesPerSecond extends MetricBase {
     __name__: 'disk_read_bytes_per_second'
     disk: string
 }
 
 
-interface DiskWriteBytesPerSecond extends MetricBase {
+export interface DiskWriteBytesPerSecond extends MetricBase {
     __name__: 'disk_write_bytes_per_second'
     disk: string
 }
 
-interface CpuUsagePercent extends MetricBase {
+export interface CpuUsagePercent extends MetricBase {
     __name__: 'cpu_usage_percent'
     core: string
     processor: string
 }
 
 
-interface CpuTemperature extends MetricBase {
+export interface CpuTemperature extends MetricBase {
     __name__: 'cpu_temperature'
     sensor: string
 }
 
-interface BiosInfo extends MetricBase {
+export interface BiosInfo extends MetricBase {
     __name__: 'bios_info'
     manufacturer: string
     release_date: string
@@ -177,7 +177,7 @@ interface BiosInfo extends MetricBase {
 
 type MetricValue = [number, string]
 
-interface PrometheusMetricResult {
+export interface PrometheusMetricResult {
     metric: BiosInfo |
             CpuTemperature |
             CpuUsagePercent |
