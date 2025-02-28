@@ -2,9 +2,11 @@
 
 import {
   type ColumnDef,
+  ColumnFiltersState,
   flexRender,
   SortingState,
   getCoreRowModel,
+  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -19,7 +21,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTranslations } from "next-intl"
+
 import { Button } from "@/components/ui/button" 
+import { Input } from "@/components/ui/input"
+
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
@@ -32,6 +37,11 @@ interface DataTableProps<TData, TValue> {
     showPageSize?: boolean
     showPageNumber?: boolean
   }
+  filtering?: {
+    enabled?: boolean
+    column?: string
+    placeholder?: string
+  }
 }
 
 export function DataTable<TData, TValue>({
@@ -42,15 +52,21 @@ export function DataTable<TData, TValue>({
     pageSize: 10,
     showPageSize: true,
     showPageNumber: false
+  },
+  filtering = {
+    enabled: false,
+    column: '',
+    placeholder: "Поиск..."
   }
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const t = useTranslations('components.dataTable')
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     ...(pagination.enabled && {
       getPaginationRowModel: getPaginationRowModel(),
       initialState: {
@@ -61,13 +77,32 @@ export function DataTable<TData, TValue>({
     }),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
-    },
+      columnFilters
+    }
+
   })
 
   return (
     <div>
+      {filtering.enabled && filtering.column && (
+          <div className="flex items-center gap-4 pt-1 pb-4">
+              <Input
+                placeholder={filtering.placeholder}
+                value={(table.getColumn(filtering.column)?.getFilterValue() as string) ?? ''}
+                onChange={(event) => {
+                  const col = table.getColumn(filtering.column!);
+                  if (col) {
+                    col.setFilterValue(event.target.value);
+                  }
+                }}
+                className="max-w-sm"
+              />
+          </div>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>

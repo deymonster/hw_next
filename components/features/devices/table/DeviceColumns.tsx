@@ -3,12 +3,20 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdowmmenu"
-import type { Device, DeviceStatus } from "@prisma/client"
+import { SelectFilter } from "@/components/ui/elements/Select-filter"
+import { Device, DeviceStatus } from "@prisma/client"
 import { ColumnDef } from "@tanstack/react-table"
 import { MoreHorizontal, Pencil, RefreshCw, Trash } from "lucide-react"
 import { ArrowUpDown } from "lucide-react"
 
 type TranslationFunction = (key: string) => string
+
+const statusTranslations: Record<DeviceStatus, string> = {
+    ACTIVE: 'В СЕТИ',
+    INACTIVE: 'НЕ В СЕТИ',
+    PENDING: 'ОЖИДАНИЕ',
+    DECOMMISSIONED: 'ВЫВЕДЕН'
+  }
 
 
 const getStatusBadge = (status: DeviceStatus) => {
@@ -18,7 +26,7 @@ const getStatusBadge = (status: DeviceStatus) => {
       PENDING: "default",
       DECOMMISSIONED: "secondary"
     }
-    return <Badge variant={variants[status]}>{status}</Badge>
+    return <Badge variant={variants[status]}>{statusTranslations[status]}</Badge>
   }
 
 export const createDeviceColumns = (t: TranslationFunction): ColumnDef<Device>[] => [
@@ -55,14 +63,37 @@ export const createDeviceColumns = (t: TranslationFunction): ColumnDef<Device>[]
 
     {
       accessorKey: 'status',
-      header: t('columns.status'),
-      cell: ({row}) => getStatusBadge(row.original.status)
+      header: ({column}) => (
+        <div className='space-y-2'>
+
+            <SelectFilter
+                    options={Object.values(DeviceStatus)}
+                    selectedValue={column.getFilterValue() as string}
+                    onValueChange={(value) => column.setFilterValue(value)}
+                    placeholder={t('columns.status')} 
+                    translateOption={(option) => statusTranslations[option as DeviceStatus] || option}
+            /> 
+
+        </div>
+        
+      ),
+      cell: ({row}) => getStatusBadge(row.original.status),
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        const status = row.getValue(columnId) as DeviceStatus;
+        return status === filterValue;
+      }
+      
     },
 
     {
-      accessorKey: 'tag',
-      header: t('columns.tag'),
-      cell: ({row}) => row.original.deviceTag
+        accessorKey: 'deviceTag',
+        header: t('columns.tag'),
+        cell: ({row}) => row.original.deviceTag,
+        filterFn: (row, columnId, filterValue) => {
+          const value = row.getValue(columnId) as string;
+          return value.toLowerCase().startsWith(filterValue.toLowerCase()); 
+        }
     },
 
     {

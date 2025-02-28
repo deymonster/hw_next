@@ -245,6 +245,11 @@ export function DevicesTable() {
               showPageSize: true,
               showPageNumber: true
             }}
+            filtering={{
+              enabled: true,
+              column: 'deviceTag',
+              placeholder: 'Search by tag...'
+            }}
           />
         )}
     </div>
