@@ -27,10 +27,10 @@ export const SelectFilter = ({
                         {selectedValue === undefined ? 'All' : selectedValue}
                 </SelectValue>
             </SelectTrigger>
-            <SelectContent>
-            <SelectItem value='all'>{placeholder}</SelectItem>
+            <SelectContent className='min-w-[180px]'>
+            <SelectItem value='all' className='text-foreground'>{placeholder}</SelectItem>
                 {options.map((option) => (
-                    <SelectItem key={option} value={option}>
+                    <SelectItem key={option} value={option} className='text-foreground py-2 pl-2'>
                         {translateOption(option)}
                     </SelectItem>
                 ))}

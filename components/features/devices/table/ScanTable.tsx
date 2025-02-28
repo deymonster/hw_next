@@ -28,7 +28,7 @@ export function ScanTable({data, isLoading, onRowSelectionChange }: ScanTablePro
 
 
   return (
-    <div className='mt-5 lg:px-10'>
+    <div>
         <DataTable
             columns={columns}
             data={data}
@@ -38,7 +38,10 @@ export function ScanTable({data, isLoading, onRowSelectionChange }: ScanTablePro
                 showPageSize: false
             }}
         />
+
     </div>
+        
+    
   )
   
 }

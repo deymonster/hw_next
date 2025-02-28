@@ -85,7 +85,7 @@ export function ScanModal() {
                 </DialogHeader>
                 <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-                            <div className='w-full max-w-[720px] mx-auto'>
+                            <div className='w-full  space-y-6'>
                                 <FormField
                                     control={form.control}
                                     name='subnet'
@@ -105,13 +105,14 @@ export function ScanModal() {
                                         </FormItem>
                                     )}
                                 />
-                            </div>
-                            <div className='mt-5 w-full max-w-[720px] mx-auto'>
-                                <ScanTable
-                                    data={discoveredAgents || []}
-                                    isLoading={isScanning}
-                                    onRowSelectionChange={setSelectedDevices}
-                                />
+                            
+                                <div className='w-full'>
+                                    <ScanTable
+                                        data={discoveredAgents || []}
+                                        isLoading={isScanning}
+                                        onRowSelectionChange={setSelectedDevices}
+                                    />
+                                </div>
                             </div>
               
                         <DialogFooter className='gap-2'>
