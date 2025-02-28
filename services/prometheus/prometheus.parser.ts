@@ -12,7 +12,8 @@ import {
     CpuTemperature,
     DiskHealthStatus,
     NetworkStatus,
-    ActiveProcessMemoryUsage
+    ActiveProcessMemoryUsage,
+    ProccessCpuUsagePercent
 } from './prometheus.interfaces'
 
 export class PrometheusParser {
@@ -38,6 +39,10 @@ export class PrometheusParser {
 
     private bytesToGB(bytes: number): number {
         return Number((bytes / (1024 * 1024 * 1024)).toFixed(2))
+    }
+
+    private bytesToMB(bytes: number): number {
+        return Number((bytes / (1024 * 1024)).toFixed(2))
     }
 
     getSystemInfo() {
@@ -142,4 +147,57 @@ export class PrometheusParser {
             }
         }
     }
+
+    getNetworkMetrics() {
+        const networkInterfaces = this.findMetrics<NetworkStatus>('network_status')
+
+        return networkInterfaces.map(iface => ({
+            name: iface.interface,
+            status: Number(this.getValue(`network_status{interface="${iface.interface}"}`) || 0) == 1 ? 'up': 'down',
+            performance: {
+                rx: this.bytesToGB(Number(this.getValue(`network_rx_bytes_per_second{interface="${iface.interface}"}`) || 0)),
+                tx: this.bytesToGB(Number(this.getValue(`network_tx_bytes_per_second{interface="${iface.interface}"}`) || 0)),
+            },
+            errors: Number(this.getValue(`network_errors{interface="${iface.interface}"}`) || 0),
+            droppedPackets: Number(this.getValue(`network_dropped_packets{interface="${iface.interface}"}`) || 0)
+        }))
+    }
+
+    getDiskMetrics() {
+        const disks = this.findMetrics<DiskHealthStatus>('disk_health_status')
+
+        return disks.map(disk => ({
+            model: disk.disk,
+            type: disk.type,
+            performance: {
+                rx: Number(this.getValue(`disk_read_bytes_per_second{disk="${disk.disk}"}`)) || 0,
+                tx: Number(this.getValue(`disk_write_bytes_per_second{disk="${disk.disk}"}`)) || 0,
+            }
+        }))
+    }
+
+    getProcessList() {
+        const processesMemory = this.findMetrics<ActiveProcessMemoryUsage>('active_process_memory_usage')
+        const processesCpu = this.findMetrics<ProccessCpuUsagePercent>('proccess_cpu_usage_percent')
+        
+        const cpuUsageByPid = new Map(
+            processesCpu.map(process => [
+                process.pid,
+                Number(this.getValue(`proccess_cpu_usage_percent{pid="${process.pid}"}`) || 0)
+            ])
+        )
+        return processesMemory.map(process => ({
+            name: process.process,
+            pid: process.pid,
+            metrics: {
+                memory: {
+                    mb: this.bytesToMB(Number(this.getValue(`active_proccess_memory_usage{pid="${process.pid}"}`) || 0)),
+                    percent: Number((Number(this.getValue(`active_proccess_memory_usage{pid="${process.pid}"}`) || 0) / Number(this.getValue('total_memory_bytes') || 1) * 100).toFixed(2))
+                },
+                cpu: cpuUsageByPid.get(process.pid) || 0
+            }
+        })).sort((a, b) => b.metrics.cpu - a.metrics.cpu)
+    }
+
+
 }
