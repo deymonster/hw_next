@@ -1,5 +1,4 @@
 import { networkInterfaces } from 'os'
-import { DeviceType } from '@prisma/client'
 import axios from 'axios'
 import { NetworkDiscoveredAgent, NetworkScannerOptions } from './network-scanner.interfaces'
 import { IServices } from '../types'
@@ -95,12 +94,14 @@ export class NetworkScannerService {
                     return null
                 }
 
-                // Парсим параметры system_information
+                const agentKey = uuidMatch[1];
+
+                const existingDevice = await this.services.data.device.findByAgentKey(agentKey)
                 
                 return {
                     ipAddress: ip,
-                    agentKey: uuidMatch[1],
-                    isRegistered: false
+                    agentKey: agentKey,
+                    isRegistered: !!existingDevice
                 }
             }
         } catch (error) {

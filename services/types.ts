@@ -9,6 +9,7 @@ import type { CacheService } from './cache/cache.service'
 import type { NotificationFactory } from './notifications/notification.factory'
 import type { DeviceService } from './device/device.service'
 import type { NetworkScannerService } from './network-scanner/network-scanner.service'
+import { PrometheusService } from './prometheus/prometheus.service'
 
 export interface IDataServices {
     user: UserService
@@ -23,6 +24,7 @@ export interface IInfrastructureServices {
     cache: CacheService
     notifications: NotificationFactory
     network_scanner: NetworkScannerService
+    prometheus: PrometheusService
 }
 
 export interface IServices {

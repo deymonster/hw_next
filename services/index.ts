@@ -8,16 +8,27 @@ import { TelegramSettingsService} from './telegram-settings/telegram-settings.se
 import { NotificationSettingsService } from './notification-settings/notification-settings.service'
 import { DeviceService } from './device/device.service';
 import { NetworkScannerService } from './network-scanner/network-scanner.service';
+import { PrometheusService } from './prometheus/prometheus.service'
 import type { IServices, IDataServices, IInfrastructureServices } from './types'
 
 class ServiceFactory {
     private static instance: ServiceFactory;
+    
     private readonly dataServices: IDataServices
     private readonly infrastructureServices: IInfrastructureServices
     
 
     private constructor() {
         const deviceService = new DeviceService(prisma)
+
+        const prometheusService = new PrometheusService({
+            url: process.env.PROMETHEUS_URL || 'http://localhost:8080',
+            targetsPath: process.env.PROMETHEUS_TARGETS_PATH || './prometheus/targets/windows_tatgets.json',
+            auth: {
+                username: process.env.PROMETHEUS_USERNAME || 'admin',
+                password: process.env.PROMETHEUS_PASSWORD || ''
+            }
+        })
         this.dataServices = {
             user: new UserService(prisma),
             event: new EventService(prisma),
@@ -30,7 +41,8 @@ class ServiceFactory {
         this.infrastructureServices = {
             cache: new CacheService(),
             notifications: new NotificationFactory(),
-            network_scanner: new NetworkScannerService(deviceService)
+            network_scanner: new NetworkScannerService(services),
+            prometheus: prometheusService
         }
     }
 
