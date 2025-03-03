@@ -9,6 +9,10 @@ export interface PrometheusTarget {
 export interface PrometheusServiceConfig {
     url: string
     targetsPath: string
+    auth: {
+        username: string
+        password: string
+    }
 }
 
 // Базовая структура метрики
