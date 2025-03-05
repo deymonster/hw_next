@@ -1,16 +1,15 @@
 'use client'
 
-import { DeviceFilterOptions } from "@/services/device/device.interfaces"
+import { DeviceFilterOptions, IDeviceCreateInput } from "@/services/device/device.interfaces"
 import { Device, DeviceStatus, DeviceType } from "@prisma/client"
 import { useCallback, useState } from "react"
-import { getDevices, getDevicesStats, updateDeviceStatus, updateDeviceIp } from "@/app/actions/device"
-import { set } from "zod"
+import { getDevices, getDevicesStats, updateDeviceStatus, updateDeviceIp, createDevice } from "@/app/actions/device"
+
 
 interface UseDevicesOptions {
     onSuccess?: () => void
     onError?: (error: Error) => void
 }
-
 
 
 export function useDevices(options?: UseDevicesOptions) {
@@ -21,6 +20,8 @@ export function useDevices(options?: UseDevicesOptions) {
         byType: Record<DeviceType, number>
     }>()
     const [isLoading, setIsLoading] = useState(false)
+
+    
 
     const fetchDevices = useCallback(async (filters?: DeviceFilterOptions) => {
         try {
@@ -34,6 +35,21 @@ export function useDevices(options?: UseDevicesOptions) {
             setIsLoading(false)
         }
     }, [options])
+
+    const addNewDevice = useCallback(async (data: IDeviceCreateInput) => {
+        try {
+            setIsLoading(true)
+            const result = await createDevice(data)
+            await fetchDevices()
+            options?.onSuccess?.()
+            return result
+        } catch (error) {
+            options?.onError?.(error as Error)
+            return null
+        } finally {
+            setIsLoading(false)
+        } 
+    }, [options, fetchDevices])
 
     const fetchStats = useCallback(async () => {
         try {
@@ -89,7 +105,8 @@ export function useDevices(options?: UseDevicesOptions) {
         fetchDevices,
         fetchStats,
         updateStatus,
-        updateIp
+        updateIp,
+        addNewDevice
     }
 
 }

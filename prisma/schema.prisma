@@ -96,7 +96,7 @@ model Device {
   id             String       @id @default(uuid())
   name           String
   ipAddress      String   
-  agentKey       String?      @unique
+  agentKey       String      @unique
   serialNumber   String?
   warrantyStatus DateTime?
   lastUpdate     DateTime     @updatedAt

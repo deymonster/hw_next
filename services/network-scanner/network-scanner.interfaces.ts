@@ -11,7 +11,8 @@ export interface NetworkScannerOptions {
     timeout?: number
     concurrency?: number
     agentPort?: number
-    targetAgentKey?: string 
+    targetAgentKey?: string
+
 }
 
 export interface NetworkScannerService {

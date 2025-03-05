@@ -11,6 +11,12 @@ export class PrometheusService {
     }
 
     private getAuthHeader(): string {
+        if (!this.config.auth.username || !this.config.auth.password) {
+            console.error('Missing auth credentials:', {
+                username: !!this.config.auth.username,
+                password: !!this.config.auth.password
+            })
+        }
         return `Basic ${Buffer.from(`${this.config.auth.username}:${this.config.auth.password}`).toString('base64')}`
     }
 
@@ -52,13 +58,17 @@ export class PrometheusService {
             }
 
             // add new target
-            const newTarget: PrometheusTarget = {
-                targets: [`${ipAddress}:9182`],
-                labels: {
-                    job: 'windows-agents'
+            if (targets.length === 0) {
+                targets.push({
+                    targets: [`${ipAddress}:9182`],
+                    labels: { job: 'windows-agents' }
+                })
+            } else {
+                // Add to existing targets array
+                if (!targets[0].targets.includes(`${ipAddress}:9182`)) {
+                    targets[0].targets.push(`${ipAddress}:9182`)
                 }
             }
-            targets.push(newTarget)
             await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2))
             await this.reloadPrometheusConfig()
         } catch (error) {
@@ -69,11 +79,13 @@ export class PrometheusService {
 
     async getMetricsByIp(ipAddress: string): Promise<PrometheusApiResponse> {
         try {
+            const authHeader = this.getAuthHeader()
             const response = await fetch(`${this.config.url}/prometheus/api/v1/query?query={instance="${ipAddress}:9182"}`, {
                 headers: {
-                    'Authorization': this.getAuthHeader()
+                    'Authorization': authHeader
                 }
             })
+            
             if (!response.ok) {
                 throw new Error(`Failed to fetch metrics: ${response.statusText}`)
             }

@@ -22,6 +22,7 @@ export interface IDeviceCreateInput {
     ipAddress: string
     agentKey: string
     type: DeviceType
+    status?: DeviceStatus
     deviceTag?: string
     locationId?: string
 }

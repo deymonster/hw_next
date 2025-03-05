@@ -10,6 +10,8 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  OnChangeFn,
+  RowSelectionState
 } from "@tanstack/react-table"
 
 import {
@@ -42,6 +44,8 @@ interface DataTableProps<TData, TValue> {
     column?: string
     placeholder?: string
   }
+  enableRowSelection?: boolean
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>
 }
 
 export function DataTable<TData, TValue>({
@@ -57,12 +61,14 @@ export function DataTable<TData, TValue>({
     enabled: false,
     column: '',
     placeholder: "Поиск..."
-  }
+  },
+  enableRowSelection,
+  onRowSelectionChange
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const t = useTranslations('components.dataTable')
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [rowSelection, setRowSelection] = useState({})
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
   const table = useReactTable({
     data,
@@ -80,7 +86,11 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
-    onRowSelectionChange: setRowSelection,
+    enableRowSelection: !!enableRowSelection,
+    onRowSelectionChange: (value) => {
+      setRowSelection(value)
+      onRowSelectionChange?.(value)
+    },
     state: {
       sorting,
       columnFilters,

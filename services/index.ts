@@ -13,22 +13,14 @@ import type { IServices, IDataServices, IInfrastructureServices } from './types'
 
 class ServiceFactory {
     private static instance: ServiceFactory;
-    
     private readonly dataServices: IDataServices
     private readonly infrastructureServices: IInfrastructureServices
     
 
     private constructor() {
         const deviceService = new DeviceService(prisma)
+        const networkScanner = new NetworkScannerService()
 
-        const prometheusService = new PrometheusService({
-            url: process.env.PROMETHEUS_URL || 'http://localhost:8080',
-            targetsPath: process.env.PROMETHEUS_TARGETS_PATH || './prometheus/targets/windows_tatgets.json',
-            auth: {
-                username: process.env.PROMETHEUS_USERNAME || 'admin',
-                password: process.env.PROMETHEUS_PASSWORD || ''
-            }
-        })
         this.dataServices = {
             user: new UserService(prisma),
             event: new EventService(prisma),
@@ -38,12 +30,28 @@ class ServiceFactory {
             device: deviceService
         }
 
+        const prometheusService = new PrometheusService({
+            url: process.env.PROMETHEUS_URL || 'http://localhost:8080',
+            targetsPath: process.env.PROMETHEUS_TARGETS_PATH || './prometheus/targets/windows_tatgets.json',
+            auth: {
+                username: process.env.PROMETHEUS_USERNAME || 'admin',
+                password: process.env.PROMETHEUS_AUTH_PASSWORD || ''
+            }
+        })
+
+
         this.infrastructureServices = {
             cache: new CacheService(),
             notifications: new NotificationFactory(),
-            network_scanner: new NetworkScannerService(services),
+            network_scanner: networkScanner,
             prometheus: prometheusService
         }
+
+        networkScanner.initialize({
+            data: this.dataServices,
+            infrastructure: this.infrastructureServices
+        })
+
     }
 
     public static getInstance(): IServices {

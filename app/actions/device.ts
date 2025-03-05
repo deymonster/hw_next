@@ -2,7 +2,31 @@
 
 import { services } from '@/services/index';
 import { DeviceFilterOptions } from '@/services/device/device.interfaces'
-import { DeviceStatus } from '@prisma/client';
+import { Device, DeviceStatus, DeviceType } from '@prisma/client';
+import { IDeviceCreateInput } from '@/services/device/device.interfaces'
+
+
+
+export async function createDevice(data: IDeviceCreateInput): Promise<Device> {
+    try {
+        if (!data.ipAddress || !data.name) {
+            throw new Error('IP address and name are required')
+        }
+        
+        await services.infrastructure.prometheus.addTarget(data.ipAddress)
+
+        return await services.data.device.create({
+            name: data.name,
+            ipAddress: data.ipAddress,
+            agentKey: data.agentKey,
+            type: data.type || DeviceType.WINDOWS,
+            status: DeviceStatus.ACTIVE,
+        })
+    } catch (error) {
+        console.log('Failed to create device:', error)
+        throw error
+    }
+}
 
 export async function getDevices(options?: DeviceFilterOptions
 ) {

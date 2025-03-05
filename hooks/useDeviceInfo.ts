@@ -2,14 +2,14 @@ import { addDeviceTarget, getDeviceInfo } from "@/app/actions/prometheus.actions
 import { useState } from "react"
 
 
-export const useDeviceScan = () => {
-    const [isScanning, setIsScanning] = useState(false)
+export const useDeviceInfo = () => {
+    const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [deviceInfo, setDeviceInfo] = useState<any>(null)
 
-    const scanDevice = async (ipAddress: string) => {
+    const getInfo = async (ipAddress: string) => {
         try {
-            setIsScanning(true)
+            setIsLoading(true)
             setError(null)
 
             const result =  await getDeviceInfo(ipAddress)
@@ -20,13 +20,14 @@ export const useDeviceScan = () => {
 
             setDeviceInfo(result.data)
             console.log('Device Info', result.data)
+            return result.data
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to scan device'
             setError(errorMessage)
             console.error('Scanning error:', error)
             return null
         } finally {
-            setIsScanning(false)
+            setIsLoading(false)
         }
     } 
 
@@ -46,9 +47,9 @@ export const useDeviceScan = () => {
     }
 
     return {
-        scanDevice,
+        getInfo,
         addDevice,
-        isScanning,
+        isLoading,
         error,
         deviceInfo
     }
