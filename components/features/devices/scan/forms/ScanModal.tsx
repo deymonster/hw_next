@@ -16,6 +16,7 @@ import { ScanTable } from "../../table/ScanTable"
 import { useDeviceInfo } from "@/hooks/useDeviceInfo"
 import { useDevices } from "@/hooks/useDevices"
 import { DeviceType } from "@prisma/client"
+import { useDevicesContext } from "@/contexts/DeviceContext"
 
 
 export function ScanModal() {
@@ -26,6 +27,7 @@ export function ScanModal() {
     const [isOpen, setIsOpen ] = useState(false)
     const [selectedDevices, setSelectedDevices] = useState<string[]>([])
     const [localAgents, setLocalAgents] = useState<typeof discoveredAgents>([])
+    const { refreshDevices } = useDevicesContext()
     
     const { addNewDevice } = useDevices({
         onError: (error) => {
@@ -169,6 +171,7 @@ export function ScanModal() {
             }
             if (addedDevicesCount > 0) {
                 toast.success(`Добавлено устройств: ${addedDevicesCount}`)
+                refreshDevices()
                 handleModalClose()
             }
         } catch (error) {

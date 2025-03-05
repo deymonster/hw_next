@@ -9,19 +9,30 @@ import { useRouter } from "next/navigation"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 
 import { DataTable } from "@/components/ui/elements/DataTable";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { createDeviceColumns } from "./DeviceColumns";
+import { useDevicesContext } from "@/contexts/DeviceContext";
 
 
 export function DevicesTable() {
   const t = useTranslations('dashboard.devices')
+  const { setRefreshDevices } = useDevicesContext()
   const router = useRouter()
+  
   const { isLoading, fetchDevices, fetchStats, devices } = useDevices()
 
+  const stableRefreshFn = useCallback(() => {
+    fetchDevices();
+  }, [fetchDevices])
+
   useEffect(() => {
-    fetchDevices()
-    fetchStats()
-  }, [fetchDevices, fetchStats])
+    fetchDevices();
+    fetchStats();    
+
+    setRefreshDevices(stableRefreshFn)
+  }, [])
+
+
 
   const columns = useMemo(()=> createDeviceColumns((key: string) => t(key)), [t])
 

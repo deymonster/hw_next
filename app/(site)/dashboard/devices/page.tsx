@@ -2,6 +2,7 @@
 
 import { DeviceScan } from '@/components/features/devices/scan/DeviceScan'
 import { DevicesTable } from '@/components/features/devices/table/DeviceTable'
+import { DevicesProvider } from '@/contexts/DeviceContext'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 
@@ -21,10 +22,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function DevicesPage() {
   return (
-    <>
-    <DeviceScan />
-    <DevicesTable />
-    </>
+    <DevicesProvider>
+      <DeviceScan />
+      <DevicesTable />
+    </DevicesProvider>
+    
+
+    
     
   )
 }
