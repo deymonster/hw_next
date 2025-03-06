@@ -12,6 +12,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useDevicesContext } from "@/contexts/DeviceContext"
 import { cn } from "@/utils/tw-merge"
 import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
+import { useRouter } from "next/navigation"
+import { useDeviceSelection } from "./DeviceTable";
 
 interface DeviceActionsProps {
   device: Device
@@ -23,6 +25,8 @@ export function DeviceActions({ device }: DeviceActionsProps) {
   const { refreshDevices } = useDevicesContext()
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const { setSelectedDevice } = useDeviceSelection()
+  const router = useRouter()
 
   const handleUpdateIp = async () => {
     try {
@@ -50,6 +54,10 @@ export function DeviceActions({ device }: DeviceActionsProps) {
     }
   }
 
+  const handleEdit = () => {
+    setSelectedDevice(device)
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -69,7 +77,7 @@ export function DeviceActions({ device }: DeviceActionsProps) {
           <RefreshCw className="mr-2 h-4 w-4" />
           {t('updateIp')}
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleEdit}>
           <Edit className="mr-2 h-4 w-4" />
           {t('edit')}
         </DropdownMenuItem>

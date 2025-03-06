@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input"
 
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useState } from "react"
+import { cn } from "@/utils/tw-merge"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -46,6 +47,7 @@ interface DataTableProps<TData, TValue> {
   }
   enableRowSelection?: boolean
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
+  onRowClick?: (data: TData) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -63,7 +65,8 @@ export function DataTable<TData, TValue>({
     placeholder: "Поиск..."
   },
   enableRowSelection,
-  onRowSelectionChange
+  onRowSelectionChange,
+  onRowClick
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const t = useTranslations('components.dataTable')
@@ -140,6 +143,8 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={() => onRowClick && onRowClick(row.original)}
+                  className={cn(onRowClick && 'cursor-pointer hover:bg-muted/50')}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
