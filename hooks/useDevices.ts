@@ -3,7 +3,7 @@
 import { DeviceFilterOptions, IDeviceCreateInput } from "@/services/device/device.interfaces"
 import { Device, DeviceStatus, DeviceType } from "@prisma/client"
 import { useCallback, useState } from "react"
-import { getDevices, getDevicesStats, updateDeviceStatus, updateDeviceIp, createDevice } from "@/app/actions/device"
+import { getDevices, getDevicesStats, updateDeviceStatus, updateDeviceIp, createDevice, deleteDeviceById } from "@/app/actions/device"
 
 
 interface UseDevicesOptions {
@@ -99,6 +99,20 @@ export function useDevices(options?: UseDevicesOptions) {
     }, [options, fetchDevices])
 
 
+    const deleteDevice = useCallback(async (id: string) => {
+        try {
+            setIsLoading(true)
+            await deleteDeviceById(id)
+            await fetchDevices()
+            options?.onSuccess?.()
+        } catch (error) {
+            options?.onError?.(error as Error)
+        } finally {
+            setIsLoading(false)
+        }
+    }, [options, fetchDevices])
+
+
     return {
         devices,
         stats,
@@ -107,7 +121,8 @@ export function useDevices(options?: UseDevicesOptions) {
         fetchStats,
         updateStatus,
         updateIp,
-        addNewDevice
+        addNewDevice,
+        deleteDevice
     }
 
 }

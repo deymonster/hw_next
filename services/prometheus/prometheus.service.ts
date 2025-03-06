@@ -76,6 +76,28 @@ export class PrometheusService {
         }
     }
 
+    async removeTarget(ipAddress: string): Promise<void> {
+        try {
+            const targetsPath = path.resolve(this.config.targetsPath)
+            let targets: PrometheusTarget[] = []
+            try {
+                const content = await fs.readFile(targetsPath, 'utf-8')
+                targets = JSON.parse(content)
+            } catch (error) {
+                console.warn(`Failed to read targets file: ${error}`)
+                targets = []
+            }
+
+            if (targets.length > 0) {
+                targets[0].targets = targets[0].targets.filter(target => target !==`${ipAddress}:9182`)
+            }
+            await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2))
+            await this.reloadPrometheusConfig()
+        } catch (error) {
+            throw new Error(`Failed to remove target: ${error}`)
+        }
+    }
+
 
     async getMetricsByIp(ipAddress: string): Promise<PrometheusApiResponse> {
         try {

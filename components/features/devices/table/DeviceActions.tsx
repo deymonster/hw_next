@@ -11,6 +11,7 @@ import { toast } from "sonner"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdowmmenu"
 import { useDevicesContext } from "@/contexts/DeviceContext"
 import { cn } from "@/utils/tw-merge"
+import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
 
 interface DeviceActionsProps {
   device: Device
@@ -18,9 +19,10 @@ interface DeviceActionsProps {
 
 export function DeviceActions({ device }: DeviceActionsProps) {
   const t = useTranslations('dashboard.devices.actions')
-  const { updateIp } = useDevices()
+  const { updateIp, deleteDevice } = useDevices()
   const { refreshDevices } = useDevicesContext()
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const handleUpdateIp = async () => {
     try {
@@ -32,6 +34,19 @@ export function DeviceActions({ device }: DeviceActionsProps) {
       toast.error(t('updateIpError'))
     } finally {
       setIsUpdating(false)
+    }
+  }
+  
+  const handleDelete = async () => {
+    try {
+        setIsDeleting(true)
+        await deleteDevice(device.id)
+        toast.success(t('deleteSuccess'))
+        refreshDevices()
+    } catch (error) {
+        toast.error(t('deleteError'))
+    } finally {
+        setIsDeleting(false)
     }
   }
 
@@ -58,10 +73,21 @@ export function DeviceActions({ device }: DeviceActionsProps) {
           <Edit className="mr-2 h-4 w-4" />
           {t('edit')}
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-destructive">
-          <Trash2 className="mr-2 h-4 w-4" />
-          {t('delete')}
-        </DropdownMenuItem>
+        <ConfirmModal
+            heading={t('deleteConfirmTitle')}
+            message={t('deleteConfirmMessage', { name: device.name})}
+            onConfirm={handleDelete}
+        >
+            <DropdownMenuItem 
+                className="text-destructive"
+                disabled={isDeleting}
+                onSelect={(e) => e.preventDefault()}
+                
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('delete')}
+            </DropdownMenuItem>
+        </ConfirmModal>
       </DropdownMenuContent>
     </DropdownMenu>
   )

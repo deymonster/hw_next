@@ -64,4 +64,15 @@ export async function updateDeviceIp(agentKey: string) {
     }
 }
 
+export async function deleteDeviceById(id: string) {
+    try {
+        const deletedDevice = await services.data.device.deleteDevice(id)
+        await services.infrastructure.prometheus.removeTarget(deletedDevice.ipAddress)
+        return deletedDevice
+    } catch (error) {
+        console.log('Failed to delete device:', error)
+        throw error
+    }
+}
+
 

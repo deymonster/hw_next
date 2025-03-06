@@ -109,5 +109,19 @@ export class DeviceService
         })
     }
 
-    
+    async deleteDevice(id: string): Promise<Device> {
+        const device = await this.model.findUnique({
+            where: { id }
+        })
+
+        if (!device) {
+            throw new Error('Device not found')
+        }
+
+        return await this.model.delete({
+            where: { id }
+        })
+    }
+
+
 }
