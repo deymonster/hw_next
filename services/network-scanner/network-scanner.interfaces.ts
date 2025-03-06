@@ -12,7 +12,6 @@ export interface NetworkScannerOptions {
     concurrency?: number
     agentPort?: number
     targetAgentKey?: string
-
 }
 
 export interface NetworkScannerService {

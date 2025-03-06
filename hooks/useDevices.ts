@@ -84,11 +84,12 @@ export function useDevices(options?: UseDevicesOptions) {
         }
     }, [options, fetchDevices])
 
-    const updateIp = useCallback(async (id: string, ipAddress: string) => {
+    const updateIp = useCallback(async (id: string) => {
         try {
             setIsLoading(true)
-            const result = await updateDeviceIp(id, ipAddress)
+            const result = await updateDeviceIp(id)
             await fetchDevices()
+            console.log('Update IP result:', result);
             options?.onSuccess?.()
         } catch (error) {
             options?.onError?.(error as Error)

@@ -393,7 +393,15 @@
 					"registered": "Зарегистрирован"
 				}
 
-			}
+			},
+			"actions": {
+					"updateIp": "Обновить IP-адрес",
+					"updatingIp": "Обновление IP-адреса...",
+					"updateIpSuccess": "IP-адрес успешно обновлен",
+					"errorUpdatingIp": "Ошибка при обновлении IP-адреса",
+					"edit": "Редактировать",
+					"delete": "Удалить"
+				}
 		}
 	},
 	"components": {

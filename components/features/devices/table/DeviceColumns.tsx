@@ -8,6 +8,7 @@ import { Device, DeviceStatus } from "@prisma/client"
 import { ColumnDef } from "@tanstack/react-table"
 import { MoreHorizontal, Pencil, RefreshCw, Trash } from "lucide-react"
 import { ArrowUpDown } from "lucide-react"
+import { DeviceActions } from "./DeviceActions"
 
 type TranslationFunction = (key: string) => string
 
@@ -98,36 +99,6 @@ export const createDeviceColumns = (t: TranslationFunction): ColumnDef<Device>[]
 
     {
         id: 'actions',
-        cell: ({ row }) => {
-            
-            return (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant='ghost' className='h-8 w-8 p-0'>
-                                <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end'>
-                        <DropdownMenuItem onClick={() => console.log('Edit', row.original.id)}>
-                            <Pencil className='size-4 mr-2'/>Редактировать
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        
-                        <DropdownMenuItem onClick={() => console.log('Renew IP', row.original.id)}>
-                            <RefreshCw className='size-4 mr-3'/>Обновить IP
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-
-                        <DropdownMenuItem className='text-destructive' onClick={() => console.log('Delete', row.original.id)}>
-                            <Trash className='size-4 mr-2'/>Удалить
-                        </DropdownMenuItem>
-                        
-
-
-
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )
-        }
+        cell: ({row}) => <DeviceActions device={row.original} />
     }
   ]

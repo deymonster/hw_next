@@ -4,6 +4,7 @@ import { services } from '@/services/index';
 import { DeviceFilterOptions } from '@/services/device/device.interfaces'
 import { Device, DeviceStatus, DeviceType } from '@prisma/client';
 import { IDeviceCreateInput } from '@/services/device/device.interfaces'
+import { Agent } from 'http';
 
 
 
@@ -42,6 +43,25 @@ export async function updateDeviceStatus(id: string, status: DeviceStatus) {
     return await services.data.device.updateStatus(id, status)
 }
 
-export async function updateDeviceIp(id: string, ipAddress: string) {
-    return await services.data.device.updateIpAddress(id, ipAddress)
+export async function updateDeviceIp(agentKey: string) {
+    try {
+        const device = await services.data.device.findByAgentKey(agentKey)
+    if (!device) {
+        throw new Error(`Device with agentKey ${agentKey} not found`)
+    }
+    const scanResults = await services.infrastructure.network_scanner.scanNetwork({
+        targetAgentKey: agentKey
+    })
+    if (!scanResults.length) {
+        throw new Error(`Device with agentKey ${agentKey} not found in network`)
+    }
+    const agent = scanResults[0]
+    
+    return await services.data.device.updateIpAddress(device.id, agent.ipAddress)
+    } catch (error) {
+        console.log('[UPDATE_DEVICE_IP]', error)
+        throw error
+    }
 }
+
+
