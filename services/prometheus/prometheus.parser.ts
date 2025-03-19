@@ -46,7 +46,10 @@ export class PrometheusParser {
     }
 
     getSystemInfo() {
+        console.log('[PROMETHEUS_PARSER] Starting to parse system info')
+        
         const systemInfo = this.findMetric<SystemInformation>('system_information')
+        console.log('[PROMETHEUS_PARSER] SystemInfo', systemInfo)
         const uuid = this.findMetric<UUIDMetric>('UNIQUE_ID_SYSTEM')
         const serialNumber = this.findMetric<SerialNumber>('device_serial_number_info')
 

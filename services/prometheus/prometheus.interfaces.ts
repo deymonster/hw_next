@@ -219,6 +219,18 @@ export interface PrometheusApiResponse {
     }
 }
 
+export interface AgentStatus {
+    health: string
+    lastError: string
+    lastScrape: string
+    lastScrapeDuration: number
+    scrapeInterval: string
+    scrapeTimeout: string
+    up: boolean
+}
+
+
+
 
 
 

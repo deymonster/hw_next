@@ -68,6 +68,8 @@ export function DataTable<TData, TValue>({
   onRowSelectionChange,
   onRowClick
 }: DataTableProps<TData, TValue>) {
+
+  
   const [sorting, setSorting] = useState<SortingState>([])
   const t = useTranslations('components.dataTable')
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])

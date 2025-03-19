@@ -9,89 +9,79 @@ import { type TypeScanDeviceSchema, scanDeviceSchema } from "@/schemas/scan/scan
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
-import { useEffect, useState } from "react"
+import { useEffect, useCallback, useState } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 import { ScanTable } from "../../table/ScanTable"
 import { useDeviceInfo } from "@/hooks/useDeviceInfo"
-import { useDevices } from "@/hooks/useDevices"
-import { DeviceType } from "@prisma/client"
 import { useDevicesContext } from "@/contexts/DeviceContext"
-
 
 export function ScanModal() {
     const t = useTranslations('dashboard.devices.scanModal')
 
+    // Хуки для сканирования и управления устройствами
     const { startScan, stopScan, discoveredAgents, isScanning, getSubnet, resetScanner } = useNetworkScanner()
-    const { getInfo, isLoading, addDevice } = useDeviceInfo()
-    const [isOpen, setIsOpen ] = useState(false)
+    const { getInfo, isLoading, addDevice, addMultipleDevices } = useDeviceInfo()
+    const { refreshDevices } = useDevicesContext()
+
+    // Локальное состояние модального окна
+    const [isOpen, setIsOpen] = useState(false)
     const [selectedDevices, setSelectedDevices] = useState<string[]>([])
     const [localAgents, setLocalAgents] = useState<typeof discoveredAgents>([])
-    const { refreshDevices } = useDevicesContext()
-    
-    const { addNewDevice } = useDevices({
-        onError: (error) => {
-            toast.error('Failed to add device to DB')
-        },
-        onSuccess: () => {
-            toast.success('Устройство успешно добавлено')
-        }
-    })
+    const [isAddingDevices, setIsAddingDevices] = useState(false)
 
-    
+    // Инициализация формы с валидацией
     const form = useForm<TypeScanDeviceSchema>({
         resolver: zodResolver(scanDeviceSchema),
         defaultValues: {
             subnet: ''
         }
-
     })
 
     const { isValid } = form.formState
 
-    const handleModalClose = () => {
+    // Функция для получения подсети, вынесенная в useCallback
+    const fetchSubnet = useCallback(async () => {
+        const subnet = await getSubnet({
+            onError: () => {
+                toast.error(t('subnetError'))
+            }
+        })
+        if (subnet) {
+            form.setValue('subnet', subnet)
+        }
+    }, [getSubnet, t, form])
+
+    // Функция закрытия модального окна
+    const handleModalClose = useCallback(() => {
         if (isScanning) {
-            
             stopScan()
         }
         resetScanner()
         setSelectedDevices([])
         setLocalAgents([])
         form.reset()
+        refreshDevices()
         setIsOpen(false)
-    }
+    }, [isScanning, stopScan, resetScanner, form, refreshDevices])
 
-    useEffect(() =>{
+    // Эффект для инициализации модального окна
+    useEffect(() => {
         if (isOpen) {
             resetScanner()
             setSelectedDevices([])
-            const fetchSubnet = async () => {
-                const subnet = await getSubnet({
-                    onError: () => {
-                        toast.error(t('subnetError'))
-                    }
-                })
-                if (subnet) {
-                    form.setValue('subnet', subnet)
-                }
-            }
             fetchSubnet()
-
         }
         return () => {
             if (isScanning) {
-                
                 stopScan()
             }
         }
-        
-    }, [isOpen, form, getSubnet, t, resetScanner, isScanning, stopScan])
+    }, [isOpen, resetScanner, isScanning, stopScan, fetchSubnet])
     
 
     async function onSubmit(data: TypeScanDeviceSchema) {
-        
         if (isScanning) {
-            
             stopScan()
         }
         setSelectedDevices([])
@@ -101,7 +91,6 @@ export function ScanModal() {
             {subnet: data.subnet},
             {
                 onSuccess: () => {
-                    
                     toast.success(t('successScanMessage'))
                 },
                 onError: () => {
@@ -109,74 +98,82 @@ export function ScanModal() {
                 }
             }
         )
-
             
         if (Array.isArray(result)) {
             if (result.length > 0) {
-
                 setLocalAgents(result)
             } else {
-                
                 setLocalAgents([])
             }
         } else {
-
             setLocalAgents([])
         }
     }
 
     const handleAddDevices = async () => {
         try {
+            console.log(`[SCAN_MODAL] Starting to add ${selectedDevices.length} devices...`)
+            setIsAddingDevices(true)
             
-            let addedDevicesCount = 0;
-
+            const validDevices: string[] = [];
             for (const ipAddress of selectedDevices) {
-                const agent = localAgents.find(a => a.ipAddress === ipAddress)
+                const agent = localAgents.find(a => a.ipAddress === ipAddress);
                 if (!agent) {
-                    throw new Error(`Agent not found for ${ipAddress}`)
+                    console.warn(`[SCAN_MODAL] Agent not found for ${ipAddress}`);
+                    continue;
                 }
-
-                // Проверка зарегистрирован ли агент уже или нет
+                
                 if (agent.isRegistered) {
-                    
-                    toast.error(`Устройство ${agent.agentKey} уже зарегистрировано`)
-                    continue
-                }
-                // Добавление в Prometheus
-                const addResult = await addDevice(ipAddress)
-                if (!addResult) {
-                    throw new Error(`Failed to add target for ${ipAddress}`)
-                }
-                // Получаем инфо из Prometheus
-                const info = await getInfo(ipAddress)
-                if (!info) {
-                    throw new Error(`Failed to get info for ${ipAddress}`)
+                    toast.error(`Устройство ${agent.agentKey} уже зарегистрировано`);
+                    continue;
                 }
                 
-                
-                if (!info.systemInfo.name || !info.systemInfo.uuid) {
-                    throw new Error(`Missing required info for device ${ipAddress}`);
-                }
-                // Добавляем новое устройство в БД
-                const deviceResult = await addNewDevice({
-                    name: info.systemInfo.name!,
-                    ipAddress: ipAddress,
-                    agentKey: info.systemInfo.uuid!,
-                    type: DeviceType.WINDOWS
-                })
-                if (!deviceResult) {
-                    throw new Error(`Failed to add device for ${ipAddress}`)
-                }
-                addedDevicesCount++;
+                validDevices.push(ipAddress);
             }
-            if (addedDevicesCount > 0) {
-                toast.success(`Добавлено устройств: ${addedDevicesCount}`)
-                refreshDevices()
+            
+            if (validDevices.length === 0) {
+                toast.error('Нет устройств для добавления');
+                return;
+            }
+            
+            //console.log(`[SCAN_MODAL] Adding ${validDevices.length} valid devices to Prometheus...`);
+            //toast.loading('Добавление устройств...', { id: 'add-devices' })
+            
+            const result = await addMultipleDevices(validDevices)
+
+            if (result.success) {
+                toast.success(`Добавлено устройств: ${result.addedCount}`, { id: 'add-devices' })
+
+                const errorCount = Object.keys(result.errors).length
+                if (errorCount > 0) {
+                    toast.warning(`Не удалось добавить ${errorCount} устройств: ${JSON.stringify(result.errors)}`)
+                    console.warn('[SCAN_MODAL] Errors during device addition:', result.errors)
+                }
+                
+                // Закрываем модальное окно сразу после успешного добавления
+                console.log('[SCAN_MODAL] Closing modal...')
                 handleModalClose()
+                
+                // Обновляем список устройств
+                // console.log('[SCAN_MODAL] Refreshing device list...')
+                // await forceRefreshDevices()
+                
+                // Вызываем refreshDevices из контекста для обновления UI
+                // console.log('[SCAN_MODAL] Calling refreshDevices from context...')
+                // refreshDevices()
+            } else {
+                toast.error(`Не удалось добавить устройства: ${JSON.stringify(result.errors)}`, { id: 'add-devices' })
+                console.error('[SCAN_MODAL] Errors during device addition:', result.errors)
             }
+            
         } catch (error) {
             console.error('[SCAN_MODAL] Failed to add devices:', error)
-            toast.error('Ошибка добавления устройства')
+            toast.error('Ошибка добавления устройства', { id: 'add-devices' })
+            
+            // Пытаемся обновить список устройств даже при ошибке
+            // await forceRefreshDevices()
+        } finally {
+            setIsAddingDevices(false)
         }
     }
 
@@ -240,10 +237,17 @@ export function ScanModal() {
                                 <Button
                                     type='button'
                                     variant='default'
-                                    disabled={selectedDevices.length === 0 || isLoading}
+                                    disabled={selectedDevices.length === 0 || isLoading || isAddingDevices}
                                     onClick={handleAddDevices}
                                 >
-                                    Добавить
+                                    {isAddingDevices ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Добавление...
+                                        </>
+                                    ) : (
+                                        'Добавить'
+                                    )}
                                 </Button>
                             )}
 

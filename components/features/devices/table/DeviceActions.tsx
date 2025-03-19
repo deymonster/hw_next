@@ -12,7 +12,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useDevicesContext } from "@/contexts/DeviceContext"
 import { cn } from "@/utils/tw-merge"
 import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
-import { useRouter } from "next/navigation"
 import { useDeviceSelection } from "./DeviceTable";
 
 interface DeviceActionsProps {
@@ -26,16 +25,19 @@ export function DeviceActions({ device }: DeviceActionsProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const { setSelectedDevice } = useDeviceSelection()
-  const router = useRouter()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  
 
   const handleUpdateIp = async () => {
     try {
       setIsUpdating(true)
+      setIsMenuOpen(false)
+      toast.loading('Сканирование сети и поиск устройства...', { id: 'update-ip' })
       await updateIp(device.agentKey)
-      toast.success(t('updateIpSuccess'))
+      toast.success(t('updateIpSuccess'), { id: 'update-ip' })
       refreshDevices()
     } catch (error) {
-      toast.error(t('updateIpError'))
+      toast.error(t('updateIpError'), { id: 'update-ip' })
     } finally {
       setIsUpdating(false)
     }
@@ -44,22 +46,41 @@ export function DeviceActions({ device }: DeviceActionsProps) {
   const handleDelete = async () => {
     try {
         setIsDeleting(true)
+        setIsMenuOpen(false)
+        toast.loading('Удаление устройства...', { id: 'delete-device' })
         await deleteDevice(device.id)
-        toast.success(t('deleteSuccess'))
+        toast.success(t('deleteSuccess'), { id: 'delete-device' })
+        setSelectedDevice(null)
+        
+        // Принудительно обновляем список устройств несколько раз
+        console.log('DeviceActions - First refresh after deletion');
         refreshDevices()
+        
+        // Дополнительное обновление через 500 мс
+        setTimeout(() => {
+            console.log('DeviceActions - Second refresh after deletion');
+            refreshDevices();
+            
+            // И еще одно обновление через 1000 мс
+            setTimeout(() => {
+                console.log('DeviceActions - Third refresh after deletion');
+                refreshDevices();
+            }, 1000);
+        }, 500);
     } catch (error) {
-        toast.error(t('deleteError'))
+      toast.error(t('deleteError'), { id: 'delete-device' })
     } finally {
         setIsDeleting(false)
     }
   }
 
   const handleEdit = () => {
+    setIsMenuOpen(false)
     setSelectedDevice(device)
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="h-8 w-8 p-0">
           <MoreHorizontal className="h-4 w-4" />
@@ -67,30 +88,54 @@ export function DeviceActions({ device }: DeviceActionsProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem
-          onClick={handleUpdateIp}
+          onClick={(e) => {
+            e.stopPropagation(); 
+            handleUpdateIp();
+          }}
           disabled={isUpdating}
           className={cn(
             "flex items-center",
             isUpdating ? "opacity-50 cursor-not-allowed" : ""
           )}
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          {t('updateIp')}
+          {isUpdating ? (
+          <>
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            Сканирование...
+          </>
+        ) : (
+          <>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {t('updateIp')}
+          </>
+        )}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleEdit}>
+        <DropdownMenuItem 
+          onClick={(e) => {
+            e.stopPropagation()
+            handleEdit()
+          }}>
           <Edit className="mr-2 h-4 w-4" />
           {t('edit')}
         </DropdownMenuItem>
         <ConfirmModal
             heading={t('deleteConfirmTitle')}
             message={t('deleteConfirmMessage', { name: device.name})}
-            onConfirm={handleDelete}
+            onConfirm={(e) => {
+              e.stopPropagation()
+              handleDelete()
+            }}
+            onCancel={(e) => {
+              if (e && e.stopPropagation) {
+                e.stopPropagation();
+              }
+            }}
         >
             <DropdownMenuItem 
                 className="text-destructive"
                 disabled={isDeleting}
                 onSelect={(e) => e.preventDefault()}
-                
+                onClick={(e) => e.stopPropagation()}
             >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {t('delete')}

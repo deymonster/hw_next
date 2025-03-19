@@ -9,7 +9,7 @@ import { ToastProvider } from "@/providers/ToastProvider";
 import { SessionProvider } from "next-auth/react";
 import { SWRProvider } from '@/providers/SWRProvider';
 import { ColorSwitcher } from "@/components/ui/elements/ColorSwitcher";
-import { timeZone } from '@/libs/i18n/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 interface RootLayoutClientProps {
   children: React.ReactNode;
@@ -17,6 +17,15 @@ interface RootLayoutClientProps {
   messages: any;
   timeZone: string;
 }
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // данные считаются свежими 1 минуту
+      refetchOnWindowFocus: false, // отключаем автообновление при фокусе окна
+    },
+  },
+})
 
 export function RootLayoutClient({ children, locale, messages, timeZone }: RootLayoutClientProps) {
   const searchParams = useSearchParams()
@@ -47,10 +56,12 @@ export function RootLayoutClient({ children, locale, messages, timeZone }: RootL
               defaultTheme="dark"
               disableTransitionOnChange
             >
-              <ToastProvider />
-              <SWRProvider>
-                {children}
-              </SWRProvider>
+              <QueryClientProvider client={queryClient}>
+                <ToastProvider />
+                <SWRProvider>
+                  {children}
+                </SWRProvider>
+              </QueryClientProvider>
             </ThemeProvider>
           </SessionProvider>
         </NextIntlClientProvider>

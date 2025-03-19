@@ -3,6 +3,7 @@ import { LayoutContainer } from "@/components/layout/LayoutContainer";
 import { Sidebar } from "@/components/layout/sidebar/Sidebar";
 import type { PropsWithChildren } from "react";
 
+
 export default function SiteLayout({children}: PropsWithChildren<unknown>) {
     return (
         <div className="flex h-full flex-col">
@@ -12,7 +13,9 @@ export default function SiteLayout({children}: PropsWithChildren<unknown>) {
                 </div>
                 <Sidebar />
                 <LayoutContainer>
-                    {children}
+                    
+                        {children}
+                    
                 </LayoutContainer>
                     
             </div>

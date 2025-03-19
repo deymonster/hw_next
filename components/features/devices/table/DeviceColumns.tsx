@@ -17,8 +17,7 @@ const statusTranslations: Record<DeviceStatus, string> = {
     INACTIVE: 'НЕ В СЕТИ',
     PENDING: 'ОЖИДАНИЕ',
     DECOMMISSIONED: 'ВЫВЕДЕН'
-  }
-
+}
 
 const getStatusBadge = (status: DeviceStatus) => {
     const variants: Record<DeviceStatus, "default" | "success" | "destructive" | "secondary"> = {
@@ -28,9 +27,10 @@ const getStatusBadge = (status: DeviceStatus) => {
       DECOMMISSIONED: "secondary"
     }
     return <Badge variant={variants[status]}>{statusTranslations[status]}</Badge>
-  }
+}
 
-export const createDeviceColumns = (t: TranslationFunction): ColumnDef<Device>[] => [
+export function createDeviceColumns(t: (key: string) => string): ColumnDef<Device>[] {
+  const columns: ColumnDef<Device>[] = [
     {
       accessorKey: 'name',
       header: ({column}) => {
@@ -61,22 +61,18 @@ export const createDeviceColumns = (t: TranslationFunction): ColumnDef<Device>[]
       },
       cell: ({row}) => row.original.ipAddress
     },
-
     {
       accessorKey: 'status',
       header: ({column}) => (
         <div className='space-y-2'>
-
             <SelectFilter
-                    options={Object.values(DeviceStatus)}
-                    selectedValue={column.getFilterValue() as string}
-                    onValueChange={(value) => column.setFilterValue(value)}
-                    placeholder={t('columns.status')} 
-                    translateOption={(option) => statusTranslations[option as DeviceStatus] || option}
+                options={Object.values(DeviceStatus)}
+                selectedValue={column.getFilterValue() as string}
+                onValueChange={(value) => column.setFilterValue(value)}
+                placeholder={t('columns.status')} 
+                translateOption={(option) => statusTranslations[option as DeviceStatus] || option}
             /> 
-
         </div>
-        
       ),
       cell: ({row}) => getStatusBadge(row.original.status),
       filterFn: (row, columnId, filterValue) => {
@@ -84,9 +80,7 @@ export const createDeviceColumns = (t: TranslationFunction): ColumnDef<Device>[]
         const status = row.getValue(columnId) as DeviceStatus;
         return status === filterValue;
       }
-      
     },
-
     {
         accessorKey: 'deviceTag',
         header: t('columns.tag'),
@@ -96,9 +90,11 @@ export const createDeviceColumns = (t: TranslationFunction): ColumnDef<Device>[]
           return value.toLowerCase().startsWith(filterValue.toLowerCase()); 
         }
     },
-
     {
         id: 'actions',
         cell: ({row}) => <DeviceActions device={row.original} />
     }
-  ]
+  ];
+  
+  return columns;
+}
