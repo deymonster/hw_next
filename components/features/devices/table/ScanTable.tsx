@@ -21,19 +21,31 @@ interface ScanTableProps {
 
 export function ScanTable({data, isLoading, onRowSelectionChange }: ScanTableProps) {
   const t = useTranslations('dashboard.devices.scanModal')
-  
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   
   const columns = useMemo(()=> createScanDeviceColumns((key: string) => t(key)), [t])
 
   const handleSelectionChange: OnChangeFn<RowSelectionState> = (updaterOrValue) => {
-    const value = typeof updaterOrValue === 'function' 
-      ? updaterOrValue({}) 
+    console.log('[SCAN_TABLE] Selection change:', updaterOrValue)
+    
+    // Get new selection value by applying updater to current state
+    const newSelection = typeof updaterOrValue === 'function' 
+      ? updaterOrValue(rowSelection)
       : updaterOrValue
     
-    const selectedIps = Object.entries(value)
+    console.log('[SCAN_TABLE] Current selection:', rowSelection)
+    console.log('[SCAN_TABLE] New selection:', newSelection)
+    
+    // Update local selection state
+    setRowSelection(newSelection)
+    
+    // Convert all selected rows to array of IP addresses
+    const selectedIps = Object.entries(newSelection)
       .filter(([_, selected]) => selected)
       .map(([index]) => data[parseInt(index)].ipAddress)
 
+    console.log('[SCAN_TABLE] All selected IPs:', selectedIps)
+    
     onRowSelectionChange?.(selectedIps)
   }
   
@@ -49,12 +61,8 @@ export function ScanTable({data, isLoading, onRowSelectionChange }: ScanTablePro
             }}
             enableRowSelection={true}
             onRowSelectionChange={handleSelectionChange}
-            
+            rowSelection={rowSelection}
         />
-
     </div>
-        
-    
   )
-  
 }

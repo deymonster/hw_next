@@ -48,6 +48,7 @@ interface DataTableProps<TData, TValue> {
   enableRowSelection?: boolean
   onRowSelectionChange?: OnChangeFn<RowSelectionState>
   onRowClick?: (data: TData) => void
+  rowSelection?: RowSelectionState
 }
 
 export function DataTable<TData, TValue>({
@@ -66,14 +67,15 @@ export function DataTable<TData, TValue>({
   },
   enableRowSelection,
   onRowSelectionChange,
-  onRowClick
+  onRowClick,
+  rowSelection
 }: DataTableProps<TData, TValue>) {
 
   
   const [sorting, setSorting] = useState<SortingState>([])
   const t = useTranslations('components.dataTable')
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [localRowSelection, setLocalRowSelection] = useState<RowSelectionState>({})
 
   const table = useReactTable({
     data,
@@ -91,15 +93,12 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
-    enableRowSelection: !!enableRowSelection,
-    onRowSelectionChange: (value) => {
-      setRowSelection(value)
-      onRowSelectionChange?.(value)
-    },
+    enableRowSelection,
+    onRowSelectionChange: onRowSelectionChange || setLocalRowSelection,
     state: {
       sorting,
       columnFilters,
-      rowSelection
+      rowSelection: rowSelection || localRowSelection
     }
 
   })

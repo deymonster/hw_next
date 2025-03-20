@@ -15,9 +15,11 @@ import { toast } from "sonner"
 import { ScanTable } from "../../table/ScanTable"
 import { useDeviceInfo } from "@/hooks/useDeviceInfo"
 import { useDevicesContext } from "@/contexts/DeviceContext"
+import { useQueryClient } from '@tanstack/react-query'
 
 export function ScanModal() {
     const t = useTranslations('dashboard.devices.scanModal')
+    const queryClient = useQueryClient()
 
     // Хуки для сканирования и управления устройствами
     const { startScan, stopScan, discoveredAgents, isScanning, getSubnet, resetScanner } = useNetworkScanner()
@@ -113,6 +115,7 @@ export function ScanModal() {
     const handleAddDevices = async () => {
         try {
             console.log(`[SCAN_MODAL] Starting to add ${selectedDevices.length} devices...`)
+            console.log('[SCAN_MODAL] Selected devices:', selectedDevices)
             setIsAddingDevices(true)
             
             const validDevices: string[] = [];
@@ -136,9 +139,7 @@ export function ScanModal() {
                 return;
             }
             
-            //console.log(`[SCAN_MODAL] Adding ${validDevices.length} valid devices to Prometheus...`);
-            //toast.loading('Добавление устройств...', { id: 'add-devices' })
-            
+            console.log(`[SCAN_MODAL] Sending ${validDevices.length} valid devices for addition:`, validDevices)
             const result = await addMultipleDevices(validDevices)
 
             if (result.success) {
@@ -150,17 +151,13 @@ export function ScanModal() {
                     console.warn('[SCAN_MODAL] Errors during device addition:', result.errors)
                 }
                 
-                // Закрываем модальное окно сразу после успешного добавления
+                // Инвалидируем кэш devices после успешного добавления
+                console.log('[SCAN_MODAL] Invalidating devices cache...')
+                queryClient.invalidateQueries({ queryKey: ['devices'] })
+                
+                // Закрываем модальное окно
                 console.log('[SCAN_MODAL] Closing modal...')
                 handleModalClose()
-                
-                // Обновляем список устройств
-                // console.log('[SCAN_MODAL] Refreshing device list...')
-                // await forceRefreshDevices()
-                
-                // Вызываем refreshDevices из контекста для обновления UI
-                // console.log('[SCAN_MODAL] Calling refreshDevices from context...')
-                // refreshDevices()
             } else {
                 toast.error(`Не удалось добавить устройства: ${JSON.stringify(result.errors)}`, { id: 'add-devices' })
                 console.error('[SCAN_MODAL] Errors during device addition:', result.errors)
@@ -169,9 +166,6 @@ export function ScanModal() {
         } catch (error) {
             console.error('[SCAN_MODAL] Failed to add devices:', error)
             toast.error('Ошибка добавления устройства', { id: 'add-devices' })
-            
-            // Пытаемся обновить список устройств даже при ошибке
-            // await forceRefreshDevices()
         } finally {
             setIsAddingDevices(false)
         }

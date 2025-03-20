@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import { getAgentStatuses } from "@/app/actions/prometheus.actions";
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { DataTable } from "@/components/ui/elements/DataTable";
 import { createContext, useContext } from "react";
@@ -33,12 +34,13 @@ export function DevicesTable() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const t = useTranslations('dashboard.devices')
   const { fetchDevices, fetchStats } = useDevices();
+  const queryClient = useQueryClient();
   
-  // Запрос данных с помощью React Query
+  // Запрос на получение списка устройств
   const { 
-    data: devices = [], // пустой массив как значение по умолчанию
-    isLoading,
-    error,
+    data: devices = [], 
+    isLoading: isLoadingDevices,
+    error: devicesError,
     refetch: refreshDevices
   } = useQuery({
     queryKey: ['devices'],
@@ -51,6 +53,30 @@ export function DevicesTable() {
     }
   })
 
+  // Отдельный запрос для обновления статусов устройств
+  useQuery({
+    queryKey: ['device-statuses'],
+    queryFn: async () => {
+      if (devices.length > 0) {
+        console.log('[QUERY] Updating device statuses from Prometheus...')
+        const ipAddresses = devices.map(d => d.ipAddress)
+        const result = await getAgentStatuses(ipAddresses)
+        
+        // Если статусы успешно обновились, инвалидируем кэш devices
+        if (result.success) {
+          console.log('[QUERY] Invalidating devices cache after status update')
+          queryClient.invalidateQueries({ queryKey: ['devices'] })
+        }
+        
+        return result
+      }
+      return null
+    },
+    refetchInterval: 30000, // обновляем каждые 30 секунд
+    enabled: devices.length > 0, // запускаем только если есть устройства
+    retry: 2 // количество повторных попыток при ошибке
+  })
+
   const handleRowClick = (device: Device) => {
     setSelectedDevice(device);
   }
@@ -58,12 +84,12 @@ export function DevicesTable() {
   const columns = useMemo(()=> createDeviceColumns((key: string) => t(key)), [t])
 
   // Обработка состояния загрузки
-  if (isLoading) {
+  if (isLoadingDevices) {
     return <div className="flex items-center justify-center p-4">Loading devices...</div>
   }
 
   // Обработка ошибок
-  if (error) {
+  if (devicesError) {
     return (
       <div className="flex flex-col items-center justify-center p-4 text-red-500">
         <p>Error loading devices</p>
@@ -93,32 +119,28 @@ export function DevicesTable() {
         </Breadcrumb>
   
         <div className='mt-5'>
-          
           {selectedDevice ? (
             <DeviceDetail 
               device={selectedDevice} 
               onBack={() => setSelectedDevice(null)} 
             />
           ) : (
-            <>
-              
-              <DataTable 
-                columns={columns} 
-                data={devices}
-                onRowClick={handleRowClick}
-                pagination={{
-                  enabled: true,
-                  pageSize: 10,
-                  showPageSize: true,
-                  showPageNumber: true
-                }}
-                filtering={{
-                  enabled: true,
-                  column: 'deviceTag',
-                  placeholder: 'Search by tag...'
-                }}
-              />
-            </>
+            <DataTable 
+              columns={columns} 
+              data={devices}
+              onRowClick={handleRowClick}
+              pagination={{
+                enabled: true,
+                pageSize: 10,
+                showPageSize: true,
+                showPageNumber: true
+              }}
+              filtering={{
+                enabled: true,
+                column: 'deviceTag',
+                placeholder: 'Search by tag...'
+              }}
+            />
           )}
         </div>
       </div>

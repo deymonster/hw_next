@@ -15,6 +15,8 @@ import { toast } from "sonner"
 import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
 import { useDeviceSelection } from "../table/DeviceTable"
 import { useDevicesContext } from "@/contexts/DeviceContext"
+import { useDeviceStatus } from "@/hooks/useDeviceStatus"
+import { useQueryClient } from '@tanstack/react-query'
 
 interface DeviceDetailProps {
   device: Device
@@ -40,9 +42,13 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdatingIp, setIsUpdatingIp] = useState(false)
-  const [status, setStatus] = useState<any>(null)
   const { setSelectedDevice } = useDeviceSelection()
   const { refreshDevices } = useDevicesContext()
+  const queryClient = useQueryClient()
+
+  // Используем хук для проверки статуса
+  const { data: statusData, isLoading: isStatusLoading } = useDeviceStatus(device)
+  const status = statusData?.data
 
   // Fetch device info on load
   useEffect(() => {
@@ -61,27 +67,6 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
     fetchDeviceInfo()
   }, [device.ipAddress, getInfo])
 
-  // Periodically update device status
-  useEffect(() => {
-    const updateStatus = async () => {
-      try {
-        const result = await getAgentStatus(device.ipAddress)
-        if (result.success && result.data && !Array.isArray(result.data)) {
-          setStatus(result.data)
-        }
-      } catch (error) {
-        console.error('Failed to update device status:', error)
-      }
-    }
-
-    // Update immediately
-    updateStatus()
-
-    // Then update every 30 seconds
-    const interval = setInterval(updateStatus, 30000)
-    return () => clearInterval(interval)
-  }, [device.ipAddress])
-
   const handleDelete = async () => {
     try {
       setIsDeleting(true)
@@ -91,14 +76,16 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
       const success = await deleteDevice(device.id)
       
       if (success) {
+        // Инвалидируем кэш devices и stats сразу после успешного удаления
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['devices'] }),
+          queryClient.invalidateQueries({ queryKey: ['device-stats'] })
+        ])
+        
         toast.success('Device deleted successfully', { id: 'delete-device' })
         
-        // Возвращаемся к таблице устройств и обновляем список
-        setTimeout(() => {
-          // Используем setTimeout, чтобы дать время серверу обработать удаление
-          refreshDevices();
-          setSelectedDevice(null);
-        }, 300);
+        // Возвращаемся к таблице устройств
+        onBack()
       } else {
         toast.error('Failed to delete device', { id: 'delete-device' })
       }
@@ -187,7 +174,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
               <div className="flex justify-between">
                 <span>Agent Status:</span>
                 <span>
-                  {status ? (
+                  {status && !Array.isArray(status) ? (
                     <Badge variant={status.up ? "default" : "destructive"}>
                       {status.up ? "Online" : "Offline"}
                     </Badge>

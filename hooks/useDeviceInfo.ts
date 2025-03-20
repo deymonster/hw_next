@@ -39,15 +39,20 @@ export const useDeviceInfo = () => {
     }> => {
         try {
             console.log(`[DEVICE_INFO_HOOK] Starting to add ${ipAddresses.length} devices...`);
+            
             // Добавляем все устройства в Prometheus
+            console.log('[DEVICE_INFO_HOOK] Adding targets to Prometheus...');
             const addResult = await addDeviceTarget(ipAddresses)
             if (!addResult.success) {
                 console.warn(`[DEVICE_INFO_HOOK] Warning: Failed to add targets to Prometheus: ${addResult.error}`)
-                // Продолжаем выполнение, даже если не удалось добавить цели в Prometheus
+            } else {
+                console.log('[DEVICE_INFO_HOOK] Successfully added targets to Prometheus');
             }
 
             // Получаем статусы всех агентов
+            console.log('[DEVICE_INFO_HOOK] Getting agent statuses...');
             const statusResults = await getAgentStatuses(ipAddresses)
+            console.log('[DEVICE_INFO_HOOK] Agent statuses:', statusResults);
 
             // Обрабатываем каждое устройство
             const errors: {[ip: string]: string} = {};
@@ -55,16 +60,20 @@ export const useDeviceInfo = () => {
             const createdDevices = [];
 
             for (const ipAddress of ipAddresses) {
+                console.log(`[DEVICE_INFO_HOOK] Processing device ${ipAddress}...`);
                 try {
                     // Проверяем статус агента
                     const agentStatus = statusResults.data?.[ipAddress];
+                    console.log(`[DEVICE_INFO_HOOK] Agent status for ${ipAddress}:`, agentStatus);
                     
                     // Пытаемся получить информацию об устройстве
                     let deviceInfo;
                     try {
+                        console.log(`[DEVICE_INFO_HOOK] Getting device info for ${ipAddress}...`);
                         deviceInfo = await getDeviceInfo(ipAddress);
+                        console.log(`[DEVICE_INFO_HOOK] Device info for ${ipAddress}:`, deviceInfo);
                     } catch (infoError) {
-                        console.warn(`[DEVICE_INFO_HOOK] Warning: Failed to get device info for ${ipAddress}: ${infoError}`);
+                        console.warn(`[DEVICE_INFO_HOOK] Warning: Failed to get device info for ${ipAddress}:`, infoError);
                     }
                     
                     // Если не удалось получить информацию или статус, создаем устройство с временными данными
@@ -72,19 +81,23 @@ export const useDeviceInfo = () => {
                         console.log(`[DEVICE_INFO_HOOK] Creating device with temporary data for ${ipAddress}`);
                         
                         // Получаем агентский ключ из результатов сканирования
+                        console.log(`[DEVICE_INFO_HOOK] Getting agent key for ${ipAddress}...`);
                         const agent = await fetch(`/dashboard/devices/scan?ip=${ipAddress}`, {
                             method: 'POST'
                         }).then(res => res.json()).catch(() => null);
+                        console.log(`[DEVICE_INFO_HOOK] Agent key result for ${ipAddress}:`, agent);
                         
                         const agentKey = agent?.agentKey || `temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                         
                         // Создаем устройство с временными данными
+                        console.log(`[DEVICE_INFO_HOOK] Creating device in database for ${ipAddress}...`);
                         const createResult = await createDevice({
                             name: `Device-${ipAddress.split('.').pop()}`,
                             ipAddress: ipAddress,
                             agentKey: agentKey,
                             type: DeviceType.WINDOWS
                         });
+                        console.log(`[DEVICE_INFO_HOOK] Create result for ${ipAddress}:`, createResult);
                         
                         if (!createResult.success) {
                             errors[ipAddress] = `Failed to add device to database`;
