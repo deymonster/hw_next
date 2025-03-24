@@ -13,6 +13,7 @@ import { useDevicesContext } from "@/contexts/DeviceContext"
 import { cn } from "@/utils/tw-merge"
 import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
 import { useDeviceSelection } from "./DeviceTable";
+import { useQueryClient } from "@tanstack/react-query"
 
 interface DeviceActionsProps {
   device: Device
@@ -26,6 +27,7 @@ export function DeviceActions({ device }: DeviceActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const { setSelectedDevice } = useDeviceSelection()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const queryClient = useQueryClient()
   
 
   const handleUpdateIp = async () => {
@@ -48,27 +50,26 @@ export function DeviceActions({ device }: DeviceActionsProps) {
         setIsDeleting(true)
         setIsMenuOpen(false)
         toast.loading('Удаление устройства...', { id: 'delete-device' })
-        await deleteDevice(device.id)
-        toast.success(t('deleteSuccess'), { id: 'delete-device' })
+        
+        // Оптимистично обновляем кэш React Query
+        queryClient.setQueryData(['devices'], (oldData: Device[]) => {
+            return oldData.filter(d => d.id !== device.id)
+        })
+        
+        // Очищаем выбранное устройство
         setSelectedDevice(null)
         
-        // Принудительно обновляем список устройств несколько раз
-        console.log('DeviceActions - First refresh after deletion');
-        refreshDevices()
+        // Удаляем устройство из БД
+        await deleteDevice(device.id)
         
-        // Дополнительное обновление через 500 мс
-        setTimeout(() => {
-            console.log('DeviceActions - Second refresh after deletion');
-            refreshDevices();
-            
-            // И еще одно обновление через 1000 мс
-            setTimeout(() => {
-                console.log('DeviceActions - Third refresh after deletion');
-                refreshDevices();
-            }, 1000);
-        }, 500);
+        // В случае успеха, инвалидируем кэш для получения актуальных данных
+        queryClient.invalidateQueries({ queryKey: ['devices'] })
+        
+        toast.success(t('deleteSuccess'), { id: 'delete-device' })
     } catch (error) {
-      toast.error(t('deleteError'), { id: 'delete-device' })
+        // В случае ошибки, отменяем оптимистичное обновление
+        queryClient.invalidateQueries({ queryKey: ['devices'] })
+        toast.error(t('deleteError'), { id: 'delete-device' })
     } finally {
         setIsDeleting(false)
     }

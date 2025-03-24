@@ -156,26 +156,24 @@ export function useDevices(options?: UseDevicesOptions) {
     const deleteDevice = useCallback(async (id: string) => {
         try {
             setIsLoading(true)
+            console.log('[CLIENT] useDevices - Deleting device:', id);
+            
+            // Удаляем устройство из БД
             await deleteDeviceById(id)
-            
-            // Обновляем локальное состояние
-            const updatedDevices = devices.filter(device => device.id !== id)
-            setDevices(updatedDevices)
-            
-            // Получаем свежий список устройств
-            await fetchDevices()
+            console.log('[CLIENT] useDevices - Device deleted');
             
             if (options?.onSuccess) {
                 options.onSuccess();
             }
             return true
         } catch (error) {
+            console.error('[CLIENT] useDevices - Error deleting device:', error);
             options?.onError?.(error as Error)
             return false
         } finally {
             setIsLoading(false)
         }
-    }, [options, devices, setDevices, setIsLoading, fetchDevices])
+    }, [options, setIsLoading])
 
 
     return {

@@ -62,7 +62,7 @@ export function DevicesTable() {
         const ipAddresses = devices.map(d => d.ipAddress)
         const result = await getAgentStatuses(ipAddresses)
         
-        // Если статусы успешно обновились, инвалидируем кэш devices
+        // Инвалидируем кэш только если статусы успешно обновились
         if (result.success) {
           console.log('[QUERY] Invalidating devices cache after status update')
           queryClient.invalidateQueries({ queryKey: ['devices'] })
@@ -73,7 +73,7 @@ export function DevicesTable() {
       return null
     },
     refetchInterval: 30000, // обновляем каждые 30 секунд
-    enabled: devices.length > 0, // запускаем только если есть устройства
+    enabled: true, // всегда активен
     retry: 2 // количество повторных попыток при ошибке
   })
 
