@@ -84,6 +84,142 @@ This system allows you to monitor multiple workstations in your local network, c
    - Telegram bot token
    - Redis configuration
 
+## Detailed Installation Guide
+
+### System Requirements
+
+1. Operating System:
+   - Linux (Ubuntu 20.04+ recommended)
+   - Windows 10/11 with WSL2
+   - macOS 12+
+
+### Installing Prerequisites
+
+1. **Node.js Installation**:
+   ```bash
+   # Using Ubuntu
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+
+   # Verify installation
+   node --version  # Should be 20.x or higher
+   npm --version   # Should be 10.x or higher
+   ```
+
+2. **Yarn Installation**:
+   ```bash
+   # Install Yarn globally
+   sudo npm install -g yarn
+
+   # Verify installation
+   yarn --version  # Should be 1.22.x or higher
+   ```
+
+3. **Docker Installation**:
+   ```bash
+   # Install Docker
+   sudo apt-get update
+   sudo apt-get install -y docker.io
+
+   # Install Docker Compose
+   sudo apt-get install -y docker-compose
+
+   # Add your user to docker group
+   sudo usermod -aG docker $USER
+   newgrp docker
+
+   # Verify installation
+   docker --version
+   docker-compose --version
+   ```
+
+### Project Setup
+
+1. **Clone and Configure**:
+   ```bash
+   # Clone repository
+   git clone <repository-url>
+   cd hw-monitor
+
+   # Copy environment file
+   cp .env.example .env
+   ```
+
+2. **Configure Environment Variables**:
+   Edit `.env` file and set up:
+   - `DATABASE_URL`: PostgreSQL connection string
+   - `REDIS_URL`: Redis connection string
+   - `NEXT_PUBLIC_API_URL`: API endpoint
+   - `JWT_SECRET`: Secret key for JWT
+   - Other required variables
+
+3. **Start Docker Services**:
+   ```bash
+   # Start all required services
+   docker-compose up -d
+
+   # Verify services are running
+   docker ps
+   ```
+
+4. **Install Dependencies and Initialize Database**:
+   ```bash
+   # Install project dependencies
+   yarn install
+
+   # Generate Prisma client
+   yarn prisma generate
+
+   # Run database migrations
+   yarn prisma migrate dev
+   ```
+
+5. **Start Development Server**:
+   ```bash
+   # Start the development server
+   yarn dev
+   ```
+
+   The application will be available at `http://localhost:3000`
+
+### Troubleshooting
+
+1. **Docker Permission Issues**:
+   ```bash
+   sudo chmod 666 /var/run/docker.sock
+   ```
+
+2. **Port Conflicts**:
+   - Check if ports 3000, 5432, 6379, 8080, 9090 are available
+   - Modify docker-compose.yml if needed
+
+3. **Database Connection Issues**:
+   - Verify PostgreSQL is running: `docker ps | grep postgres`
+   - Check database logs: `docker logs postgres_container`
+
+4. **Redis Connection Issues**:
+   - Verify Redis is running: `docker ps | grep redis`
+   - Check Redis logs: `docker logs redis_container`
+
+### Production Deployment
+
+For production deployment, additional steps are required:
+
+1. **Build the Application**:
+   ```bash
+   yarn build
+   ```
+
+2. **Start Production Server**:
+   ```bash
+   yarn start
+   ```
+
+3. **Configure Nginx** (recommended):
+   - Set up SSL certificates
+   - Configure reverse proxy
+   - Enable gzip compression
+
 ## Installation
 
 ```bash

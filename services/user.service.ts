@@ -53,7 +53,7 @@ export class UserService
             const verificationToken = crypto.randomBytes(32).toString("hex");
 
             // Создаем пользователя
-            const user = await this.prisma.user.create({
+            const user = await this.model.create({
                 data: {
                     email: data.email,
                     name: data.username,

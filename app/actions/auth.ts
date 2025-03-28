@@ -50,7 +50,11 @@ export async function resetPassword(data: TypeResetPasswordSchema) {
 
 export async function createUser(data: TypeCreateAccountSchema) {
   try {
-    const result = await services.data.user.createUser(data);
+    const userData = {
+      ...data,
+      name: data.username // преобразование username в name
+    };
+    const result = await services.data.user.createUser(userData);
     if ('error' in result) {
       return { error: result.error };
     }

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useDevices } from "@/hooks/useDevices"
-import { useDeviceInfo } from "@/hooks/useDeviceInfo"
+import { useDeviceMetrics } from "@/hooks/useDeviceMetrics"
 import { getAgentStatus } from "@/app/actions/prometheus.actions"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +17,8 @@ import { useDeviceSelection } from "../table/DeviceTable"
 import { useDevicesContext } from "@/contexts/DeviceContext"
 import { useDeviceStatus } from "@/hooks/useDeviceStatus"
 import { useQueryClient } from '@tanstack/react-query'
+import { Progress } from "@/components/ui/progress"
+
 
 interface DeviceDetailProps {
   device: Device
@@ -37,9 +39,7 @@ const getStatusBadge = (status: DeviceStatus) => {
 export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
   const t = useTranslations('dashboard.devices')
   const { deleteDevice, updateIp } = useDevices()
-  const { getInfo } = useDeviceInfo()
-  const [deviceInfo, setDeviceInfo] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
+  const { metrics, error: metricsError } = useDeviceMetrics(device.ipAddress)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdatingIp, setIsUpdatingIp] = useState(false)
   const { setSelectedDevice } = useDeviceSelection()
@@ -49,23 +49,6 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
   // Используем хук для проверки статуса
   const { data: statusData, isLoading: isStatusLoading } = useDeviceStatus(device)
   const status = statusData?.data
-
-  // Fetch device info on load
-  useEffect(() => {
-    const fetchDeviceInfo = async () => {
-      setIsLoading(true)
-      try {
-        const info = await getInfo(device.ipAddress)
-        setDeviceInfo(info)
-      } catch (error) {
-        console.error('Failed to fetch device info:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchDeviceInfo()
-  }, [device.ipAddress, getInfo])
 
   const handleDelete = async () => {
     try {
@@ -110,13 +93,11 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
     }
   }
 
-  // Обработчик отмены удаления (как при нажатии кнопки "Отмена", так и при клике вне модального окна)
+  // Обработчик отмены удаления
   const handleCancelDelete = (e: any) => {
-    // Предотвращаем всплытие события, чтобы не открывалась детальная информация
     if (e && e.stopPropagation) {
       e.stopPropagation();
     }
-    console.log('Delete cancelled');
   };
 
   return (
@@ -242,103 +223,324 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
         </Card>
       </div>
 
-      {deviceInfo && (
+      {metricsError ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-red-500">Error loading metrics: {metricsError.message}</div>
+          </CardContent>
+        </Card>
+      ) : !metrics ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div>Loading metrics...</div>
+          </CardContent>
+        </Card>
+      ) : (
         <Tabs defaultValue="system">
           <TabsList>
             <TabsTrigger value="system">System</TabsTrigger>
             <TabsTrigger value="hardware">Hardware</TabsTrigger>
+            <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="processes">Processes</TabsTrigger>
           </TabsList>
+
+          {/* Системная информация */}
           <TabsContent value="system" className="space-y-4">
-            {deviceInfo.systemInfo && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>System Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium">Manufacturer</p>
+                    <p className="text-sm text-muted-foreground">
+                      {metrics.systemInfo.manufacturer || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Model</p>
+                    <p className="text-sm text-muted-foreground">
+                      {metrics.systemInfo.model || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">OS</p>
+                    <p className="text-sm text-muted-foreground">
+                      {metrics.systemInfo.osArchitecture} {metrics.systemInfo.osVersion}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Serial Number</p>
+                    <p className="text-sm text-muted-foreground">
+                      {metrics.systemInfo.serialNumber || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Информация об оборудовании */}
+          <TabsContent value="hardware" className="space-y-4">
+            {/* CPU */}
+            <Card>
+              <CardHeader>
+                <CardTitle>CPU</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium">Model</p>
+                    <p className="text-sm text-muted-foreground">
+                      {metrics.hardwareInfo.cpu.model || 'N/A'}
+                    </p>
+                  </div>
+                  {metrics.processorMetrics && (
+                    <>
                       <div>
-                        <p className="text-sm font-medium">OS</p>
-                        <p className="text-sm text-muted-foreground">
-                          {deviceInfo.systemInfo.os?.name} {deviceInfo.systemInfo.os?.version}
-                        </p>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">CPU Usage</span>
+                          <span className="text-sm text-muted-foreground">
+                            {metrics.processorMetrics.usage.toFixed(1)}%
+                          </span>
+                        </div>
+                        <Progress value={metrics.processorMetrics.usage} className="h-2" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">Hostname</p>
-                        <p className="text-sm text-muted-foreground">
-                          {deviceInfo.systemInfo.hostname}
-                        </p>
+                        <p className="text-sm font-medium mb-2">Temperature</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {metrics.processorMetrics.temperature.sensors.map((sensor, index) => (
+                            <div key={index} className="flex justify-between">
+                              <span className="text-sm">{sensor.name}:</span>
+                              <span className="text-sm text-muted-foreground">
+                                {sensor.value}°C
+                              </span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between font-medium">
+                            <span className="text-sm">Average:</span>
+                            <span className="text-sm">
+                              {metrics.processorMetrics.temperature.average}°C
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">Uptime</p>
-                        <p className="text-sm text-muted-foreground">
-                          {Math.floor(deviceInfo.systemInfo.uptime / 86400)} days
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Boot Time</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(deviceInfo.systemInfo.bootTime * 1000).toLocaleString()}
-                        </p>
-                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Memory */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Memory</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm font-medium">Memory Usage</span>
+                      <span className="text-sm text-muted-foreground">
+                        {metrics.hardwareInfo.memory.usage.percent}%
+                      </span>
+                    </div>
+                    <Progress 
+                      value={metrics.hardwareInfo.memory.usage.percent} 
+                      className="h-2"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <p className="text-sm font-medium">Total</p>
+                      <p className="text-sm text-muted-foreground">
+                        {metrics.hardwareInfo.memory.usage.total} GB
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Used</p>
+                      <p className="text-sm text-muted-foreground">
+                        {metrics.hardwareInfo.memory.usage.used} GB
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Free</p>
+                      <p className="text-sm text-muted-foreground">
+                        {metrics.hardwareInfo.memory.usage.free} GB
+                      </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          <TabsContent value="hardware" className="space-y-4">
-            {deviceInfo.hardwareInfo && (
-              <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>CPU</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm font-medium">Model</p>
-                          <p className="text-sm text-muted-foreground">
-                            {deviceInfo.hardwareInfo.cpu?.model}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">Cores</p>
-                          <p className="text-sm text-muted-foreground">
-                            {deviceInfo.hardwareInfo.cpu?.cores} cores / {deviceInfo.hardwareInfo.cpu?.threads} threads
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Memory</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
+            {/* Disks */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Storage</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {metrics.hardwareInfo.disks.map((disk, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between">
+                        <p className="text-sm font-medium">{disk.model}</p>
+                        <Badge variant={disk.health === 'OK' ? 'default' : 'destructive'}>
+                          {disk.health}
+                        </Badge>
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Usage</span>
+                          <span className="text-sm text-muted-foreground">
+                            {disk.usage.percent}%
+                          </span>
+                        </div>
+                        <Progress value={disk.usage.percent} className="h-2" />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div>
+                          <p className="font-medium">Total</p>
+                          <p className="text-muted-foreground">{disk.usage.total} GB</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Used</p>
+                          <p className="text-muted-foreground">{disk.usage.used} GB</p>
+                        </div>
+                        <div>
+                          <p className="font-medium">Free</p>
+                          <p className="text-muted-foreground">{disk.usage.free} GB</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Performance */}
+          <TabsContent value="performance" className="space-y-4">
+            {/* Network Performance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Network Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {metrics.networkMetrics.map((network, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between">
+                        <p className="text-sm font-medium">{network.name}</p>
+                        <Badge variant={network.status === 'up' ? 'default' : 'destructive'}>
+                          {network.status}
+                        </Badge>
+                      </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm font-medium">Total</p>
+                          <p className="text-sm font-medium">Receive</p>
                           <p className="text-sm text-muted-foreground">
-                            {deviceInfo.hardwareInfo.memory?.total} GB
+                            {network.performance.rx.toFixed(2)} MB/s
                           </p>
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Used</p>
+                          <p className="text-sm font-medium">Transmit</p>
                           <p className="text-sm text-muted-foreground">
-                            {deviceInfo.hardwareInfo.memory?.used} GB ({deviceInfo.hardwareInfo.memory?.percent}%)
+                            {network.performance.tx.toFixed(2)} MB/s
+                          </p>
+                        </div>
+                      </div>
+                      {(network.errors > 0 || network.droppedPackets > 0) && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm font-medium">Errors</p>
+                            <p className="text-sm text-red-500">{network.errors}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Dropped Packets</p>
+                            <p className="text-sm text-red-500">{network.droppedPackets}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Disk Performance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Disk Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {metrics.diskMetrics.map((disk, index) => (
+                    <div key={index} className="space-y-2">
+                      <p className="text-sm font-medium">{disk.model}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium">Read</p>
+                          <p className="text-sm text-muted-foreground">
+                            {(disk.performance.rx / 1024 / 1024).toFixed(2)} MB/s
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Write</p>
+                          <p className="text-sm text-muted-foreground">
+                            {(disk.performance.tx / 1024 / 1024).toFixed(2)} MB/s
                           </p>
                         </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Processes */}
+          <TabsContent value="processes">
+            <Card>
+              <CardHeader>
+                <CardTitle>Active Processes</CardTitle>
+                <CardDescription>Top processes by CPU usage</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {metrics.processList.slice(0, 10).map((process, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between">
+                        <p className="text-sm font-medium">{process.name}</p>
+                        <p className="text-sm text-muted-foreground">PID: {process.pid}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-sm text-muted-foreground">CPU</span>
+                            <span className="text-sm text-muted-foreground">
+                              {process.metrics.cpu.toFixed(1)}%
+                            </span>
+                          </div>
+                          <Progress value={process.metrics.cpu} className="h-1" />
+                        </div>
+                        <div>
+                          <div className="flex justify-between mb-1">
+                            <span className="text-sm text-muted-foreground">Memory</span>
+                            <span className="text-sm text-muted-foreground">
+                              {process.metrics.memory.percent.toFixed(1)}%
+                              ({process.metrics.memory.mb.toFixed(0)} MB)
+                            </span>
+                          </div>
+                          <Progress value={process.metrics.memory.percent} className="h-1" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       )}

@@ -31,7 +31,7 @@ class ServiceFactory {
         }
 
         const prometheusService = new PrometheusService({
-            url: process.env.PROMETHEUS_URL || 'http://localhost:8080',
+            url: process.env.PROMETHEUS_PROXY_URL || 'http://localhost:8080',
             targetsPath: process.env.PROMETHEUS_TARGETS_PATH || './prometheus/targets/windows_tatgets.json',
             auth: {
                 username: process.env.PROMETHEUS_USERNAME || 'admin',

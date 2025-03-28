@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тестирование Prometheus Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Тестирование Prometheus Service</h1>
+        
+        <div class="input-group">
+            <label for="baseUrl">URL приложения:</label>
+            <input type="text" id="baseUrl" value="http://localhost:8080" />
+        </div>
+        
+        <div class="input-group">
+            <label for="deviceIp">IP устройства:</label>
+            <input type="text" id="deviceIp" />
+        </div>
+        
+        <button onclick="testGetMetricsByIp()">Получить все метрики</button>
+        <button onclick="testGetSystemInfo()">Информация о системе</button>
+        <button onclick="testGetHardwareInfo()">Информация об оборудовании</button>
+        <button onclick="testGetProcessorMetrics()">Метрики процессора</button>
+        <button onclick="testGetNetworkMetrics()">Сетевые метрики</button>
+        <button onclick="testGetDiskMetrics()">Метрики дисков</button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        async function makeRequest(endpoint, params = {}) {
+            const baseUrl = document.getElementById('baseUrl').value;
+            const deviceIp = document.getElementById('deviceIp').value;
+
+            try {
+                const url = `${baseUrl}/api/prometheus${endpoint}?ip=${encodeURIComponent(deviceIp)}`;
+                
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResult(data);
+            } catch (error) {
+                displayError(error.message);
+            }
+        }
+
+        async function testGetMetricsByIp() {
+            await makeRequest('/metrics');
+        }
+
+        async function testGetSystemInfo() {
+            await makeRequest('/system-info');
+        }
+
+        async function testGetHardwareInfo() {
+            await makeRequest('/hardware-info');
+        }
+
+        async function testGetProcessorMetrics() {
+            await makeRequest('/processor-metrics');
+        }
+
+        async function testGetNetworkMetrics() {
+            await makeRequest('/network-metrics');
+        }
+
+        async function testGetDiskMetrics() {
+            await makeRequest('/disk-metrics');
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = JSON.stringify(data, null, 2);
+            resultDiv.classList.remove('error');
+        }
+
+        function displayError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `Ошибка: ${message}`;
+            resultDiv.classList.add('error');
+        }
+    </script>
+</body>
+</html> 

@@ -1,16 +1,16 @@
 // services/types.ts
-import type { PrismaClient } from '@prisma/client'
-import type { UserService } from './user.service'
-import type { EventService } from './event.service'
-import type { SmtpSettingsService } from './smtp-settings/smtp-settings.service'
-import type { TelegramSettingsService } from './telegram-settings/telegram-settings.service'
-import type { NotificationSettingsService } from './notification-settings/notification-settings.service'
-import type { CacheService } from './cache/cache.service'
-import type { NotificationFactory } from './notifications/notification.factory'
-import type { DeviceService } from './device/device.service'
-import type { NetworkScannerService } from './network-scanner/network-scanner.service'
+import { UserService } from './user.service'
+import { EventService } from './event.service'
+import { SmtpSettingsService } from './smtp-settings/smtp-settings.service'
+import { TelegramSettingsService } from './telegram-settings/telegram-settings.service'
+import { NotificationSettingsService } from './notification-settings/notification-settings.service'
+import { DeviceService } from './device/device.service'
+import { NetworkScannerService } from './network-scanner/network-scanner.service'
 import { PrometheusService } from './prometheus/prometheus.service'
+import { CacheService } from './cache/cache.service'
+import { NotificationFactory } from './notifications/notification.factory'
 
+// Сервисы для работы с данными
 export interface IDataServices {
     user: UserService
     event: EventService
@@ -20,6 +20,7 @@ export interface IDataServices {
     device: DeviceService
 }
 
+// Инфраструктурные сервисы
 export interface IInfrastructureServices {
     cache: CacheService
     notifications: NotificationFactory
@@ -27,6 +28,7 @@ export interface IInfrastructureServices {
     prometheus: PrometheusService
 }
 
+// Общий интерфейс всех сервисов
 export interface IServices {
     data: IDataServices
     infrastructure: IInfrastructureServices

@@ -106,7 +106,7 @@ export class NetworkScannerService {
             
             const response = await axios.get(`http://${ip}:${options.agentPort}/metrics`, {
                 timeout: options.timeout,
-                
+                proxy: false,
                 headers: {
                     'X-Agent-Handshake-Key': process.env.AGENT_HANDSHAKE_KEY || 'VERY_SECRET_KEY'
                 }
