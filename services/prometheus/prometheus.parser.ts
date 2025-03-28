@@ -13,7 +13,7 @@ import {
     DiskHealthStatus,
     NetworkStatus,
     ActiveProcessMemoryUsage,
-    ProcessCpuUsage,
+    ProcessCpuUsagePercent,
     NetworkRXPerSecond,
     NetworkTXPerSecond,
     NetworkErrors,
@@ -421,32 +421,52 @@ export class PrometheusParser {
      * @returns Информация о процессах: общее количество и топ-5 по использованию CPU
      */
     getProcessList(): ProcessListInfo {
-        const processes = this.findMetrics<ProcessInfo>('process_info')
+        const activeProcesses = this.findMetrics<ActiveProcessMemoryUsage>('active_process_memory_usage')
+        const processCpuUsage = this.findMetrics<ProcessCpuUsagePercent>('process_cpu_usage_percent')
         
-        // Получаем CPU для каждого процесса
-        const processCpuUsage = this.findMetrics<ProcessCpuUsage>('process_cpu_usage')
-        
-        // Создаем карту CPU usage по PID
-        const cpuByPid = new Map<string, number>()
-        processCpuUsage.forEach(cpu => {
-            if (cpu.pid) {
-                cpuByPid.set(cpu.pid, parseFloat(cpu.value || '0'))
+        if (!activeProcesses.length || !processCpuUsage.length) {
+            console.warn('[PROMETHEUS_PARSER] No process metrics found')
+            return {
+                total: 0,
+                top5ByCpu: []
+            }
+        }
+
+        // Собираем информацию о процессах
+        const processes = new Map<string, {
+            name: string
+            pid: string
+            cpu: number
+            memory: number
+        }>()
+
+        // Добавляем информацию об использовании памяти
+        activeProcesses.forEach(proc => {
+            if (!proc.pid || !proc.process) return
+            processes.set(proc.pid, {
+                name: proc.process,
+                pid: proc.pid,
+                cpu: 0,
+                memory: parseFloat(this.getValue(`active_process_memory_usage{pid="${proc.pid}"}`) || '0')
+            })
+        })
+
+        // Добавляем информацию об использовании CPU
+        processCpuUsage.forEach(proc => {
+            if (!proc.pid) return
+            const process = processes.get(proc.pid)
+            if (process) {
+                process.cpu = parseFloat(this.getValue(`process_cpu_usage_percent{pid="${proc.pid}"}`) || '0')
             }
         })
-        
-        // Добавляем CPU к процессам и сортируем
-        const processesWithCpu = processes
-            .map(proc => ({
-                name: proc.name || '',
-                pid: proc.pid || '',
-                cpu: cpuByPid.get(proc.pid || '') || 0,
-                memory: parseFloat(proc.working_set || '0') / (1024 * 1024 * 1024) // конвертируем в GB
-            }))
+
+        // Сортируем по использованию CPU
+        const sortedProcesses = Array.from(processes.values())
             .sort((a, b) => b.cpu - a.cpu)
 
         return {
-            total: processes.length,
-            top5ByCpu: processesWithCpu.slice(0, 5)
+            total: processes.size,
+            top5ByCpu: sortedProcesses.slice(0, 5)
         }
     }
 

@@ -258,9 +258,9 @@ export class PrometheusService {
                 message.includes('Failed to') ||
                 message.includes('Error')
             ))) {
-            const timestamp = new Date().toISOString();
-            const prefix = `[PROMETHEUS_SERVICE][${timestamp}]`;
-            
+        const timestamp = new Date().toISOString();
+        const prefix = `[PROMETHEUS_SERVICE][${timestamp}]`;
+        
             if (data) {
                 console[level](`${prefix} ${message}`, data);
             } else {

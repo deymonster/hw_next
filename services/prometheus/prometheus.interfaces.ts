@@ -86,7 +86,7 @@ export interface ActiveProcessList extends MetricBase {
  * Использование памяти активным процессом
  */
 export interface ActiveProcessMemoryUsage extends MetricBase {
-    __name__: 'active_proccess_memory_usage'
+    __name__: 'active_process_memory_usage'
     pid: string
     process: string
 }
@@ -94,8 +94,8 @@ export interface ActiveProcessMemoryUsage extends MetricBase {
 /**
  * Использование CPU процессом в процентах
  */
-export interface ProccessCpuUsagePercent extends MetricBase {
-    __name__: 'proccess_cpu_usage_percent'
+export interface ProcessCpuUsagePercent extends MetricBase {
+    __name__: 'process_cpu_usage_percent'
     pid: string
     process: string
 }

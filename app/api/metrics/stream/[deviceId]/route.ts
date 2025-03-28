@@ -6,6 +6,35 @@
 import { services } from '@/services'
 import { NextRequest } from 'next/server'
 
+// Общие CORS заголовки
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Max-Age': '86400' // 24 часа
+}
+
+// Общие заголовки для SSE
+const sseHeaders = {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+}
+
+/**
+ * OPTIONS обработчик для CORS preflight запросов
+ */
+export async function OPTIONS(request: NextRequest) {
+    console.log('[OPTIONS] Получен preflight запрос')
+    return new Response(null, {
+        status: 204,
+        headers: {
+            ...corsHeaders,
+            'Access-Control-Allow-Origin': request.headers.get('origin') || '*'
+        }
+    })
+}
+
 /**
  * Интерфейс для типизации метрик устройства
  */
@@ -39,173 +68,98 @@ interface DeviceMetrics {
 
 /**
  * GET обработчик для SSE стрима метрик устройства
- * 
- * Этот обработчик:
- * 1. Устанавливает SSE соединение с клиентом
- * 2. Отправляет статические данные устройства сразу при подключении
- * 3. Подписывается на обновления динамических метрик
- * 4. Отправляет обновления метрик клиенту по мере их поступления
- * 5. Корректно закрывает соединение при отключении клиента
- * 
- * @param {NextRequest} request - Объект запроса Next.js
- * @param {Object} params - Параметры маршрута
- * @param {string} params.deviceId - Идентификатор устройства
- * @returns {Promise<Response>} SSE стрим или ответ с ошибкой
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { deviceId: string } }
+    { params }: { params: Promise<{ deviceId: string }> }
 ) {
-    const { deviceId } = params
-    const prometheusService = services.infrastructure.prometheus
+    console.log('[SSE] Начало обработки GET запроса')
 
-    console.log('[SSE] Starting stream for device:', deviceId)
+    const { deviceId } = await params
+    console.log('[SSE] Получен deviceId:', deviceId)
 
-    // Инициализация SSE стрима
-    const encoder = new TextEncoder()
-    const stream = new TransformStream()
-    const writer = stream.writable.getWriter()
+    // Создаем ReadableStream напрямую
+    const stream = new ReadableStream({
+        start: async (controller) => {
+            console.log('[SSE] Stream started')
+            
+            try {
+                // Отправляем начальное сообщение
+                const initialMessage = `data: ${JSON.stringify({
+                    type: 'system',
+                    data: {
+                        status: 'connected',
+                        message: 'SSE connection established',
+                        timestamp: Date.now()
+                    }
+                })}\n\n`
+                
+                controller.enqueue(new TextEncoder().encode(initialMessage))
+                console.log('[SSE] Initial message sent')
 
-    // Флаг для отслеживания состояния соединения
-    let isConnectionClosed = false
+                // Получаем статические данные
+                try {
+                    console.log('[SSE] Requesting static data for device:', deviceId)
+                    const staticData = await services.infrastructure.prometheus.getDeviceStaticData(deviceId)
+                    console.log('[SSE] Got static data:', JSON.stringify(staticData).slice(0, 100) + '...')
+                    
+                    const staticMessage = `data: ${JSON.stringify({
+                        type: 'static',
+                        data: staticData
+                    })}\n\n`
+                    controller.enqueue(new TextEncoder().encode(staticMessage))
+                    console.log('[SSE] Static data sent successfully')
+                } catch (error) {
+                    console.error('[SSE] Error getting static data:', error)
+                    const errorMessage = `data: ${JSON.stringify({
+                        type: 'error',
+                        data: {
+                            message: 'Failed to get static data',
+                            error: error instanceof Error ? error.message : String(error),
+                            timestamp: Date.now()
+                        }
+                    })}\n\n`
+                    controller.enqueue(new TextEncoder().encode(errorMessage))
+                    console.log('[SSE] Error message sent to client')
+                }
 
-    /**
-     * Отправляет метрики клиенту через SSE
-     * @param {DeviceMetrics} metrics - Метрики для отправки
-     */
-    const sendMetrics = async (metrics: DeviceMetrics) => {
-        if (isConnectionClosed) {
-            return
-        }
+                // Подписываемся на обновления
+                const unsubscribe = services.infrastructure.prometheus.subscribe(deviceId, (metrics) => {
+                    try {
+                        const message = `data: ${JSON.stringify({
+                            type: 'dynamic',
+                            data: metrics
+                        })}\n\n`
+                        controller.enqueue(new TextEncoder().encode(message))
+                        console.log('[SSE] Dynamic metrics sent')
+                    } catch (error) {
+                        console.error('[SSE] Error sending metrics:', error)
+                    }
+                })
 
-        try {
-            const data = `data: ${JSON.stringify(metrics, null, 2)}\n\n`
-            await writer.write(encoder.encode(data))
-        } catch (error) {
-            console.error('[SSE] Error sending metrics:', error)
-            // Если ошибка связана с записью, закрываем соединение
-            if (error instanceof Error && 
-                (error.message.includes('write after end') || 
-                 error.message.includes('ECONNRESET'))) {
-                await closeConnection()
+                // Очистка при закрытии соединения
+                request.signal.addEventListener('abort', () => {
+                    console.log('[SSE] Connection aborted')
+                    unsubscribe()
+                    controller.close()
+                })
+
+            } catch (error) {
+                console.error('[SSE] Stream error:', error)
+                controller.error(error)
             }
         }
-    }
+    })
 
-    /**
-     * Закрывает соединение и освобождает ресурсы
-     */
-    const closeConnection = async () => {
-        if (isConnectionClosed) {
-            return
+    // Возвращаем Response сразу
+    return new Response(stream, {
+        headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': '*'
         }
-
-        isConnectionClosed = true
-        console.log('[SSE] Closing connection for device:', deviceId)
-
-        try {
-            // Отправляем последнее сообщение перед закрытием
-            await sendMetrics({ 
-                type: 'system', 
-                data: { 
-                    status: 'closing',
-                    message: 'Connection closing',
-                    timestamp: Date.now()
-                } 
-            })
-        } catch (error) {
-            console.error('[SSE] Error sending closing message:', error)
-        }
-
-        try {
-            await writer.close()
-        } catch (error) {
-            console.error('[SSE] Error closing writer:', error)
-        }
-    }
-
-    try {
-        // Настраиваем обработчики закрытия соединения
-        request.signal.addEventListener('abort', closeConnection)
-        
-        // Добавляем обработчик для неожиданного закрытия
-        writer.closed
-            .then(() => {
-                console.log('[SSE] Writer closed for device:', deviceId)
-                closeConnection()
-            })
-            .catch((error) => {
-                console.error('[SSE] Writer closed with error:', error)
-                closeConnection()
-            })
-
-        // Отправляем начальное сообщение для проверки соединения
-        await sendMetrics({ 
-            type: 'system', 
-            data: { 
-                status: 'connected',
-                message: 'SSE connection established',
-                timestamp: Date.now()
-            } 
-        })
-
-        // Получаем и отправляем статические данные
-        try {
-            const staticData = await prometheusService.getDeviceStaticData(deviceId)
-            await sendMetrics({ type: 'static', data: staticData })
-        } catch (error) {
-            console.error('[SSE] Error getting static data:', error)
-            await sendMetrics({ 
-                type: 'error', 
-                data: { 
-                    message: 'Failed to get static data',
-                    timestamp: Date.now()
-                } 
-            })
-        }
-
-        // Подписываемся на обновления динамических метрик
-        const unsubscribe = prometheusService.subscribe(deviceId, async (metrics) => {
-            if (!isConnectionClosed) {
-                await sendMetrics({ type: 'dynamic', data: metrics })
-            }
-        })
-
-        // Добавляем cleanup при закрытии соединения
-        request.signal.addEventListener('abort', () => {
-            unsubscribe()
-        })
-
-        // Возвращаем SSE стрим
-        return new Response(stream.readable, {
-            headers: {
-                'Content-Type': 'text/event-stream; charset=utf-8',
-                'Cache-Control': 'no-cache, no-transform',
-                'Connection': 'keep-alive',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'X-Accel-Buffering': 'no'
-            },
-        })
-    } catch (error) {
-        console.error('[SSE] Error setting up stream:', error)
-        await closeConnection()
-        
-        return new Response(
-            JSON.stringify({ 
-                error: 'Failed to setup metrics stream',
-                message: error instanceof Error ? error.message : 'Unknown error'
-            }), 
-            {
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json; charset=utf-8',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
-                },
-            }
-        )
-    }
-} 
+    })
+}
