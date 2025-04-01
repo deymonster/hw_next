@@ -246,12 +246,12 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 
           {/* Системная информация */}
           <TabsContent value="system" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>System Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>System Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium">Manufacturer</p>
                     <p className="text-sm text-muted-foreground">
@@ -264,13 +264,13 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
                       {metrics.systemInfo.model || 'N/A'}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">OS</p>
-                    <p className="text-sm text-muted-foreground">
+                      <div>
+                        <p className="text-sm font-medium">OS</p>
+                        <p className="text-sm text-muted-foreground">
                       {metrics.systemInfo.osArchitecture} {metrics.systemInfo.osVersion}
-                    </p>
-                  </div>
-                  <div>
+                        </p>
+                      </div>
+                      <div>
                     <p className="text-sm font-medium">Serial Number</p>
                     <p className="text-sm text-muted-foreground">
                       {metrics.systemInfo.serialNumber || 'N/A'}
@@ -292,7 +292,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium">Model</p>
-                    <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                       {metrics.hardwareInfo.cpu.model || 'N/A'}
                     </p>
                   </div>
@@ -366,7 +366,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
                     </div>
                     <div>
                       <p className="text-sm font-medium">Free</p>
-                      <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                         {metrics.hardwareInfo.memory.usage.free} GB
                       </p>
                     </div>
@@ -415,19 +415,19 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
                       </div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
           </TabsContent>
 
           {/* Performance */}
           <TabsContent value="performance" className="space-y-4">
             {/* Network Performance */}
-            <Card>
-              <CardHeader>
+                <Card>
+                  <CardHeader>
                 <CardTitle>Network Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
+                  </CardHeader>
+                  <CardContent>
                 <div className="space-y-6">
                   {metrics.networkMetrics.map((network, index) => (
                     <div key={index} className="space-y-2">
@@ -465,16 +465,16 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
                       )}
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
+                    </div>
+                  </CardContent>
+                </Card>
 
             {/* Disk Performance */}
-            <Card>
-              <CardHeader>
+                <Card>
+                  <CardHeader>
                 <CardTitle>Disk Performance</CardTitle>
-              </CardHeader>
-              <CardContent>
+                  </CardHeader>
+                  <CardContent>
                 <div className="space-y-6">
                   {metrics.diskMetrics.map((disk, index) => (
                     <div key={index} className="space-y-2">
@@ -538,9 +538,9 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
                       </div>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
+                    </div>
+                  </CardContent>
+                </Card>
           </TabsContent>
         </Tabs>
       )}

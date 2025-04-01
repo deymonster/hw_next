@@ -160,9 +160,9 @@ export interface MotherBoardInfo extends MetricBase {
 }
 
 /**
- * Информация о модуле памяти
+ * Информация о модуле памяти (статическая)
  */
-export interface MemoryInfo extends MetricBase {
+export interface MemoryModuleInfo extends MetricBase {
     __name__: 'memory_module_info'
     capacity: string
     manufacturer: string
@@ -193,7 +193,7 @@ export interface FreeMemoryBytes extends MetricBase {
 }
 
 /**
- * Информация о GPU
+ * Статическая информация о GPU
  */
 export interface GpuInfo extends MetricBase {
     __name__: 'gpu_info'
@@ -338,6 +338,44 @@ export interface AgentStatus {
 }
 
 /**
+ * Динамическая информация об использовании памяти
+ * Значения конвертируются из байт в гигабайты при обработке
+ */
+export interface MemoryMetrics {
+    total: number;    // из total_memory_bytes
+    used: number;     // из used_memory_bytes
+    free: number;     // вычисляется как total - used
+    percent: number;  // вычисляется как (used / total) * 100
+}
+
+/**
+ * Статическая информация о диске
+ */
+export interface DiskInfo {
+    model: string;
+    health: string;
+    size: string;    // из disk_health_status
+    type: string;    // из disk_health_status
+}
+
+/**
+ * Динамическая информация об использовании диска
+ */
+export interface DiskMetrics {
+    disk: string;    // идентификатор диска
+    usage: {
+        total: number;    // из disk_usage_bytes
+        used: number;     // из disk_usage_bytes
+        free: number;     // вычисляется
+        percent: number;  // из disk_usage_percent
+    };
+    performance: {
+        read: number;     // из disk_read_bytes_per_second
+        write: number;    // из disk_write_bytes_per_second
+    };
+}
+
+/**
  * Метрики устройства
  */
 export interface DeviceMetrics {
@@ -351,28 +389,20 @@ export interface DeviceMetrics {
     hardwareInfo: {
         cpu: {
             model: string;
-            cores: number;
-            threads: number;
         };
         memory: {
-            usage: {
-                total: number;
-                used: number;
-                free: number;
-                percent: number;
-            };
+            modules: MemoryModuleInfo[]  // статическая информация о модулях
         };
-        disks: Array<{
-            model: string;
-            health: string;
-            usage: {
-                total: number;
-                used: number;
-                free: number;
-                percent: number;
+        disks: DiskInfo[];  // статическая информация о дисках
+        gpus: Array<{      // статическая информация о GPU
+            name: string;
+            memory: {
+                total: number;  // общий объем памяти в МБ
             };
         }>;
     };
+    memoryMetrics: MemoryMetrics;  // динамическая информация об использовании памяти
+    diskMetrics: DiskMetrics[];    // динамическая информация о дисках
     processorMetrics: {
         usage: number;
         temperature: {
@@ -392,13 +422,6 @@ export interface DeviceMetrics {
         };
         errors: number;
         droppedPackets: number;
-    }>;
-    diskMetrics: Array<{
-        model: string;
-        performance: {
-            rx: number;
-            tx: number;
-        };
     }>;
     processList: Array<{
         name: string;

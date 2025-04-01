@@ -11,6 +11,7 @@ import { EventEmitter } from 'events';
 import path from 'path'
 import fs from 'fs/promises'
 import { PrometheusParser } from "./prometheus.parser";
+import { MetricType, PROMETHEUS_METRICS } from "./metrics";
 
 /**
  * Сервис для работы с Prometheus API
@@ -62,7 +63,9 @@ export class PrometheusService {
         }
 
         // Получаем новые данные
-        const parser = await this.getParser(deviceId)
+        // Получаем только статические метрики
+        const response = await this.getMetricsByIp(deviceId, MetricType.STATIC)
+        const parser = new PrometheusParser(response)
         const data = {
             systemInfo: parser.getSystemInfo(),
             hardwareInfo: parser.getHardwareInfo()
@@ -582,42 +585,93 @@ export class PrometheusService {
         }
     }
 
+    
     /**
-     * Получает метрики для указанного IP-адреса
-     * @param ipAddress IP-адрес устройства
-     * @param metricName Опциональное имя конкретной метрики
-     * @returns Ответ Prometheus API
-     */
-    async getMetricsByIp(ipAddress: string, metricName?: string): Promise<PrometheusApiResponse> {
-        try {
-            const query = metricName
-                ? `${metricName}{instance="${ipAddress}:9182"}`
-                : `{instance="${ipAddress}:9182"}`
+ * Получает метрики от Prometheus для указанного IP адреса
+ * @param ipAddress IP адрес устройства
+ * @param type Тип запрашиваемых метрик
+ * @param specificMetrics Конкретные метрики (опционально)
+ */
+async getMetricsByIp(
+    ipAddress: string, 
+    type?: MetricType,
+    specificMetrics?: string[]
+): Promise<PrometheusApiResponse> {
+    try {
+        // Определяем какие метрики запрашивать
+        let metricsToQuery: string[] = []
+        
+        if (specificMetrics?.length) {
+            // Если переданы конкретные метрики, используем их
+            metricsToQuery = specificMetrics
+            this.log('info', 'Using specific metrics:', { metrics: specificMetrics })
+        } else if (type) {
+            // Если указан тип - получаем метрики из конфига
+            if (type === MetricType.STATIC) {
+                metricsToQuery = [
+                    ...PROMETHEUS_METRICS[MetricType.STATIC].system,
+                    ...PROMETHEUS_METRICS[MetricType.STATIC].hardware
+                ]
+                this.log('info', 'Using static metrics:', { count: metricsToQuery.length })
+            }
+            // Пока обрабатываем только статические метрики
+            // Динамические добавим позже
+        } else {
+            throw new Error('Either type or specificMetrics must be provided')
+        }
 
-            const url = new URL('/prometheus/api/v1/query', this.config.url)
-            url.searchParams.append('query', query)
+        if (!metricsToQuery.length) {
+            throw new Error(`No metrics found for type: ${type}`)
+        }
 
-            // Убираем лишние логи
-            this.log('info', `Fetching metrics from Prometheus`, {
-                url: url.toString(),
-                query
+        // Формируем запрос к Prometheus
+        const query = `{instance="${ipAddress}:9182",__name__=~"${metricsToQuery.join('|')}"}`;
+
+        // Создаем URL для запроса
+        const url = new URL('/prometheus/api/v1/query', this.config.url)
+        url.searchParams.append('query', query)
+
+        this.log('info', `Fetching metrics from Prometheus`, {
+            type,
+            metricsCount: metricsToQuery.length,
+            url: url.toString(),
+            query
+        })
+
+        // Выполняем запрос
+        const response = await fetch(url.toString(), {
+            headers: { 
+                'Authorization': this.getAuthHeader(),
+                'Accept': 'application/json'
+            }
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}, statusText: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+
+        // Добавляем отладочный вывод
+        if (process.env.NODE_ENV === 'development') {
+            const availableMetrics = data.data.result.map((r: any) => ({
+                name: r.metric.__name__,
+                value: r.value?.[1],
+                labels: Object.fromEntries(
+                    Object.entries(r.metric).filter(([k]) => k !== '__name__')
+                )
+            }))
+
+            this.log('info', 'Received metrics from Prometheus:', {
+                totalMetrics: availableMetrics.length,
+                metrics: availableMetrics
             })
+        }
 
-            const headers = {
-                'Authorization': this.getAuthHeader()
-            }
-
-            const response = await fetch(url.toString(), { headers })
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`)
-            }
-
-            const data = await response.json()
-            return data
-        } catch (error) {
-            this.log('error', `Error fetching metrics:`, error)
-            throw error
+        return data
+    } catch (error) {
+        this.log('error', `Error fetching metrics for ${ipAddress}:`, error)
+        throw error
         }
     }
 

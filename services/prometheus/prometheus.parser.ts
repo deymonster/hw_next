@@ -6,7 +6,6 @@ import {
     SerialNumber,
     BiosInfo,
     MotherBoardInfo,
-    MemoryInfo,
     GpuInfo,
     CpuUsagePercent,
     CpuTemperature,
@@ -28,6 +27,9 @@ import {
     GpuMemoryBytes,
     ProcessListInfo,
     ProcessInfo,
+    MemoryMetrics,
+    DiskMetrics,
+    MemoryModuleInfo,
 } from './prometheus.interfaces'
 
 /**
@@ -210,28 +212,11 @@ export class PrometheusParser {
     getHardwareInfo() {
         const bios = this.findMetric<BiosInfo>('bios_info')
         const motherboard = this.findMetric<MotherBoardInfo>('motherboard_info')
-        const memoryModules = this.findMetrics<MemoryInfo>('memory_module_info')
+        const memoryModules = this.findMetrics<MemoryModuleInfo>('memory_module_info')
         const gpus = this.findMetrics<GpuInfo>('gpu_info')
-        const gpuMemoryMetrics = this.findMetrics<GpuMemoryBytes>('gpu_memory_bytes')
         const disks = this.findMetrics<DiskHealthStatus>('disk_health_status')
         const cpuInfo = this.findMetric<CpuUsagePercent>('cpu_usage_percent')
         const networkInterfaces = this.findMetrics<NetworkStatus>('network_status')
-
-        // Получаем метрики памяти для валидации
-        const totalMemory = this.findMetric<TotalMemoryBytes>('total_memory_bytes')
-        const usedMemory = this.findMetric<UsedMemoryBytes>('used_memory_bytes')
-        const freeMemory = this.findMetric<FreeMemoryBytes>('free_memory_bytes')
-
-        this.log('info', 'Memory metrics found:', {
-            total: totalMemory ? 'yes' : 'no',
-            used: usedMemory ? 'yes' : 'no',
-            free: freeMemory ? 'yes' : 'no'
-        })
-
-        this.log('info', 'GPU metrics found:', {
-            gpus: gpus.length,
-            gpuMemory: gpuMemoryMetrics.length
-        })
 
         return {
             cpu: {
@@ -255,37 +240,25 @@ export class PrometheusParser {
                     partNumber: module.part_number,
                     serialNumber: module.serial_number,
                     speed: module.speed
-                })),
-                usage: {
-                    total: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.totalMemory)),
-                    used: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.usedMemory)),
-                    free: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.freeMemory)),
-                    percent: Number((this.getMetricValue(PrometheusParser.METRIC_NAMES.usedMemory) / 
-                                  this.getMetricValue(PrometheusParser.METRIC_NAMES.totalMemory) * 100).toFixed(2))
-                }
+                }))
             },
             disks: disks.map(disk => ({
                 model: disk.disk,
-                type: disk.type,
-                size: this.bytesToGB(Number(disk.size)),
-                health: disk.status,
-                usage: {
-                    total: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsage, { disk: disk.disk, type: 'total' })),
-                    used: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsage, { disk: disk.disk, type: 'used' })),
-                    free: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsage, { disk: disk.disk, type: 'free' })),
-                    percent: this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsagePercent, { disk: disk.disk })
-                }
+                type: disk.type || 'Unknown',
+                size: disk.size || '0',
+                health: disk.status || 'Unknown'
             })),
-            gpus: gpus.map(gpu => ({
-                name: gpu.name,
+            gpus: gpus.map(gpu => {
+                const name = gpu.name;
+                const memoryBytes = this.getMetricValue('gpu_memory_bytes', { name });
+                
+                return {
+                    name,
                 memory: {
-                    total: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.gpuMemory, { name: gpu.name })),
-                    used: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.gpuMemory, { name: gpu.name, type: 'used' })),
-                    free: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.gpuMemory, { name: gpu.name, type: 'free' })),
-                    percent: Number((this.getMetricValue(PrometheusParser.METRIC_NAMES.gpuMemory, { name: gpu.name, type: 'used' }) /
-                                    this.getMetricValue(PrometheusParser.METRIC_NAMES.gpuMemory, { name: gpu.name, type: 'total' }) * 100).toFixed(2))
+                        total: this.bytesToMB(memoryBytes)  // Конвертируем в МБ
                 }
-            })),
+                };
+            }),
             network: networkInterfaces.map(iface => ({
                 name: iface.interface,
                 status: this.getMetricValue('network_status', { interface: iface.interface }) === 1 ? 'up': 'down'
@@ -297,32 +270,42 @@ export class PrometheusParser {
      * Получает метрики процессора
      * Включает:
      * - Модель процессора
-     * - Процент использования
-     * - Температуру (по датчикам и среднюю)
+     * - Процент использования CPU
+     * - Температуру процессора (все сенсоры и среднее значение)
      * @returns Объект с метриками процессора
      */
     getProcessorMetrics() {
-        const cpuUsage = this.findMetric<CpuUsagePercent>('cpu_usage_percent')
+        // Получаем базовую информацию о процессоре
+        const cpuInfo = this.findMetric<CpuUsagePercent>('cpu_usage_percent')
+        
+        // Получаем все температурные сенсоры
         const cpuTemperatures = this.findMetrics<CpuTemperature>('cpu_temperature')
 
-        const sensors = cpuTemperatures.map(sensor => {
-            const sensorLabels = { sensor: sensor.sensor }
+        // Получаем все значения температуры
+        const temperatures = cpuTemperatures.map(sensor => {
+            // Получаем значение температуры используя getMetricValue
+            // Это более надежный способ, так как он учитывает все edge cases
+            const value = this.getMetricValue('cpu_temperature', { sensor: sensor.sensor })
+            
             return {
-                name: sensor.sensor,
-                value: this.getMetricValue('cpu_temperature', sensorLabels)
+                name: sensor.sensor,    // Имя сенсора (например: \_TZ.TZ00)
+                value: Number(value.toFixed(2))  // Округляем до 2 знаков
             }
         })
 
-        const average = sensors.length > 0
-            ? Number((sensors.reduce((acc, sensor) => acc + sensor.value, 0) / sensors.length).toFixed(2))
-            : null
+        // Вычисляем среднюю температуру
+        const averageTemp = temperatures.length > 0
+            ? Number((
+                temperatures.reduce((sum, sensor) => sum + sensor.value, 0) / temperatures.length
+              ).toFixed(2))
+            : 0
 
         return {
-            model: cpuUsage?.processor,
-            usage: this.getMetricValue('cpu_usage_percent'),
+            model: cpuInfo?.processor || '',  // Модель процессора с fallback
+            usage: Math.round(this.getMetricValue('cpu_usage_percent')), // Округленный процент использования
             temperature: {
-                sensors,
-                average
+                sensors: temperatures,  // Все сенсоры с их значениями
+                average: averageTemp   // Средняя температура
             }
         }
     }
@@ -338,32 +321,20 @@ export class PrometheusParser {
      * @returns Массив объектов с метриками сетевых интерфейсов
      */
     getNetworkMetrics() {
-        // Получаем все сетевые интерфейсы
         const networkInterfaces = this.findMetrics<NetworkStatus>('network_status')
-
-        // Получаем все метрики для валидации
-        const rxMetrics = this.findMetrics<NetworkRXPerSecond>('network_rx_bytes_per_second')
-        const txMetrics = this.findMetrics<NetworkTXPerSecond>('network_tx_bytes_per_second')
-        const errorMetrics = this.findMetrics<NetworkErrors>('network_errors')
-        const droppedMetrics = this.findMetrics<NetworkDroppedPackets>('network_dropped_packets')
-
-        this.log('info', 'Network metrics found:', {
-            interfaces: networkInterfaces.length,
-            rx: rxMetrics.length,
-            tx: txMetrics.length,
-            errors: errorMetrics.length,
-            dropped: droppedMetrics.length
-        })
 
         return networkInterfaces.map(iface => {
             const labels = { interface: iface.interface }
+            const status = this.getMetricValue('network_status', labels)
             
+            console.log('[DEBUG] Network status for', iface.interface, ':', status)
+
             return {
             name: iface.interface,
-                status: this.getMetricValue('network_status', labels) === 1 ? 'up' : 'down',
+                status: status === 1 ? 'up' : 'down',
             performance: {
-                    rx: this.bytesToGB(this.getMetricValue('network_rx_bytes_per_second', labels)),
-                    tx: this.bytesToGB(this.getMetricValue('network_tx_bytes_per_second', labels))
+                    rx: this.getMetricValue('network_rx_bytes_per_second', labels),
+                    tx: this.getMetricValue('network_tx_bytes_per_second', labels)
                 },
                 errors: this.getMetricValue('network_errors', labels),
                 droppedPackets: this.getMetricValue('network_dropped_packets', labels)
@@ -373,47 +344,40 @@ export class PrometheusParser {
 
     /**
      * Получает метрики дисков
-     * Для каждого диска включает:
-     * - Модель
-     * - Производительность (чтение/запись)
-     * - Использование (общее/использовано/свободно/процент)
-     * @returns Массив объектов с метриками дисков
+     * @returns {DiskMetrics[]} Массив метрик для каждого диска
      */
-    getDiskMetrics() {
-        const disks = this.findMetrics<DiskHealthStatus>('disk_health_status')
-
-        // Получаем все метрики для валидации
-        const readMetrics = this.findMetrics<DiskReadBytesPerSecond>('disk_read_bytes_per_second')
-        const writeMetrics = this.findMetrics<DiskWriteBytesPerSecond>('disk_write_bytes_per_second')
-        const usageMetrics = this.findMetrics<DiskUsageBytes>('disk_usage_bytes')
-        const usagePercentMetrics = this.findMetrics<DiskUsagePercent>('disk_usage_percent')
-
-        this.log('info', 'Disk metrics found:', {
-            disks: disks.length,
-            read: readMetrics.length,
-            write: writeMetrics.length,
-            usage: usageMetrics.length,
-            usagePercent: usagePercentMetrics.length
-        })
+    getDiskMetrics(): DiskMetrics[] {
+        // Получаем базовую информацию о дисках
+        const disks = this.findMetrics<DiskHealthStatus>('disk_health_status');
 
         return disks.map(disk => {
-            const diskLabels = { disk: disk.disk }
-            
+            const diskName = disk.disk;
+            const labels = { disk: diskName };
+
+            // Получаем значения использования диска
+            const total = this.getMetricValue('disk_usage_bytes', { ...labels, type: 'total' });
+            const used = this.getMetricValue('disk_usage_bytes', { ...labels, type: 'used' });
+            const free = total - used;  // Вычисляем свободное место
+            const percent = this.getMetricValue('disk_usage_percent', labels);
+
+            // Получаем значения производительности
+            const read = this.getMetricValue('disk_read_bytes_per_second', labels);
+            const write = this.getMetricValue('disk_write_bytes_per_second', labels);
+
             return {
-            model: disk.disk,
-            type: disk.type,
-            performance: {
-                    rx: this.getMetricValue(PrometheusParser.METRIC_NAMES.diskRead, diskLabels),
-                    tx: this.getMetricValue(PrometheusParser.METRIC_NAMES.diskWrite, diskLabels)
-                },
+                disk: diskName,
                 usage: {
-                    total: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsage, { ...diskLabels, type: 'total' })),
-                    used: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsage, { ...diskLabels, type: 'used' })),
-                    free: this.bytesToGB(this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsage, { ...diskLabels, type: 'free' })),
-                    percent: this.getMetricValue(PrometheusParser.METRIC_NAMES.diskUsagePercent, diskLabels)
+                    total: this.bytesToGB(total),
+                    used: this.bytesToGB(used),
+                    free: this.bytesToGB(free),
+                    percent: Number(percent.toFixed(2))
+                },
+            performance: {
+                    read: read,
+                    write: write
                 }
-            }
-        })
+            };
+        });
     }
 
     /**
@@ -508,26 +472,32 @@ export class PrometheusParser {
 
     /**
      * Получает метрики памяти
-     * @returns Информация о памяти устройства
+     * @returns {MemoryMetrics} Информация об использовании памяти
      */
-    public getMemoryMetrics() {
-        const memoryMetric = this.findMetric('windows_cs_physical_memory_bytes');
-        const memoryAvailableMetric = this.findMetric('windows_os_physical_memory_free_bytes');
+    public getMemoryMetrics(): MemoryMetrics {
+        // Получаем метрики из Prometheus
+        const totalMetric = this.findMetric('total_memory_bytes');
+        const usedMetric = this.findMetric('used_memory_bytes');
         
-        const memoryTotal = memoryMetric && typeof memoryMetric === 'object' && 'value' in memoryMetric ? Number(memoryMetric.value) : 0;
-        const memoryAvailable = memoryAvailableMetric && typeof memoryAvailableMetric === 'object' && 'value' in memoryAvailableMetric ? Number(memoryAvailableMetric.value) : 0;
-        const memoryUsed = memoryTotal - memoryAvailable;
+        // Парсим значения, используя 0 как значение по умолчанию
+        const total = totalMetric && typeof totalMetric === 'object' && 'value' in totalMetric 
+            ? Number(totalMetric.value) 
+            : 0;
+            
+        const used = usedMetric && typeof usedMetric === 'object' && 'value' in usedMetric 
+            ? Number(usedMetric.value) 
+            : 0;
 
+        // Вычисляем производные значения
+        const free = total - used;
+        const percent = total ? (used / total) * 100 : 0;
+
+        // Конвертируем байты в гигабайты для отображения
         return {
-            total: this.bytesToGB(memoryTotal),
-            available: this.bytesToGB(memoryAvailable),
-            used: this.bytesToGB(memoryUsed),
-            usage: {
-                total: memoryTotal,
-                available: memoryAvailable,
-                used: memoryUsed,
-                percent: memoryTotal ? (memoryUsed / memoryTotal) * 100 : 0
-            }
+            total: this.bytesToGB(total),
+            used: this.bytesToGB(used),
+            free: this.bytesToGB(free),
+            percent: Number(percent.toFixed(2))
         };
     }
 

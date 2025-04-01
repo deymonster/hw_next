@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSE Debug Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        #controls {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #messages {
+            background: #fff;
+            padding: 10px;
+            height: 500px;
+            overflow-y: auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .info { background-color: #e3f2fd; }
+        .error { background-color: #ffebee; }
+        .data { background-color: #f1f8e9; }
+        .stats { background-color: #fff3e0; }
+        #stats {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
+        button {
+            padding: 5px 10px;
+            margin-right: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #1976d2;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        input {
+            padding: 5px;
+            margin-right: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f5f5f5;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <input type="text" id="deviceId" value="192.168.13.179" placeholder="Device ID">
+        <input type="text" id="serverUrl" value="http://localhost:3001" placeholder="Server URL">
+        <button onclick="connect()">Connect</button>
+        <button onclick="disconnect()">Disconnect</button>
+        <button onclick="clearMessages()">Clear</button>
+        <label><input type="checkbox" id="autoscroll" checked> Auto-scroll</label>
+    </div>
+    <div id="messages"></div>
+    <div id="stats">
+        <div>Connection time: <span id="connectionTime">-</span></div>
+        <div>Last update: <span id="lastUpdate">-</span></div>
+        <div>Updates count: <span id="updatesCount">0</span></div>
+        <div>Avg update size: <span id="avgUpdateSize">0</span> bytes</div>
+        <div>Memory usage: <span id="memoryUsage">-</span></div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let connectionStartTime = 0;
+        let lastUpdateTime = 0;
+        let updatesCount = 0;
+        let totalUpdateSize = 0;
+        
+        const messagesDiv = document.getElementById('messages');
+        const deviceIdInput = document.getElementById('deviceId');
+        const serverUrlInput = document.getElementById('serverUrl');
+        const autoscrollCheckbox = document.getElementById('autoscroll');
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function updateStats() {
+            const now = Date.now();
+            document.getElementById('connectionTime').textContent = 
+                connectionStartTime ? Math.round((now - connectionStartTime)/1000) + 's' : '-';
+            document.getElementById('lastUpdate').textContent = 
+                lastUpdateTime ? Math.round((now - lastUpdateTime)/1000) + 's ago' : '-';
+            document.getElementById('updatesCount').textContent = updatesCount;
+            document.getElementById('avgUpdateSize').textContent = 
+                updatesCount ? formatBytes(Math.round(totalUpdateSize/updatesCount)) : '0';
+            
+            if (window.performance && performance.memory) {
+                document.getElementById('memoryUsage').textContent = 
+                    formatBytes(performance.memory.usedJSHeapSize) + ' / ' + 
+                    formatBytes(performance.memory.jsHeapSizeLimit);
+            }
+        }
+
+        function addMessage(type, message, data = null) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = `${new Date().toISOString()} [${type.toUpperCase()}] ${message}`;
+            
+            if (data) {
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(data, null, 2);
+                div.appendChild(pre);
+            }
+            
+            messagesDiv.appendChild(div);
+            
+            if (autoscrollCheckbox.checked) {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        }
+
+        function clearMessages() {
+            messagesDiv.innerHTML = '';
+            updatesCount = 0;
+            totalUpdateSize = 0;
+            updateStats();
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                connectionStartTime = 0;
+                addMessage('info', 'Соединение закрыто вручную');
+            }
+        }
+
+        async function testConnection(url) {
+            try {
+                const response = await fetch(url, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Origin': window.location.origin
+                    }
+                });
+                return response.ok;
+            } catch (error) {
+                console.error('CORS test failed:', error);
+                return false;
+            }
+        }
+
+        async function connect() {
+            disconnect();
+
+            const deviceId = deviceIdInput.value.trim();
+            const serverUrl = serverUrlInput.value.trim();
+
+            if (!deviceId) {
+                addMessage('error', 'Укажите Device ID');
+                return;
+            }
+
+            if (!serverUrl) {
+                addMessage('error', 'Укажите URL сервера');
+                return;
+            }
+
+            try {
+                addMessage('info', `Проверка CORS для ${serverUrl}...`);
+                const corsOk = await testConnection(`${serverUrl}/api/metrics/stream/${deviceId}`);
+                
+                if (!corsOk) {
+                    addMessage('error', 'CORS не настроен на сервере');
+                    return;
+                }
+
+                addMessage('info', `Подключение к устройству ${deviceId}...`);
+                connectionStartTime = Date.now();
+                
+                eventSource = new EventSource(`${serverUrl}/api/metrics/stream/${deviceId}`);
+
+                eventSource.onmessage = (event) => {
+                    try {
+                        lastUpdateTime = Date.now();
+                        updatesCount++;
+                        totalUpdateSize += event.data.length;
+                        
+                        const data = JSON.parse(event.data);
+                        addMessage('data', `Получены данные типа: ${data.type}`, data);
+                        updateStats();
+                    } catch (error) {
+                        addMessage('error', `Ошибка парсинга: ${error.message}`);
+                    }
+                };
+
+                eventSource.onerror = (error) => {
+                    const errorInfo = {
+                        type: error.type,
+                        target: {
+                            readyState: eventSource ? eventSource.readyState : 'unknown',
+                            url: eventSource ? eventSource.url : 'unknown'
+                        }
+                    };
+                    
+                    addMessage('error', `Ошибка соединения`, errorInfo);
+                    
+                    if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+                        addMessage('error', 'Соединение закрыто');
+                        eventSource = null;
+                        connectionStartTime = 0;
+                    }
+                    updateStats();
+                };
+
+                eventSource.onopen = () => {
+                    addMessage('info', 'Соединение установлено');
+                    updateStats();
+                };
+            } catch (error) {
+                addMessage('error', `Ошибка создания EventSource: ${error.message}`);
+                connectionStartTime = 0;
+            }
+        }
+
+        // Обновляем статистику каждую секунду
+        setInterval(updateStats, 1000);
+
+        // Автоматически подключаемся при загрузке страницы
+        window.onload = connect;
+    </script>
+</body>
+</html>
