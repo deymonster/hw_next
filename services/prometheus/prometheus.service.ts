@@ -135,15 +135,24 @@ export class PrometheusService {
                 this.log('warn', `Metrics for device ${deviceId} are stale, fetching new data`)
             }
 
-            const parser = await this.getParser(deviceId)
+            // Получаем динамические метрики
+            const dynamicResponse = await this.getMetricsByIp(deviceId, MetricType.DYNAMIC)
+            const dynamicParser = new PrometheusParser(dynamicResponse)
+
+            // Получаем метрики процессов
+            const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
+            const processParser = new PrometheusParser(processResponse)
+
+
             const newMetrics = {
-                processorMetrics: parser.getProcessorMetrics(),
-                networkMetrics: parser.getNetworkMetrics(),
-                diskMetrics: parser.getDiskMetrics(),
-                memoryMetrics: parser.getMemoryMetrics(),
-                processList: parser.getProcessList(),
+                processorMetrics: dynamicParser.getProcessorMetrics(),
+                networkMetrics: dynamicParser.getNetworkMetrics(),
+                diskMetrics: dynamicParser.getDiskMetrics(),
+                memoryMetrics: dynamicParser.getMemoryMetrics(),
+                processList: processParser.getProcessList(),
                 timestamp: now
             }
+            
 
             // Обновляем кэш и оповещаем подписчиков только если данные изменились
             if (!cached.metrics || this.hasMetricsChanged(cached.metrics, newMetrics)) {
@@ -613,9 +622,19 @@ async getMetricsByIp(
                     ...PROMETHEUS_METRICS[MetricType.STATIC].hardware
                 ]
                 this.log('info', 'Using static metrics:', { count: metricsToQuery.length })
+            } else if (type === MetricType.DYNAMIC) {
+                metricsToQuery = [
+                    ...PROMETHEUS_METRICS[MetricType.DYNAMIC].cpu,
+                    ...PROMETHEUS_METRICS[MetricType.DYNAMIC].memory,
+                    ...PROMETHEUS_METRICS[MetricType.DYNAMIC].disk,
+                    ...PROMETHEUS_METRICS[MetricType.DYNAMIC].network,
+                ]
+                this.log('info', 'Using dynamic metrics:', { count: metricsToQuery.length })
+            } else if (type === MetricType.PROCESS) {
+                metricsToQuery = [...PROMETHEUS_METRICS[MetricType.PROCESS].process]
+                this.log('info', 'Using process metrics:', { count: metricsToQuery.length })
             }
-            // Пока обрабатываем только статические метрики
-            // Динамические добавим позже
+            
         } else {
             throw new Error('Either type or specificMetrics must be provided')
         }

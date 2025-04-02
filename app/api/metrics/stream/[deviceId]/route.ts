@@ -101,7 +101,7 @@ export async function GET(
                 try {
                     console.log('[SSE] Requesting static data for device:', deviceId)
                     const staticData = await services.infrastructure.prometheus.getDeviceStaticData(deviceId)
-                    console.log('[SSE] Got static data:', JSON.stringify(staticData).slice(0, 100) + '...')
+                    
                     
                     const staticMessage = `data: ${JSON.stringify({
                         type: 'static',

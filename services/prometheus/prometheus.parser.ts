@@ -129,30 +129,43 @@ export class PrometheusParser {
      * @returns Числовое значение метрики
      */
     private getMetricValue(name: string, labels: Record<string, string> = {}): number {
-        const labelString = Object.entries(labels)
-            .map(([key, value]) => `${key}="${value}"`)
-            .join(',')
-        const query = labelString ? `${name}{${labelString}}` : name
-        return Number(this.getValue(query) || 0)
+        console.log(`Getting metric value for ${name} with labels:`, labels);
+        
+        if (!this.response?.data?.result) {
+            this.log('warn', 'No data in response');
+            return 0;
+        }
+
+        // Ищем метрику, которая соответствует имени и всем переданным лейблам
+        const result = this.response.data.result.find(item => {
+            // Проверяем имя метрики
+            if (item.metric.__name__ !== name) {
+                return false;
+            }
+
+            // Проверяем все переданные лейблы
+            return Object.entries(labels).every(([key, value]) => 
+                item.metric[key] === value
+            );
+        });
+        if (!result) {
+            console.warn(`[PROMETHEUS_PARSER] No metric found for ${name} with labels:`, labels);
+            return 0;
+        }
+        // Получаем значение из массива value [timestamp, value]
+        const value = result.value?.[1];
+
+        if (!value) {
+            this.log('warn', `No value found for metric ${name}`);
+            return 0;
+        }
+
+        console.log(`Found value for ${name}:`, value);
+        return Number(value);
+        
     }
 
-    /**
-     * Константы для имен метрик
-     */
-    private static readonly METRIC_NAMES = {
-        networkRx: 'network_rx_bytes_per_second',
-        networkTx: 'network_tx_bytes_per_second',
-        networkErrors: 'network_errors',
-        networkDropped: 'network_dropped_packets',
-        diskRead: 'disk_read_bytes_per_second',
-        diskWrite: 'disk_write_bytes_per_second',
-        diskUsage: 'disk_usage_bytes',
-        diskUsagePercent: 'disk_usage_percent',
-        totalMemory: 'total_memory_bytes',
-        usedMemory: 'used_memory_bytes',
-        freeMemory: 'free_memory_bytes',
-        gpuMemory: 'gpu_memory_bytes'
-    } as const
+    
 
     /**
      * Конвертирует байты в гигабайты
@@ -251,7 +264,8 @@ export class PrometheusParser {
             gpus: gpus.map(gpu => {
                 const name = gpu.name;
                 const memoryBytes = this.getMetricValue('gpu_memory_bytes', { name });
-                
+                console.log('[DEBUG] GPU Memory Bytes for', name, ':', memoryBytes)
+                // Возвращаем объект с информацией о GPU
                 return {
                     name,
                 memory: {

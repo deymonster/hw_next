@@ -19,8 +19,45 @@ export const PROMETHEUS_METRICS = {
             'motherboard_info',
             'memory_module_info',
             'gpu_info',
+            'gpu_memory_bytes',
             'disk_health_status',
             'network_status'
+        ]
+    },
+    [MetricType.DYNAMIC]: {
+        /** Метрики процессора */
+        cpu: [
+            'cpu_usage_percent',
+            'cpu_temperature'
+        ],
+        /** Метрики памяти */
+        memory: [
+            'total_memory_bytes',
+            'used_memory_bytes',
+            'free_memory_bytes'
+        ],
+        /** Метрики дисков */
+        disk: [
+            'disk_read_bytes_per_second',
+            'disk_write_bytes_per_second',
+            'disk_usage_bytes',
+            'disk_usage_percent'
+        ],
+        /** Метрики сети */
+        network: [
+            'network_rx_bytes_per_second',
+            'network_tx_bytes_per_second',
+            'network_errors',
+            'network_dropped_packets'
+        ]
+    },
+    [MetricType.PROCESS]: {
+        /** Метрики процессов */
+        process: [
+            'active_proccess_list',
+            'proccess_cpu_usage_percent',
+            'active_proccess_memory_usage'
+
         ]
     }
 } as const
