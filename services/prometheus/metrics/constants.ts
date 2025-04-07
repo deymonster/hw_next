@@ -38,6 +38,7 @@ export const PROMETHEUS_METRICS = {
         ],
         /** Метрики дисков */
         disk: [
+            'disk_health_status',
             'disk_read_bytes_per_second',
             'disk_write_bytes_per_second',
             'disk_usage_bytes',
@@ -45,6 +46,7 @@ export const PROMETHEUS_METRICS = {
         ],
         /** Метрики сети */
         network: [
+            'network_status',
             'network_rx_bytes_per_second',
             'network_tx_bytes_per_second',
             'network_errors',

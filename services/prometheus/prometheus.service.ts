@@ -132,24 +132,40 @@ export class PrometheusService {
             // Проверяем не устарели ли данные
             const now = Date.now()
             if (cached.lastUpdate && (now - cached.lastUpdate) > this.dynamicDataMaxAge) {
-                this.log('warn', `Metrics for device ${deviceId} are stale, fetching new data`)
+                console.warn(`Metrics for device ${deviceId} are stale, fetching new data`) 
             }
-
+            
+            this.log('info', `Получаем динамические метрики для ${deviceId}`)
+            
             // Получаем динамические метрики
+            
             const dynamicResponse = await this.getMetricsByIp(deviceId, MetricType.DYNAMIC)
+            
             const dynamicParser = new PrometheusParser(dynamicResponse)
-
+            
             // Получаем метрики процессов
-            const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
-            const processParser = new PrometheusParser(processResponse)
+            //const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
+            //const processParser = new PrometheusParser(processResponse)
+            
+            const processorMetrics = dynamicParser.getProcessorMetrics()
+            this.log('info', `Parsed processor metrics:`, processorMetrics)
+            
+            const networkMetrics = dynamicParser.getNetworkMetrics()
+            this.log('info', `Parsed network metrics:`, networkMetrics)
+            
+            const diskMetrics = dynamicParser.getDiskMetrics()
+            this.log('info', `Parsed disk metrics:`, diskMetrics)
+            
+            const memoryMetrics = dynamicParser.getMemoryMetrics()
+            this.log('info', `Parsed memory metrics:`, memoryMetrics)
 
 
             const newMetrics = {
-                processorMetrics: dynamicParser.getProcessorMetrics(),
-                networkMetrics: dynamicParser.getNetworkMetrics(),
-                diskMetrics: dynamicParser.getDiskMetrics(),
-                memoryMetrics: dynamicParser.getMemoryMetrics(),
-                processList: processParser.getProcessList(),
+                processorMetrics,
+                networkMetrics,
+                diskMetrics,
+                memoryMetrics,
+                //processList: processParser.getProcessList(),
                 timestamp: now
             }
             
@@ -262,22 +278,14 @@ export class PrometheusService {
      * @param data Дополнительные данные
      */
     private log(level: 'info' | 'warn' | 'error', message: string, data?: any): void {
-        // Логируем только ошибки и критические предупреждения
-        if (level === 'error' || 
-            (level === 'warn' && message.includes('Failed to')) ||
-            (level === 'info' && (
-                message.includes('metrics changed') ||
-                message.includes('Failed to') ||
-                message.includes('Error')
-            ))) {
+        // Убираем условную фильтрацию, чтобы логировать все сообщения
         const timestamp = new Date().toISOString();
         const prefix = `[PROMETHEUS_SERVICE][${timestamp}]`;
         
-            if (data) {
-                console[level](`${prefix} ${message}`, data);
-            } else {
-                console[level](`${prefix} ${message}`);
-            }
+        if (data) {
+            console[level](`${prefix} ${message}`, data);
+        } else {
+            console[level](`${prefix} ${message}`);
         }
     }
 
@@ -630,6 +638,7 @@ async getMetricsByIp(
                     ...PROMETHEUS_METRICS[MetricType.DYNAMIC].network,
                 ]
                 this.log('info', 'Using dynamic metrics:', { count: metricsToQuery.length })
+                
             } else if (type === MetricType.PROCESS) {
                 metricsToQuery = [...PROMETHEUS_METRICS[MetricType.PROCESS].process]
                 this.log('info', 'Using process metrics:', { count: metricsToQuery.length })
@@ -645,17 +654,10 @@ async getMetricsByIp(
 
         // Формируем запрос к Prometheus
         const query = `{instance="${ipAddress}:9182",__name__=~"${metricsToQuery.join('|')}"}`;
-
+        
         // Создаем URL для запроса
         const url = new URL('/prometheus/api/v1/query', this.config.url)
         url.searchParams.append('query', query)
-
-        this.log('info', `Fetching metrics from Prometheus`, {
-            type,
-            metricsCount: metricsToQuery.length,
-            url: url.toString(),
-            query
-        })
 
         // Выполняем запрос
         const response = await fetch(url.toString(), {
@@ -670,23 +672,23 @@ async getMetricsByIp(
         }
 
         const data = await response.json()
-
-        // Добавляем отладочный вывод
-        if (process.env.NODE_ENV === 'development') {
-            const availableMetrics = data.data.result.map((r: any) => ({
-                name: r.metric.__name__,
-                value: r.value?.[1],
-                labels: Object.fromEntries(
-                    Object.entries(r.metric).filter(([k]) => k !== '__name__')
-                )
-            }))
-
-            this.log('info', 'Received metrics from Prometheus:', {
-                totalMetrics: availableMetrics.length,
-                metrics: availableMetrics
-            })
-        }
-
+        // this.log('info', `Fetched metrics for ${ipAddress}`, {
+        //     status: data.status,
+        //     resultType: data.data.resultType,
+        //     resultCount: data.data.result.length,
+        //     metrics: data.data.result.map((item: { 
+        //         metric: { 
+        //             __name__: string; 
+        //             [key: string]: string 
+        //         }; 
+        //         value?: [number, string] 
+        //     }) => ({
+        //         name: item.metric.__name__,
+        //         labels: Object.keys(item.metric).filter(k => k !== '__name__')
+        //             .reduce((obj, key) => ({ ...obj, [key]: item.metric[key] }), {}),
+        //         value: item.value ? item.value[1] : null
+        //     }))
+        // }) 
         return data
     } catch (error) {
         this.log('error', `Error fetching metrics for ${ipAddress}:`, error)

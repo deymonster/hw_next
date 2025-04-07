@@ -370,8 +370,8 @@ export interface DiskMetrics {
         percent: number;  // из disk_usage_percent
     };
     performance: {
-        read: number;     // из disk_read_bytes_per_second
-        write: number;    // из disk_write_bytes_per_second
+        read:  { value: number, unit: string };     // из disk_read_bytes_per_second
+        write:  { value: number, unit: string };    // из disk_write_bytes_per_second
     };
 }
 

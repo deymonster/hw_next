@@ -80,9 +80,9 @@ export class PrometheusParser {
      * @returns Массив метрик указанного типа
      */
     private findMetrics<T>(name: string): T[] {
-        this.log('info', `Finding metrics: ${name}`);
+        console.log(`Finding metrics: ${name}`);
         if (!this.response?.data?.result) {
-            this.log('warn', 'No data in response');
+            console.warn('No data in response');
             return [];
         }
 
@@ -91,7 +91,7 @@ export class PrometheusParser {
             return metricName === name;
         });
 
-        this.log('info', `Found ${results.length} metrics for ${name}`);
+        console.log(`Found ${results.length} metrics for ${name}`);
         return results.map(item => item.metric as T);
     }
 
@@ -129,43 +129,58 @@ export class PrometheusParser {
      * @returns Числовое значение метрики
      */
     private getMetricValue(name: string, labels: Record<string, string> = {}): number {
-        console.log(`Getting metric value for ${name} with labels:`, labels);
+        console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Getting value for ${name} with labels:`, labels);
         
         if (!this.response?.data?.result) {
-            this.log('warn', 'No data in response');
+            console.warn('[PROMETHEUS_PARSER][METRIC_VALUE] No data in response');
             return 0;
         }
-
+    
+        // Логируем все доступные метрики для отладки
+        const availableMetrics = this.response.data.result
+            .filter(item => item.metric.__name__ === name)
+            .map(item => ({
+                name: item.metric.__name__,
+                labels: item.metric,
+                value: item.value
+            }));
+        
+        console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Available metrics for ${name}:`, availableMetrics);
+    
         // Ищем метрику, которая соответствует имени и всем переданным лейблам
         const result = this.response.data.result.find(item => {
             // Проверяем имя метрики
             if (item.metric.__name__ !== name) {
+                console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Name mismatch: ${item.metric.__name__} !== ${name}`);
                 return false;
             }
-
+    
             // Проверяем все переданные лейблы
-            return Object.entries(labels).every(([key, value]) => 
-                item.metric[key] === value
-            );
+            const labelsMatch = Object.entries(labels).every(([key, value]) => {
+                const metricValue = item.metric[key];
+                const matches = metricValue === value;
+                console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Label check ${key}: ${metricValue} === ${value} -> ${matches}`);
+                return matches;
+            });
+            return labelsMatch;
         });
+    
         if (!result) {
-            console.warn(`[PROMETHEUS_PARSER] No metric found for ${name} with labels:`, labels);
+            console.warn(`[PROMETHEUS_PARSER][METRIC_VALUE] No metric found for ${name} with labels:`, labels);
             return 0;
         }
-        // Получаем значение из массива value [timestamp, value]
+    
         const value = result.value?.[1];
-
+        console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Found value for ${name}:`, value);
+    
         if (!value) {
-            this.log('warn', `No value found for metric ${name}`);
+            console.warn(`[PROMETHEUS_PARSER][METRIC_VALUE] No value found for metric ${name}`);
             return 0;
         }
-
-        console.log(`Found value for ${name}:`, value);
+    
         return Number(value);
-        
     }
 
-    
 
     /**
      * Конвертирует байты в гигабайты
@@ -183,6 +198,25 @@ export class PrometheusParser {
      */
     private bytesToMB(bytes: number): number {
         return Number((bytes / (1024 * 1024)).toFixed(2))
+    }
+
+
+    /**
+     * Конвертирует байты в секунду в читаемый формат
+     * @param bytesPerSecond Скорость в байтах в секунду
+     * @returns Объект с значением и единицей измерения
+     */
+    private formatBytesPerSecond(bytesPerSecond: number): { value: number; unit: string } {
+        if (bytesPerSecond >= 1024 * 1024 * 1024) {
+            return { value: Number((bytesPerSecond / (1024 * 1024 * 1024)).toFixed(2)), unit: 'Gb/s' };
+        }
+        if (bytesPerSecond >= 1024 * 1024) {
+            return { value: Number((bytesPerSecond / (1024 * 1024)).toFixed(2)), unit: 'Mb/s' };
+        }
+        if (bytesPerSecond >= 1024) {
+            return { value: Number((bytesPerSecond / 1024).toFixed(2)), unit: 'Kb/s' };
+        }
+        return { value: Number(bytesPerSecond.toFixed(2)), unit: 'B/s' };
     }
 
     /**
@@ -264,7 +298,7 @@ export class PrometheusParser {
             gpus: gpus.map(gpu => {
                 const name = gpu.name;
                 const memoryBytes = this.getMetricValue('gpu_memory_bytes', { name });
-                console.log('[DEBUG] GPU Memory Bytes for', name, ':', memoryBytes)
+                
                 // Возвращаем объект с информацией о GPU
                 return {
                     name,
@@ -336,19 +370,25 @@ export class PrometheusParser {
      */
     getNetworkMetrics() {
         const networkInterfaces = this.findMetrics<NetworkStatus>('network_status')
-
+        
         return networkInterfaces.map(iface => {
             const labels = { interface: iface.interface }
             const status = this.getMetricValue('network_status', labels)
             
-            console.log('[DEBUG] Network status for', iface.interface, ':', status)
+            const rxBytes = this.getMetricValue('network_rx_bytes_per_second', labels)
+            const txBytes = this.getMetricValue('network_tx_bytes_per_second', labels)
+
+            const rx = this.formatBytesPerSecond(rxBytes)
+            const tx = this.formatBytesPerSecond(txBytes)
+
+
 
             return {
-            name: iface.interface,
+                name: iface.interface,
                 status: status === 1 ? 'up' : 'down',
-            performance: {
-                    rx: this.getMetricValue('network_rx_bytes_per_second', labels),
-                    tx: this.getMetricValue('network_tx_bytes_per_second', labels)
+                performance: {
+                    rx: { value: rx.value, unit: rx.unit },
+                    tx: { value: tx.value, unit: tx.unit }
                 },
                 errors: this.getMetricValue('network_errors', labels),
                 droppedPackets: this.getMetricValue('network_dropped_packets', labels)
@@ -363,35 +403,49 @@ export class PrometheusParser {
     getDiskMetrics(): DiskMetrics[] {
         // Получаем базовую информацию о дисках
         const disks = this.findMetrics<DiskHealthStatus>('disk_health_status');
-
-        return disks.map(disk => {
-            const diskName = disk.disk;
+        
+        const diskUsageMetrics = this.response.data.result
+            .filter(item => item.metric.__name__ === 'disk_usage_bytes')
+            .map(item => ({
+                letter: item.metric.disk,
+                type: item.metric.type,
+                value: item.value?.[1] || '0'  
+            }));
+        const diskLetters = [...new Set(diskUsageMetrics
+            .filter(m => m.type === 'total')
+            .map(m => m.letter))];
+        
+        return diskLetters.map(letter => {
+            const diskName = letter || 'unknown';
             const labels = { disk: diskName };
-
-            // Получаем значения использования диска
+    
             const total = this.getMetricValue('disk_usage_bytes', { ...labels, type: 'total' });
             const used = this.getMetricValue('disk_usage_bytes', { ...labels, type: 'used' });
-            const free = total - used;  // Вычисляем свободное место
+            const free = total - used;
             const percent = this.getMetricValue('disk_usage_percent', labels);
+    
+            const readSpeed = this.getMetricValue('disk_read_bytes_per_second', labels);
+            const writeSpeed = this.getMetricValue('disk_write_bytes_per_second', labels);
+            
+            const read = this.formatBytesPerSecond(readSpeed);
+            const write = this.formatBytesPerSecond(writeSpeed);
 
-            // Получаем значения производительности
-            const read = this.getMetricValue('disk_read_bytes_per_second', labels);
-            const write = this.getMetricValue('disk_write_bytes_per_second', labels);
-
+            const healthInfo = disks.find(d => d.disk === diskName);
             return {
-                disk: diskName,
+                disk: healthInfo?.disk || letter || 'Unknown',  // Добавляем fallback значение
                 usage: {
                     total: this.bytesToGB(total),
                     used: this.bytesToGB(used),
                     free: this.bytesToGB(free),
                     percent: Number(percent.toFixed(2))
                 },
-            performance: {
-                    read: read,
-                    write: write
+                performance: {
+                    read: { value: read.value, unit: read.unit },
+                    write: { value: write.value, unit: write.unit }
                 }
             };
         });
+        
     }
 
     /**
@@ -516,19 +570,18 @@ export class PrometheusParser {
     }
 
     private log(level: 'info' | 'warn' | 'error', message: string, data?: any): void {
-        // Логируем только критические ошибки и важные предупреждения
-        if (level === 'error' || 
-            (level === 'warn' && (
-                message.includes('Failed to') ||
-                message.includes('No data') ||
-                message.includes('not found')
-            ))) {
-            const prefix = `[PROMETHEUS_PARSER]`;
-            if (data) {
-                console[level](`${prefix} ${message}`, data);
-            } else {
-                console[level](`${prefix} ${message}`);
-            }
+        const prefix = `[PROMETHEUS_PARSER]`;
+        
+        switch (level) {
+            case 'error':
+                console.error(`${prefix} ${message}`, data || '');
+                break;
+            case 'warn':
+                console.warn(`${prefix} ${message}`, data || '');
+                break;
+            case 'info':
+                console.log(`${prefix} ${message}`, data || '');
+                break;
         }
     }
 }
