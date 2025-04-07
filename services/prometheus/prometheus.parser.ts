@@ -544,27 +544,19 @@ export class PrometheusParser {
      */
     public getMemoryMetrics(): MemoryMetrics {
         // Получаем метрики из Prometheus
-        const totalMetric = this.findMetric('total_memory_bytes');
-        const usedMetric = this.findMetric('used_memory_bytes');
-        
-        // Парсим значения, используя 0 как значение по умолчанию
-        const total = totalMetric && typeof totalMetric === 'object' && 'value' in totalMetric 
-            ? Number(totalMetric.value) 
-            : 0;
-            
-        const used = usedMetric && typeof usedMetric === 'object' && 'value' in usedMetric 
-            ? Number(usedMetric.value) 
-            : 0;
+        const total = this.getMetricValue('total_memory_bytes');
+        const used = this.getMetricValue('used_memory_bytes');
+        const free = this.getMetricValue('free_memory_bytes');
 
-        // Вычисляем производные значения
-        const free = total - used;
+
+        // Вычисляем процент использования
         const percent = total ? (used / total) * 100 : 0;
 
         // Конвертируем байты в гигабайты для отображения
         return {
-            total: this.bytesToGB(total),
-            used: this.bytesToGB(used),
-            free: this.bytesToGB(free),
+            total: this.bytesToMB(total),
+            used: this.bytesToMB(used),
+            free: this.bytesToMB(free),
             percent: Number(percent.toFixed(2))
         };
     }
