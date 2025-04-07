@@ -129,7 +129,7 @@ export class PrometheusParser {
      * @returns Числовое значение метрики
      */
     private getMetricValue(name: string, labels: Record<string, string> = {}): number {
-        console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Getting value for ${name} with labels:`, labels);
+        
         
         if (!this.response?.data?.result) {
             console.warn('[PROMETHEUS_PARSER][METRIC_VALUE] No data in response');
@@ -145,13 +145,13 @@ export class PrometheusParser {
                 value: item.value
             }));
         
-        console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Available metrics for ${name}:`, availableMetrics);
+        
     
         // Ищем метрику, которая соответствует имени и всем переданным лейблам
         const result = this.response.data.result.find(item => {
             // Проверяем имя метрики
             if (item.metric.__name__ !== name) {
-                console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Name mismatch: ${item.metric.__name__} !== ${name}`);
+                
                 return false;
             }
     
@@ -159,7 +159,7 @@ export class PrometheusParser {
             const labelsMatch = Object.entries(labels).every(([key, value]) => {
                 const metricValue = item.metric[key];
                 const matches = metricValue === value;
-                console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Label check ${key}: ${metricValue} === ${value} -> ${matches}`);
+                
                 return matches;
             });
             return labelsMatch;
@@ -171,7 +171,7 @@ export class PrometheusParser {
         }
     
         const value = result.value?.[1];
-        console.log(`[PROMETHEUS_PARSER][METRIC_VALUE] Found value for ${name}:`, value);
+        
     
         if (!value) {
             console.warn(`[PROMETHEUS_PARSER][METRIC_VALUE] No value found for metric ${name}`);
@@ -453,14 +453,15 @@ export class PrometheusParser {
      * @returns Информация о процессах: общее количество и топ-5 по использованию CPU
      */
     getProcessList(): ProcessListInfo {
-        const activeProcesses = this.findMetrics<ActiveProcessMemoryUsage>('active_process_memory_usage')
-        const processCpuUsage = this.findMetrics<ProcessCpuUsagePercent>('process_cpu_usage_percent')
+        const totalProcesses = Math.round(this.getMetricValue('active_proccess_list'));
+        const activeProcesses = this.findMetrics<ActiveProcessMemoryUsage>('active_proccess_memory_usage')
+        const processCpuUsage = this.findMetrics<ProcessCpuUsagePercent>('proccess_cpu_usage_percent')
         
         if (!activeProcesses.length || !processCpuUsage.length) {
             console.warn('[PROMETHEUS_PARSER] No process metrics found')
             return {
-                total: 0,
-                top5ByCpu: []
+                total: totalProcesses,
+                processes: []
             }
         }
 
@@ -473,32 +474,41 @@ export class PrometheusParser {
         }>()
 
         // Добавляем информацию об использовании памяти
+        // Добавляем информацию об использовании памяти
         activeProcesses.forEach(proc => {
-            if (!proc.pid || !proc.process) return
+            if (!proc.pid || !proc.process) return;
+            const memoryValue = this.getMetricValue('active_proccess_memory_usage', {
+                pid: proc.pid,
+                process: proc.process
+            });
+            
             processes.set(proc.pid, {
                 name: proc.process,
                 pid: proc.pid,
                 cpu: 0,
-                memory: parseFloat(this.getValue(`active_process_memory_usage{pid="${proc.pid}"}`) || '0')
-            })
-        })
+                memory: Number(memoryValue.toFixed(1))
+            });
+        });
 
         // Добавляем информацию об использовании CPU
         processCpuUsage.forEach(proc => {
-            if (!proc.pid) return
-            const process = processes.get(proc.pid)
+            if (!proc.pid) return;
+            const process = processes.get(proc.pid);
             if (process) {
-                process.cpu = parseFloat(this.getValue(`process_cpu_usage_percent{pid="${proc.pid}"}`) || '0')
+                const cpuValue = this.getMetricValue('proccess_cpu_usage_percent', {
+                    pid: proc.pid,
+                    process: process.name
+                });
+                process.cpu = Number(cpuValue.toFixed(1));
             }
-        })
+        });
 
-        // Сортируем по использованию CPU
-        const sortedProcesses = Array.from(processes.values())
-            .sort((a, b) => b.cpu - a.cpu)
+        // Преобразуем Map в массив процессов
+        const processList = Array.from(processes.values());
 
         return {
-            total: processes.size,
-            top5ByCpu: sortedProcesses.slice(0, 5)
+            total: totalProcesses,
+            processes: processList
         }
     }
 

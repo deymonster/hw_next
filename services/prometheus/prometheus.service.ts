@@ -144,8 +144,8 @@ export class PrometheusService {
             const dynamicParser = new PrometheusParser(dynamicResponse)
             
             // Получаем метрики процессов
-            //const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
-            //const processParser = new PrometheusParser(processResponse)
+            const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
+            const processParser = new PrometheusParser(processResponse)
             
             const processorMetrics = dynamicParser.getProcessorMetrics()
             this.log('info', `Parsed processor metrics:`, processorMetrics)
@@ -165,7 +165,7 @@ export class PrometheusService {
                 networkMetrics,
                 diskMetrics,
                 memoryMetrics,
-                //processList: processParser.getProcessList(),
+                processList: processParser.getProcessList(),
                 timestamp: now
             }
             
@@ -629,7 +629,7 @@ async getMetricsByIp(
                     ...PROMETHEUS_METRICS[MetricType.STATIC].system,
                     ...PROMETHEUS_METRICS[MetricType.STATIC].hardware
                 ]
-                this.log('info', 'Using static metrics:', { count: metricsToQuery.length })
+                
             } else if (type === MetricType.DYNAMIC) {
                 metricsToQuery = [
                     ...PROMETHEUS_METRICS[MetricType.DYNAMIC].cpu,
@@ -637,11 +637,11 @@ async getMetricsByIp(
                     ...PROMETHEUS_METRICS[MetricType.DYNAMIC].disk,
                     ...PROMETHEUS_METRICS[MetricType.DYNAMIC].network,
                 ]
-                this.log('info', 'Using dynamic metrics:', { count: metricsToQuery.length })
+                
                 
             } else if (type === MetricType.PROCESS) {
                 metricsToQuery = [...PROMETHEUS_METRICS[MetricType.PROCESS].process]
-                this.log('info', 'Using process metrics:', { count: metricsToQuery.length })
+                
             }
             
         } else {
@@ -654,7 +654,7 @@ async getMetricsByIp(
 
         // Формируем запрос к Prometheus
         const query = `{instance="${ipAddress}:9182",__name__=~"${metricsToQuery.join('|')}"}`;
-        
+        console.log('QUERY', query)
         // Создаем URL для запроса
         const url = new URL('/prometheus/api/v1/query', this.config.url)
         url.searchParams.append('query', query)
@@ -672,23 +672,7 @@ async getMetricsByIp(
         }
 
         const data = await response.json()
-        // this.log('info', `Fetched metrics for ${ipAddress}`, {
-        //     status: data.status,
-        //     resultType: data.data.resultType,
-        //     resultCount: data.data.result.length,
-        //     metrics: data.data.result.map((item: { 
-        //         metric: { 
-        //             __name__: string; 
-        //             [key: string]: string 
-        //         }; 
-        //         value?: [number, string] 
-        //     }) => ({
-        //         name: item.metric.__name__,
-        //         labels: Object.keys(item.metric).filter(k => k !== '__name__')
-        //             .reduce((obj, key) => ({ ...obj, [key]: item.metric[key] }), {}),
-        //         value: item.value ? item.value[1] : null
-        //     }))
-        // }) 
+        
         return data
     } catch (error) {
         this.log('error', `Error fetching metrics for ${ipAddress}:`, error)

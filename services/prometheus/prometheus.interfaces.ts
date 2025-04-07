@@ -507,12 +507,12 @@ export interface ProcessCpuUsage {
  */
 export interface ProcessListInfo {
     total: number;
-    top5ByCpu: {
+    processes: Array<{
         name: string;
         pid: string;
         cpu: number;
         memory: number;
-    }[];
+    }>;
 }
 
 
