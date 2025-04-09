@@ -12,6 +12,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import { PrometheusParser } from "./prometheus.parser";
 import { MetricType, PROMETHEUS_METRICS } from "./metrics";
+import { Logger } from '@/services/logger/logger.service'
 
 /**
  * Сервис для работы с Prometheus API
@@ -26,6 +27,7 @@ import { MetricType, PROMETHEUS_METRICS } from "./metrics";
 export class PrometheusService {
     private readonly config: PrometheusServiceConfig
     private readonly emitter = new EventEmitter()
+    private readonly logger = Logger.getInstance()
     private readonly staticDataCache: Map<string, {
         lastUpdate: number,
         data: {
@@ -33,6 +35,10 @@ export class PrometheusService {
             hardwareInfo: any
         }
     }> = new Map()
+
+    private async log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]) {
+        await this.logger.log('PROMETHEUS_SERVICE', level, message, ...args)
+    }
 
     private readonly dynamicMetricsCache: Map<string, {
         lastUpdate: number,
@@ -123,62 +129,83 @@ export class PrometheusService {
      * Обновляет динамические метрики для устройства
      */
     private async updateDeviceMetrics(deviceId: string) {
+        const startTime = Date.now()
+        
         try {
             const cached = this.dynamicMetricsCache.get(deviceId)
             if (!cached || cached.subscribers <= 0) {
+                await this.log('debug', `No subscribers for device ${deviceId}, skipping update`);
                 return // Не обновляем метрики если нет подписчиков
             }
 
             // Проверяем не устарели ли данные
             const now = Date.now()
             if (cached.lastUpdate && (now - cached.lastUpdate) > this.dynamicDataMaxAge) {
-                console.warn(`Metrics for device ${deviceId} are stale, fetching new data`) 
+                await this.log('warn', `Metrics for device ${deviceId} are stale`);
             }
-            
-            this.log('info', `Получаем динамические метрики для ${deviceId}`)
             
             // Получаем динамические метрики
             
+            const dynamicStartTime = Date.now()
             const dynamicResponse = await this.getMetricsByIp(deviceId, MetricType.DYNAMIC)
-            
+            this.log('debug', `[METRICS] Dynamic metrics fetch took ${Date.now() - dynamicStartTime}ms`)
+            const dynamicFetchTime = Date.now() - dynamicStartTime;
+            if (dynamicFetchTime > 1000) { // Логируем только медленные запросы
+                await this.log('warn', `Slow dynamic metrics fetch for ${deviceId}: ${dynamicFetchTime}ms`);
+            }
+
             const dynamicParser = new PrometheusParser(dynamicResponse)
             
             // Получаем метрики процессов
-            const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
-            const processParser = new PrometheusParser(processResponse)
+            // const processStartTime = Date.now()
+            // const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
+            // const processFetchTime = Date.now() - processStartTime;
             
+            // if (processFetchTime > 1000) { // Логируем только медленные запросы
+            //     await this.log('warn', `Slow process metrics fetch for ${deviceId}: ${processFetchTime}ms`);
+            // }
+            // const processParser = new PrometheusParser(processResponse)
+            
+            const parseStartTime = Date.now();
             const processorMetrics = dynamicParser.getProcessorMetrics()
-            this.log('info', `Parsed processor metrics:`, processorMetrics)
-            
             const networkMetrics = dynamicParser.getNetworkMetrics()
-            this.log('info', `Parsed network metrics:`, networkMetrics)
-            
             const diskMetrics = dynamicParser.getDiskMetrics()
-            this.log('info', `Parsed disk metrics:`, diskMetrics)
-            
             const memoryMetrics = dynamicParser.getMemoryMetrics()
-            this.log('info', `Parsed memory metrics:`, memoryMetrics)
 
+            const parseTime = Date.now() - parseStartTime;
+
+            if (parseTime > 500) {
+                await this.log('warn', `Slow metrics parsing for ${deviceId}: ${parseTime}ms`);
+            }
 
             const newMetrics = {
                 processorMetrics,
                 networkMetrics,
                 diskMetrics,
                 memoryMetrics,
-                processList: processParser.getProcessList(),
+                // processList: processParser.getProcessList(),
                 timestamp: now
             }
-            
 
             // Обновляем кэш и оповещаем подписчиков только если данные изменились
             if (!cached.metrics || this.hasMetricsChanged(cached.metrics, newMetrics)) {
                 cached.metrics = newMetrics
                 cached.lastUpdate = now
+                await this.log('debug', `Emitting updated metrics for device ${deviceId}`);
                 this.emitter.emit(`metrics:${deviceId}`, newMetrics)
+            } else {
+                await this.log('debug', `No changes detected for device ${deviceId}, skipping update`);
             }
 
+            const totalTime = Date.now() - startTime;
+            if (totalTime > 2000) {
+                await this.log('warn', `Slow total metrics update for ${deviceId}: ${totalTime}ms`);
+            }
+
+
+
         } catch (error) {
-            this.log('error', `Error updating metrics for device ${deviceId}:`, error)
+            await this.log('error', `Error updating metrics for device ${deviceId}:`, error);
         }
     }
 
@@ -271,23 +298,7 @@ export class PrometheusService {
         return new PrometheusParser(response)
     }
 
-    /**
-     * Логирует сообщение с указанным уровнем
-     * @param level Уровень логирования
-     * @param message Сообщение
-     * @param data Дополнительные данные
-     */
-    private log(level: 'info' | 'warn' | 'error', message: string, data?: any): void {
-        // Убираем условную фильтрацию, чтобы логировать все сообщения
-        const timestamp = new Date().toISOString();
-        const prefix = `[PROMETHEUS_SERVICE][${timestamp}]`;
-        
-        if (data) {
-            console[level](`${prefix} ${message}`, data);
-        } else {
-            console[level](`${prefix} ${message}`);
-        }
-    }
+  
 
     /**
      * Перезагружает конфигурацию Prometheus
@@ -419,13 +430,13 @@ export class PrometheusService {
                 
                 // Проверяем статус агента
                 const status = await this.getAgentStatus(ipAddress);
-                this.log('info', `Agent status for ${ipAddress}:`, status);
+                
                 
                 // Пробуем получить метрики независимо от статуса агента
                 try {
                     const response = await this.getMetricsByIp(ipAddress);
                     if (response && response.data && response.data.result && response.data.result.length > 0) {
-                        this.log('info', `Metrics available for ${ipAddress}, result count: ${response.data.result.length}`);
+                        
                         return true;
                     } else {
                         this.log('info', `No metrics available yet for ${ipAddress}`);
@@ -435,7 +446,7 @@ export class PrometheusService {
                 }
                 
                 // Ждем перед следующей попыткой
-                this.log('info', `Waiting ${delayMs}ms before next attempt...`)
+                
                 await new Promise(resolve => setTimeout(resolve, delayMs));
             } catch (error) {
                 this.log('warn', `Error checking metrics availability (attempt ${attempt}/${maxAttempts}):`, error)
@@ -472,7 +483,7 @@ export class PrometheusService {
                 try {
                     const content = await fs.readFile(targetsPath, 'utf-8');
                     targets = JSON.parse(content);
-                    this.log('info', `Current targets:`, targets);
+                    
                 } catch (error) {
                     this.log('warn', `Failed to read targets file:`, error);
                     targets = [];
@@ -496,7 +507,7 @@ export class PrometheusService {
                 }
     
                 if (addedCount > 0) {
-                    this.log('info', `Writing updated targets with ${addedCount} new entries:`, targets);
+                    
                     await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2));
                     await this.reloadPrometheusConfig();
                     
@@ -530,14 +541,14 @@ export class PrometheusService {
         
         // Оригинальная логика для одного IP-адреса
         try {
-            this.log('info', `Adding target for ${ipAddress}...`)
+            
             const targetsPath = path.resolve(this.config.targetsPath)
             let targets: PrometheusTarget[] = []
     
             try {
                 const content = await fs.readFile(targetsPath, 'utf-8')
                 targets = JSON.parse(content)
-                this.log('info', `Current targets:`, targets)
+                
             } catch (error) {
                 this.log('warn', `Failed to read targets file:`, error)
                 targets = []
@@ -555,7 +566,7 @@ export class PrometheusService {
                     targets[0].targets.push(`${ipAddress}:9182`)
                 }
             }
-            this.log('info', `Writing updated targets:`, targets)
+            
             await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2))
             await this.reloadPrometheusConfig()
     
@@ -614,6 +625,12 @@ async getMetricsByIp(
     type?: MetricType,
     specificMetrics?: string[]
 ): Promise<PrometheusApiResponse> {
+    const startTime = Date.now()
+    this.log('info', `[METRICS_FETCH] Starting metrics fetch for ${ipAddress}`, {
+        type,
+        specificMetrics: specificMetrics?.length || 0
+    })
+    
     try {
         // Определяем какие метрики запрашивать
         let metricsToQuery: string[] = []
@@ -621,7 +638,7 @@ async getMetricsByIp(
         if (specificMetrics?.length) {
             // Если переданы конкретные метрики, используем их
             metricsToQuery = specificMetrics
-            this.log('info', 'Using specific metrics:', { metrics: specificMetrics })
+            
         } else if (type) {
             // Если указан тип - получаем метрики из конфига
             if (type === MetricType.STATIC) {
@@ -653,25 +670,58 @@ async getMetricsByIp(
         }
 
         // Формируем запрос к Prometheus
-        const query = `{instance="${ipAddress}:9182",__name__=~"${metricsToQuery.join('|')}"}`;
-        console.log('QUERY', query)
+        const query = `{instance="${ipAddress}:9182",__name__=~"${metricsToQuery.join('|')}"}`;        
+        this.log('info', `[METRICS_FETCH] Query prepared with ${metricsToQuery.length} metrics`)
+        
         // Создаем URL для запроса
         const url = new URL('/prometheus/api/v1/query', this.config.url)
         url.searchParams.append('query', query)
 
+        this.log('info', `[METRICS_FETCH] Query prepared for ${ipAddress}: ${query}`)
+        const fetchStartTime = Date.now()
+
         // Выполняем запрос
+        this.log('info', `[METRICS_FETCH] Sending request to ${url.toString()}`)
+
+        
         const response = await fetch(url.toString(), {
             headers: { 
                 'Authorization': this.getAuthHeader(),
                 'Accept': 'application/json'
             }
         })
+        
+        const fetchTime = Date.now() - fetchStartTime
+        this.log('info', `[METRICS_FETCH] Response received in ${fetchTime}ms`)
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}, statusText: ${response.statusText}`)
         }
 
+        const responseTime = Date.now() - fetchStartTime
+        this.log('info', `[METRICS_FETCH] Response received in ${responseTime}ms`)
+
+        const parseStartTime = Date.now()
         const data = await response.json()
+        const parseTime = Date.now() - parseStartTime
+        
+        const dataSize = JSON.stringify(data).length / 1024 // размер в КБ
+        const totalTime = Date.now() - startTime
+        const metricsCount = data.data?.result?.length || 0
+
+        this.log('info', `[METRICS_FETCH] Metrics data processed for ${ipAddress}:`, {
+            type,
+            fetchTimeMs: fetchTime,
+            parseTimeMs: parseTime,
+            totalTimeMs: totalTime,
+            dataSizeKb: Math.round(dataSize),
+            metricsCount,
+            metricsPerSecond: Math.round((metricsCount / totalTime) * 1000)
+        })
+        
+        if (metricsCount === 0) {
+            this.log('warn', `[METRICS_FETCH] No metrics found for ${ipAddress} with type ${type}`)
+        }
         
         return data
     } catch (error) {
@@ -717,16 +767,7 @@ async getMetricsByIp(
             const url = `${this.config.url}/prometheus/api/v1/query_range?` + 
                        `query=${query}&start=${start}&end=${end}&step=${this.parseTimeRange(step)}`;
             
-            this.log('info', `Fetching metrics range:`, {
-                metric: metricName,
-                labels: labels,
-                timeRange: {
-                    start: new Date(start * 1000).toISOString(),
-                    end: new Date(end * 1000).toISOString(),
-                    step: step
-                },
-                url: url
-            });
+            
             
             const response = await fetch(url, {
                 headers: {
@@ -739,16 +780,7 @@ async getMetricsByIp(
             }
             
             const data = await response.json();
-            this.log('info', `Received metrics range response:`, {
-                status: data.status,
-                resultType: data.data?.resultType,
-                resultCount: data.data?.result?.length || 0,
-                timeRange: {
-                    start: new Date(start * 1000).toISOString(),
-                    end: new Date(end * 1000).toISOString(),
-                    step: step
-                }
-            });
+            
             
             if (data.data.result.length === 0) {
                 this.log('warn', `No data found for query:`, {
@@ -792,10 +824,10 @@ async getMetricsByIp(
      */
     async getSystemInfo(ipAddress: string) {
         try {
-            this.log('info', `Getting system info for ${ipAddress}...`);
+            
             const parser = await this.getParser(ipAddress)
             const info = parser.getSystemInfo();
-            this.log('info', `System info retrieved:`, info);
+            
             return info;
         } catch (error) {
             this.log('error', `Failed to get system info:`, error);
@@ -810,10 +842,10 @@ async getMetricsByIp(
      */
     async getHardwareInfo(ipAddress: string) {
         try {
-            console.log(`[PROMETHEUS_SERVICE] Getting system info for ${ipAddress}...`);
+            
             const parser = await this.getParser(ipAddress)
             const info = parser.getSystemInfo();
-            console.log(`[PROMETHEUS_SERVICE] System info retrieved:`, info);
+            
             return info;
         } catch (error) {
             console.error(`[PROMETHEUS_SERVICE] Failed to get system info:`, error);

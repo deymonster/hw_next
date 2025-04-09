@@ -7,25 +7,25 @@ import { Device } from "@prisma/client"
 interface DeviceContextType {
   devices: Device[]
   setDevices: (devices: Device[]) => void
-  refreshDevices: () => void
-  setRefreshDevices: (fn: () => void) => void
+  refreshDevices: () => Promise<void>
+  setRefreshDevices: (fn: () => Promise<void>) => void
   isLoading: boolean
   setIsLoading: (isLoading: boolean) => void
-  forceRefresh: () => void
+  forceRefresh: () => Promise<void>
 }
 
 export const DeviceContext = createContext<DeviceContextType>({
   devices: [],
   setDevices: () => {},
-  refreshDevices: () => {},
+  refreshDevices: async () => {},
   setRefreshDevices: () => {},
   isLoading: false,
   setIsLoading: () => {},
-  forceRefresh: () => {}
+  forceRefresh: async () => {}
 });
 
 export function DevicesProvider({ children }: { children: ReactNode }) {
-    const refreshCallbackRef = useRef<() => void>(() => {})
+    const refreshCallbackRef = useRef<() => Promise<void>>(() => Promise.resolve())
     const [devices, setDevices] = useState<Device[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [refreshCounter, setRefreshCounter] = useState(0);
@@ -34,26 +34,31 @@ export function DevicesProvider({ children }: { children: ReactNode }) {
         setDevices(newDevices);
     }, []);
 
-    const setRefreshDevicesCallback = useCallback((callback: () => void) => {
+    const setRefreshDevicesCallback = useCallback((callback: () => Promise<void>) => {
         refreshCallbackRef.current = callback;
     }, []);
       
-    const refreshDevicesCallback = useCallback(() => {
+    const refreshDevicesCallback = useCallback(async () => {
         try {
-            refreshCallbackRef.current();
+            setIsLoading(true);
+            await refreshCallbackRef.current();
         } catch (error) {
             console.error('[CACHE] DeviceContext - Error in refreshDevices:', error);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
     
     // Функция для принудительного обновления списка устройств
-    const forceRefreshCallback = useCallback(() => {
-        setRefreshCounter(prev => prev + 1);
-        
+    const forceRefreshCallback = useCallback(async () => {
         try {
-            refreshCallbackRef.current();
+            setIsLoading(true);
+            setRefreshCounter(prev => prev + 1);
+            await refreshCallbackRef.current();
         } catch (error) {
             console.error('[CACHE] DeviceContext - Error in force refresh:', error);
+        } finally {
+            setIsLoading(false);
         }
     }, []);
 

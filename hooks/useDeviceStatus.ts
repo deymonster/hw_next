@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getAgentStatus } from '@/app/actions/prometheus.actions'
 import { Device } from '@prisma/client'
+import { usePathname } from 'next/navigation'
 
 interface AgentStatus {
     up: boolean;
@@ -10,6 +11,8 @@ interface AgentStatus {
 
 export function useDeviceStatus(device: Device | null) {
     const queryClient = useQueryClient()
+    const pathname = usePathname()
+    const isDeviceList = pathname === '/devices'
 
     return useQuery({
         queryKey: ['device-status', device?.ipAddress],
@@ -20,12 +23,13 @@ export function useDeviceStatus(device: Device | null) {
             const result = await getAgentStatus(device.ipAddress)
             
             // Если статус успешно получен и отличается от текущего в кэше
-            if (result.success && result.data && !Array.isArray(result.data)) {
-                const currentData = queryClient.getQueryData(['devices']) as Device[] | undefined
-                if (currentData) {
-                    const deviceInCache = currentData.find(d => d.ipAddress === device.ipAddress)
-                    const agentStatus = result.data as AgentStatus
-                    if (deviceInCache && agentStatus.up !== undefined) {
+            if (isDeviceList && result.success && result.data && !Array.isArray(result.data)) {
+                const agentStatus = result.data as AgentStatus
+                if (agentStatus.up !== undefined) {
+                    const currentData = queryClient.getQueryData(['devices']) as Device[] | undefined
+                    const deviceInCache = currentData?.find(d => d.ipAddress === device.ipAddress)
+                    
+                    if (deviceInCache) {
                         console.log('[DEVICE_STATUS] Status changed, invalidating devices cache')
                         queryClient.invalidateQueries({ queryKey: ['devices'] })
                     }
@@ -35,11 +39,11 @@ export function useDeviceStatus(device: Device | null) {
             return result
         },
         enabled: !!device,
-        refetchInterval: 30000,
+        refetchInterval: isDeviceList ? 30000 : 60000,
         retry: 2,
-        // Принудительно запрашиваем статус при монтировании
-        refetchOnMount: true,
-        // Отключаем кэширование для первого запроса
-        staleTime: 0
+        // Принудительно запрашиваем статус при монтировании только на странице списка
+        refetchOnMount: isDeviceList,
+        // Используем кэширование на странице детализации
+        staleTime: isDeviceList ? 0 : 30000
     })
 } 

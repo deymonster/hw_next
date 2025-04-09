@@ -31,6 +31,7 @@ import {
     DiskMetrics,
     MemoryModuleInfo,
 } from './prometheus.interfaces'
+import { Logger } from '@/services/logger/logger.service'
 
 /**
  * Класс для парсинга метрик из Prometheus API
@@ -42,9 +43,14 @@ import {
  */
 export class PrometheusParser {
     private readonly response: PrometheusApiResponse;
+    private readonly logger = Logger.getInstance()
 
     constructor(response: PrometheusApiResponse) {
         this.response = response;
+    }
+
+    private async log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]) {
+        await this.logger.log('PROMETHEUS_PARSER', level, message, ...args)
     }
 
     /**
@@ -52,38 +58,46 @@ export class PrometheusParser {
      * @param name Имя метрики
      * @returns Метрика указанного типа или undefined
      */
-    private findMetric<T>(name: string): T | undefined {
-        this.log('info', `Finding metric: ${name}`);
+    private async findMetric<T>(name: string): Promise<T | undefined> {
+        const startTime = Date.now();
+        
         if (!this.response?.data?.result) {
-            this.log('warn', 'No data in response');
+            await this.log('warn', `No data in response for metric ${name}`);
             return undefined;
         }
 
         const result = this.response.data.result.find(item => {
             const metricName = item.metric.__name__ || item.metric.name;
-            this.log('info', `Comparing ${metricName} with ${name}`);
             return metricName === name;
         });
 
         if (!result) {
-            this.log('warn', `Metric ${name} not found`);
+            await this.log('debug', `Metric ${name} not found`);
             return undefined;
         }
 
-        this.log('info', `Found metric ${name}:`, result);
+        const endTime = Date.now();
+        await this.log('debug', `Found metric ${name} in ${endTime - startTime}ms`);
         return result.metric as T;
     }
+
+    private _metricsCache: Map<string, any[]> = new Map();
 
     /**
      * Находит все метрики с указанным именем
      * @param name Имя метрики
      * @returns Массив метрик указанного типа
      */
-    private findMetrics<T>(name: string): T[] {
-        console.log(`Finding metrics: ${name}`);
+    private async findMetrics<T>(name: string): Promise<T[]> {
+        const startTime = Date.now();
+        
         if (!this.response?.data?.result) {
-            console.warn('No data in response');
+            await this.log('warn', '[PROMETHEUS_PARSER] No data in response');
             return [];
+        }
+
+        if (this._metricsCache.has(name)) {
+            return this._metricsCache.get(name) as T[];
         }
 
         const results = this.response.data.result.filter(item => {
@@ -91,8 +105,18 @@ export class PrometheusParser {
             return metricName === name;
         });
 
-        console.log(`Found ${results.length} metrics for ${name}`);
-        return results.map(item => item.metric as T);
+        const mappedResults = results.map(item => ({
+            ...(item.metric as unknown as T),
+            value: Number(item.value?.[1] || 0)
+        })) as T[];
+
+        // Кэшируем результат
+        this._metricsCache.set(name, mappedResults);
+
+        const endTime = Date.now();
+        await this.log('debug', `[PROMETHEUS_PARSER] Found ${mappedResults.length} metrics for ${name} in ${endTime - startTime}ms`);
+
+        return mappedResults;
     }
 
     /**
@@ -100,10 +124,12 @@ export class PrometheusParser {
      * @param name Имя метрики
      * @returns Строковое значение метрики или undefined
      */
-    private getValue(name: string): string | undefined {
-        this.log('info', `Getting value for metric: ${name}`);
+    private async getValue(name: string): Promise<string | undefined> {
+        const startTime = Date.now();
+        await this.log('debug', `[PROMETHEUS_PARSER] Getting value for metric: ${name}`);
+        
         if (!this.response?.data?.result) {
-            this.log('warn', 'No data in response');
+            this.log('warn', '[PROMETHEUS_PARSER] No data in response');
             return undefined;
         }
 
@@ -113,12 +139,13 @@ export class PrometheusParser {
         });
 
         if (!result?.value) {
-            this.log('warn', `No value found for metric ${name}`);
+            this.log('warn', `[PROMETHEUS_PARSER] No value found for metric ${name}`);
             return undefined;
         }
 
         const value = result.value[1];
-        this.log('info', `Found value for ${name}:`, value);
+        const endTime = Date.now();
+        this.log('debug', `[PROMETHEUS_PARSER] Found value for ${name} in ${endTime - startTime}ms:`, value);
         return value;
     }
 
@@ -128,30 +155,19 @@ export class PrometheusParser {
      * @param labels Лейблы для фильтрации
      * @returns Числовое значение метрики
      */
-    private getMetricValue(name: string, labels: Record<string, string> = {}): number {
+    private async getMetricValue(name: string, labels: Record<string, string> = {}): Promise<number> {
+        const startTime = Date.now();
         
         
         if (!this.response?.data?.result) {
-            console.warn('[PROMETHEUS_PARSER][METRIC_VALUE] No data in response');
+            await this.log('warn', `No data in response for ${name}`);
             return 0;
         }
-    
-        // Логируем все доступные метрики для отладки
-        const availableMetrics = this.response.data.result
-            .filter(item => item.metric.__name__ === name)
-            .map(item => ({
-                name: item.metric.__name__,
-                labels: item.metric,
-                value: item.value
-            }));
-        
-        
     
         // Ищем метрику, которая соответствует имени и всем переданным лейблам
         const result = this.response.data.result.find(item => {
             // Проверяем имя метрики
             if (item.metric.__name__ !== name) {
-                
                 return false;
             }
     
@@ -159,25 +175,26 @@ export class PrometheusParser {
             const labelsMatch = Object.entries(labels).every(([key, value]) => {
                 const metricValue = item.metric[key];
                 const matches = metricValue === value;
-                
                 return matches;
             });
             return labelsMatch;
         });
     
         if (!result) {
-            console.warn(`[PROMETHEUS_PARSER][METRIC_VALUE] No metric found for ${name} with labels:`, labels);
             return 0;
         }
     
         const value = result.value?.[1];
         
-    
         if (!value) {
-            console.warn(`[PROMETHEUS_PARSER][METRIC_VALUE] No value found for metric ${name}`);
+            await this.log('warn', `No value found for metric ${name}`);
             return 0;
         }
     
+        const endTime = Date.now();
+        if (endTime - startTime > 100) { // Логируем только если операция заняла больше 100мс
+            await this.log('warn', `Slow metric value retrieval for ${name}: ${endTime - startTime}ms`);
+        }
         return Number(value);
     }
 
@@ -223,13 +240,13 @@ export class PrometheusParser {
      * Получает системную информацию
      * @returns Объект с системной информацией
      */
-    getSystemInfo() {
-        this.log('info', 'Starting to parse system info')
+    public async getSystemInfo() {
+        await this.log('info', 'Starting to parse system info')
         
-        const systemInfo = this.findMetric<SystemInformation>('system_information')
+        const systemInfo = await this.findMetric<SystemInformation>('system_information')
         this.log('info', 'SystemInfo', systemInfo)
-        const uuid = this.findMetric<UUIDMetric>('UNIQUE_ID_SYSTEM')
-        const serialNumber = this.findMetric<SerialNumber>('device_serial_number_info')
+        const uuid = await this.findMetric<UUIDMetric>('UNIQUE_ID_SYSTEM')
+        const serialNumber = await this.findMetric<SerialNumber>('device_serial_number_info')
 
         return {
             uuid: uuid?.uuid,
@@ -256,15 +273,32 @@ export class PrometheusParser {
      * - Информацию о сетевых интерфейсах (имя, статус)
      * @returns Объект с информацией о железе
      */
-    getHardwareInfo() {
-        const bios = this.findMetric<BiosInfo>('bios_info')
-        const motherboard = this.findMetric<MotherBoardInfo>('motherboard_info')
-        const memoryModules = this.findMetrics<MemoryModuleInfo>('memory_module_info')
-        const gpus = this.findMetrics<GpuInfo>('gpu_info')
-        const disks = this.findMetrics<DiskHealthStatus>('disk_health_status')
-        const cpuInfo = this.findMetric<CpuUsagePercent>('cpu_usage_percent')
-        const networkInterfaces = this.findMetrics<NetworkStatus>('network_status')
+    public async getHardwareInfo() {
+        const bios = await this.findMetric<BiosInfo>('bios_info')
+        const motherboard = await this.findMetric<MotherBoardInfo>('motherboard_info')
+        const memoryModules = await this.findMetrics<MemoryModuleInfo>('memory_module_info')
+        const gpus = await this.findMetrics<GpuInfo>('gpu_info')
+        const disks = await this.findMetrics<DiskHealthStatus>('disk_health_status')
+        const cpuInfo = await this.findMetric<CpuUsagePercent>('cpu_usage_percent')
+        const networkInterfaces = await this.findMetrics<NetworkStatus>('network_status')
 
+        const gpuInfo = await Promise.all(gpus.map(async gpu => {
+            const name = gpu.name;
+            const memoryBytes = await this.getMetricValue('gpu_memory_bytes', { name });
+            
+            return {
+                name,
+                memory: {
+                    total: this.bytesToMB(memoryBytes)
+                }
+            };
+        }));
+
+        const networkInfo = await Promise.all(networkInterfaces.map(async iface => ({
+            name: iface.interface,
+            status: await this.getMetricValue('network_status', { interface: iface.interface }) === 1 ? 'up': 'down'
+        })));
+        
         return {
             cpu: {
                 model: cpuInfo?.processor
@@ -295,22 +329,8 @@ export class PrometheusParser {
                 size: disk.size || '0',
                 health: disk.status || 'Unknown'
             })),
-            gpus: gpus.map(gpu => {
-                const name = gpu.name;
-                const memoryBytes = this.getMetricValue('gpu_memory_bytes', { name });
-                
-                // Возвращаем объект с информацией о GPU
-                return {
-                    name,
-                memory: {
-                        total: this.bytesToMB(memoryBytes)  // Конвертируем в МБ
-                }
-                };
-            }),
-            network: networkInterfaces.map(iface => ({
-                name: iface.interface,
-                status: this.getMetricValue('network_status', { interface: iface.interface }) === 1 ? 'up': 'down'
-            }))
+            gpus: gpuInfo,
+            network: networkInfo
         }
     }
 
@@ -322,24 +342,21 @@ export class PrometheusParser {
      * - Температуру процессора (все сенсоры и среднее значение)
      * @returns Объект с метриками процессора
      */
-    getProcessorMetrics() {
+    public async getProcessorMetrics() {
         // Получаем базовую информацию о процессоре
-        const cpuInfo = this.findMetric<CpuUsagePercent>('cpu_usage_percent')
+        const cpuInfo = await this.findMetric<CpuUsagePercent>('cpu_usage_percent')
         
         // Получаем все температурные сенсоры
-        const cpuTemperatures = this.findMetrics<CpuTemperature>('cpu_temperature')
+        const cpuTemperatures = await this.findMetrics<CpuTemperature>('cpu_temperature')
 
         // Получаем все значения температуры
-        const temperatures = cpuTemperatures.map(sensor => {
-            // Получаем значение температуры используя getMetricValue
-            // Это более надежный способ, так как он учитывает все edge cases
-            const value = this.getMetricValue('cpu_temperature', { sensor: sensor.sensor })
-            
+        const temperatures = await Promise.all(cpuTemperatures.map(async sensor => {
+            const value = await this.getMetricValue('cpu_temperature', { sensor: sensor.sensor })
             return {
-                name: sensor.sensor,    // Имя сенсора (например: \_TZ.TZ00)
-                value: Number(value.toFixed(2))  // Округляем до 2 знаков
+                name: sensor.sensor,
+                value: Number(value.toFixed(2))
             }
-        })
+        }))
 
         // Вычисляем среднюю температуру
         const averageTemp = temperatures.length > 0
@@ -350,7 +367,7 @@ export class PrometheusParser {
 
         return {
             model: cpuInfo?.processor || '',  // Модель процессора с fallback
-            usage: Math.round(this.getMetricValue('cpu_usage_percent')), // Округленный процент использования
+            usage: Math.round(await this.getMetricValue('cpu_usage_percent')), // Округленный процент использования
             temperature: {
                 sensors: temperatures,  // Все сенсоры с их значениями
                 average: averageTemp   // Средняя температура
@@ -368,20 +385,18 @@ export class PrometheusParser {
      * - Количество потерянных пакетов
      * @returns Массив объектов с метриками сетевых интерфейсов
      */
-    getNetworkMetrics() {
-        const networkInterfaces = this.findMetrics<NetworkStatus>('network_status')
+    public async getNetworkMetrics() {
+        const networkInterfaces = await this.findMetrics<NetworkStatus>('network_status')
         
-        return networkInterfaces.map(iface => {
+        const results = await Promise.all(networkInterfaces.map(async iface => {
             const labels = { interface: iface.interface }
-            const status = this.getMetricValue('network_status', labels)
+            const status = await this.getMetricValue('network_status', labels)
             
-            const rxBytes = this.getMetricValue('network_rx_bytes_per_second', labels)
-            const txBytes = this.getMetricValue('network_tx_bytes_per_second', labels)
+            const rxBytes = await this.getMetricValue('network_rx_bytes_per_second', labels)
+            const txBytes = await this.getMetricValue('network_tx_bytes_per_second', labels)
 
             const rx = this.formatBytesPerSecond(rxBytes)
             const tx = this.formatBytesPerSecond(txBytes)
-
-
 
             return {
                 name: iface.interface,
@@ -390,19 +405,21 @@ export class PrometheusParser {
                     rx: { value: rx.value, unit: rx.unit },
                     tx: { value: tx.value, unit: tx.unit }
                 },
-                errors: this.getMetricValue('network_errors', labels),
-                droppedPackets: this.getMetricValue('network_dropped_packets', labels)
+                errors: await this.getMetricValue('network_errors', labels),
+                droppedPackets: await this.getMetricValue('network_dropped_packets', labels)
             }
-        })
+        }))
+
+        return results
     }
 
     /**
      * Получает метрики дисков
      * @returns {DiskMetrics[]} Массив метрик для каждого диска
      */
-    getDiskMetrics(): DiskMetrics[] {
+    public async getDiskMetrics(): Promise<DiskMetrics[]> {
         // Получаем базовую информацию о дисках
-        const disks = this.findMetrics<DiskHealthStatus>('disk_health_status');
+        const disks = await this.findMetrics<DiskHealthStatus>('disk_health_status');
         
         const diskUsageMetrics = this.response.data.result
             .filter(item => item.metric.__name__ === 'disk_usage_bytes')
@@ -415,36 +432,38 @@ export class PrometheusParser {
             .filter(m => m.type === 'total')
             .map(m => m.letter))];
         
-        return diskLetters.map(letter => {
-            const diskName = letter || 'unknown';
-            const labels = { disk: diskName };
+            const results = await Promise.all(diskLetters.map(async letter => {
+                const diskName = letter || 'unknown';
+                const labels = { disk: diskName };
+        
+                const total = await this.getMetricValue('disk_usage_bytes', { ...labels, type: 'total' });
+                const used = await this.getMetricValue('disk_usage_bytes', { ...labels, type: 'used' });
+                const free = total - used;
+                const percent = await this.getMetricValue('disk_usage_percent', labels);
+        
+                const readSpeed = await this.getMetricValue('disk_read_bytes_per_second', labels);
+                const writeSpeed = await this.getMetricValue('disk_write_bytes_per_second', labels);
+                
+                const read = this.formatBytesPerSecond(readSpeed);
+                const write = this.formatBytesPerSecond(writeSpeed);
     
-            const total = this.getMetricValue('disk_usage_bytes', { ...labels, type: 'total' });
-            const used = this.getMetricValue('disk_usage_bytes', { ...labels, type: 'used' });
-            const free = total - used;
-            const percent = this.getMetricValue('disk_usage_percent', labels);
-    
-            const readSpeed = this.getMetricValue('disk_read_bytes_per_second', labels);
-            const writeSpeed = this.getMetricValue('disk_write_bytes_per_second', labels);
-            
-            const read = this.formatBytesPerSecond(readSpeed);
-            const write = this.formatBytesPerSecond(writeSpeed);
+                const healthInfo = disks.find(d => d.disk === diskName);
+                return {
+                    disk: healthInfo?.disk || letter || 'Unknown',
+                    usage: {
+                        total: this.bytesToGB(total),
+                        used: this.bytesToGB(used),
+                        free: this.bytesToGB(free),
+                        percent: Number(percent.toFixed(2))
+                    },
+                    performance: {
+                        read: { value: read.value, unit: read.unit },
+                        write: { value: write.value, unit: write.unit }
+                    }
+                };
+            }));
 
-            const healthInfo = disks.find(d => d.disk === diskName);
-            return {
-                disk: healthInfo?.disk || letter || 'Unknown',  // Добавляем fallback значение
-                usage: {
-                    total: this.bytesToGB(total),
-                    used: this.bytesToGB(used),
-                    free: this.bytesToGB(free),
-                    percent: Number(percent.toFixed(2))
-                },
-                performance: {
-                    read: { value: read.value, unit: read.unit },
-                    write: { value: write.value, unit: write.unit }
-                }
-            };
-        });
+            return results;
         
     }
 
@@ -452,64 +471,48 @@ export class PrometheusParser {
      * Получает список процессов
      * @returns Информация о процессах: общее количество и топ-5 по использованию CPU
      */
-    getProcessList(): ProcessListInfo {
-        const totalProcesses = Math.round(this.getMetricValue('active_proccess_list'));
-        const activeProcesses = this.findMetrics<ActiveProcessMemoryUsage>('active_proccess_memory_usage')
-        const processCpuUsage = this.findMetrics<ProcessCpuUsagePercent>('proccess_cpu_usage_percent')
+    public async getProcessList(): Promise<ProcessListInfo> {
+        const totalProcesses = Math.round(await this.getMetricValue('active_proccess_list'));
         
-        if (!activeProcesses.length || !processCpuUsage.length) {
-            console.warn('[PROMETHEUS_PARSER] No process metrics found')
+        const processMemoryMetrics = await this.findMetrics<ActiveProcessMemoryUsage>('active_proccess_memory_usage');
+        const processCpuMetrics = await this.findMetrics<ProcessCpuUsagePercent>('proccess_cpu_usage_percent');
+        
+        if (!processMemoryMetrics.length || !processCpuMetrics.length) {
+            await this.log('warn', 'No process metrics found')
             return {
                 total: totalProcesses,
                 processes: []
             }
         }
 
-        // Собираем информацию о процессах
-        const processes = new Map<string, {
-            name: string
-            pid: string
-            cpu: number
-            memory: number
-        }>()
-
-        // Добавляем информацию об использовании памяти
-        // Добавляем информацию об использовании памяти
-        activeProcesses.forEach(proc => {
-            if (!proc.pid || !proc.process) return;
-            const memoryValue = this.getMetricValue('active_proccess_memory_usage', {
-                pid: proc.pid,
-                process: proc.process
+        // Создаем Map для быстрого поиска CPU метрик по PID
+        const cpuByPid = new Map();
+        await Promise.all(processCpuMetrics.map(async metric => {
+            const value = await this.getMetricValue('proccess_cpu_usage_percent', {
+                pid: metric.pid,
+                process: metric.process
             });
-            
-            processes.set(proc.pid, {
+            cpuByPid.set(metric.pid, value);
+        }));
+        
+
+        // Формируем список процессов
+        const processes = await Promise.all(processMemoryMetrics
+            .filter(proc => proc.pid && proc.process)
+            .map(async proc => ({
                 name: proc.process,
                 pid: proc.pid,
-                cpu: 0,
-                memory: Number(memoryValue.toFixed(1))
-            });
-        });
-
-        // Добавляем информацию об использовании CPU
-        processCpuUsage.forEach(proc => {
-            if (!proc.pid) return;
-            const process = processes.get(proc.pid);
-            if (process) {
-                const cpuValue = this.getMetricValue('proccess_cpu_usage_percent', {
+                memory: this.bytesToMB(await this.getMetricValue('active_proccess_memory_usage', {
                     pid: proc.pid,
-                    process: process.name
-                });
-                process.cpu = Number(cpuValue.toFixed(1));
-            }
-        });
-
-        // Преобразуем Map в массив процессов
-        const processList = Array.from(processes.values());
+                    process: proc.process
+                })),
+                cpu: Number((cpuByPid.get(proc.pid) || 0).toFixed(1))
+            })));
 
         return {
             total: totalProcesses,
-            processes: processList
-        }
+            processes
+        };
     }
 
     /**
@@ -519,11 +522,14 @@ export class PrometheusParser {
      * @throws Error если ответ не является временным рядом
      */
     parseTimeSeriesData(metricName: string): Array<[number, number]> {
-        if (this.response.data.resultType !== 'matrix') {
+        if (!this.response?.data?.resultType || this.response.data.resultType !== 'matrix') {
             throw new Error('Response is not a time series (matrix)');
         }
 
-        const result = this.response.data.result.find(r => r.metric.name === metricName);
+        const result = this.response.data.result.find(item => 
+            item.metric.__name__ === metricName || item.metric.name === metricName
+        );
+
         if (!result?.values?.length) {
             this.log('warn', `No time series data found for metric: ${metricName}`);
             return [];
@@ -531,7 +537,7 @@ export class PrometheusParser {
 
         return result.values.map(([timestamp, value]) => [
             Number(timestamp),
-            parseFloat(value)
+            Number(value)
         ]);
     }
 
@@ -541,22 +547,27 @@ export class PrometheusParser {
      * @returns Последнее значение или null если данных нет
      */
     getLastValueFromTimeSeries(metricName: string): number | null {
-        const timeSeries = this.parseTimeSeriesData(metricName)
-        if (timeSeries.length === 0) {
-            return null
+        try {
+            const timeSeries = this.parseTimeSeriesData(metricName);
+            if (timeSeries.length === 0) {
+                return null;
+            }
+            return timeSeries[timeSeries.length - 1][1];
+        } catch (error) {
+            this.log('error', `Error getting last value from time series: ${error}`);
+            return null;
         }
-        return timeSeries[timeSeries.length - 1][1]
     }
 
     /**
      * Получает метрики памяти
      * @returns {MemoryMetrics} Информация об использовании памяти
      */
-    public getMemoryMetrics(): MemoryMetrics {
+    public async getMemoryMetrics(): Promise<MemoryMetrics> {
         // Получаем метрики из Prometheus
-        const total = this.getMetricValue('total_memory_bytes');
-        const used = this.getMetricValue('used_memory_bytes');
-        const free = this.getMetricValue('free_memory_bytes');
+        const total = await this.getMetricValue('total_memory_bytes');
+        const used = await this.getMetricValue('used_memory_bytes');
+        const free = await this.getMetricValue('free_memory_bytes');
 
 
         // Вычисляем процент использования
@@ -571,19 +582,5 @@ export class PrometheusParser {
         };
     }
 
-    private log(level: 'info' | 'warn' | 'error', message: string, data?: any): void {
-        const prefix = `[PROMETHEUS_PARSER]`;
-        
-        switch (level) {
-            case 'error':
-                console.error(`${prefix} ${message}`, data || '');
-                break;
-            case 'warn':
-                console.warn(`${prefix} ${message}`, data || '');
-                break;
-            case 'info':
-                console.log(`${prefix} ${message}`, data || '');
-                break;
-        }
-    }
+    
 }
