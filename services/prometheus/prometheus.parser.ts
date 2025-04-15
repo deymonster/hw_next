@@ -1,3 +1,4 @@
+
 import { 
     PrometheusApiResponse, 
     PrometheusMetricResult,
@@ -31,7 +32,8 @@ import {
     DiskMetrics,
     MemoryModuleInfo,
 } from './prometheus.interfaces'
-import { Logger } from '@/services/logger/logger.service'
+import { Logger  } from '../logger/logger.service'
+import { LogLevel, LoggerService } from '../logger/logger.interface'
 
 /**
  * Класс для парсинга метрик из Prometheus API
@@ -49,8 +51,8 @@ export class PrometheusParser {
         this.response = response;
     }
 
-    private async log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]) {
-        await this.logger.log('PROMETHEUS_PARSER', level, message, ...args)
+    private async log(level: keyof LogLevel, message: string, ...args: any[]) {
+        await this.logger.log(LoggerService.PROMETHEUS_PARSER, level, message, ...args)
     }
 
     /**
@@ -192,7 +194,7 @@ export class PrometheusParser {
         }
     
         const endTime = Date.now();
-        if (endTime - startTime > 100) { // Логируем только если операция заняла больше 100мс
+        if (endTime - startTime > 250) { // Логируем только если операция заняла больше 100мс
             await this.log('warn', `Slow metric value retrieval for ${name}: ${endTime - startTime}ms`);
         }
         return Number(value);
@@ -365,6 +367,12 @@ export class PrometheusParser {
               ).toFixed(2))
             : 0
 
+        // Извлекаем количество логических ядер из метрики
+        let logicalCores = 0
+        if (cpuInfo && cpuInfo.logical_cores) {
+            logicalCores = parseInt(cpuInfo.logical_cores, 10) || 0
+        }
+
         return {
             model: cpuInfo?.processor || '',  // Модель процессора с fallback
             usage: Math.round(await this.getMetricValue('cpu_usage_percent')), // Округленный процент использования
@@ -477,6 +485,12 @@ export class PrometheusParser {
         const processMemoryMetrics = await this.findMetrics<ActiveProcessMemoryUsage>('active_proccess_memory_usage');
         const processCpuMetrics = await this.findMetrics<ProcessCpuUsagePercent>('proccess_cpu_usage_percent');
         
+        const cpuInfo = await this.findMetric<CpuUsagePercent>('cpu_usage_percent');
+        let logicalCores = 1;
+        if (cpuInfo && cpuInfo.logical_cores) {
+            logicalCores = parseInt(cpuInfo.logical_cores, 10) || 1;
+        }
+
         if (!processMemoryMetrics.length || !processCpuMetrics.length) {
             await this.log('warn', 'No process metrics found')
             return {
@@ -494,24 +508,59 @@ export class PrometheusParser {
             });
             cpuByPid.set(metric.pid, value);
         }));
+
+        // Создаем Map для группировки процессов по имени
+        const processGroups = new Map<string, {
+            name: string;
+            totalCpu: number;
+            totalMemory: number;
+            count: number;
+        }>();
         
-
-        // Формируем список процессов
-        const processes = await Promise.all(processMemoryMetrics
-            .filter(proc => proc.pid && proc.process)
-            .map(async proc => ({
-                name: proc.process,
+        // Формируем список процессов и группируем их
+        for (const proc of processMemoryMetrics.filter(proc => proc.pid && proc.process)) {
+            const memory = this.bytesToMB(await this.getMetricValue('active_process_memory_usage', {
                 pid: proc.pid,
-                memory: this.bytesToMB(await this.getMetricValue('active_proccess_memory_usage', {
-                    pid: proc.pid,
-                    process: proc.process
-                })),
-                cpu: Number((cpuByPid.get(proc.pid) || 0).toFixed(1))
-            })));
+                process: proc.process
+            }));
+            
+            const cpu = Number((cpuByPid.get(proc.pid) || 0).toFixed(1));
+            
+            // Группируем процессы по имени
+            if (!processGroups.has(proc.process)) {
+                processGroups.set(proc.process, {
+                    name: proc.process,
+                    totalCpu: cpu,
+                    totalMemory: memory,
+                    count: 1
+                });
+            } else {
+                const group = processGroups.get(proc.process)!;
+                group.totalCpu += cpu;
+                group.totalMemory += memory;
+                group.count += 1;
+            }
+        }
 
+        // Преобразуем сгруппированные процессы в массив и нормализуем CPU
+        const groupedProcesses = Array.from(processGroups.values()).map(group => {
+            // Нормализуем CPU, деля на количество логических ядер
+            const normalizedCpu = Math.min(group.totalCpu / logicalCores, 100);
+            
+            return {
+                name: group.name,
+                instances: group.count, // Изменено с pid на instances
+                memory: group.totalMemory,
+                cpu: Number(normalizedCpu.toFixed(1))
+            };
+        });
+
+        // Сортируем процессы по использованию CPU
+        groupedProcesses.sort((a, b) => b.cpu - a.cpu);
+        
         return {
             total: totalProcesses,
-            processes
+            processes: groupedProcesses
         };
     }
 

@@ -9,6 +9,7 @@ import { NotificationSettingsService } from './notification-settings/notificatio
 import { DeviceService } from './device/device.service';
 import { NetworkScannerService } from './network-scanner/network-scanner.service';
 import { PrometheusService } from './prometheus/prometheus.service'
+import { Logger } from './logger/logger.service'
 import type { IServices, IDataServices, IInfrastructureServices } from './types'
 
 class ServiceFactory {
@@ -44,7 +45,8 @@ class ServiceFactory {
             cache: new CacheService(),
             notifications: new NotificationFactory(),
             network_scanner: networkScanner,
-            prometheus: prometheusService
+            prometheus: prometheusService,
+            logger: Logger.getInstance()
         }
 
         networkScanner.initialize({

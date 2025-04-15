@@ -259,6 +259,7 @@ export interface CpuUsagePercent extends MetricBase {
     __name__: 'cpu_usage_percent'
     core: string
     processor: string
+    logical_cores?: string 
 }
 
 /**
@@ -412,6 +413,7 @@ export interface DeviceMetrics {
             }>;
             average: number;
         };
+        logicalCores: number;
     };
     networkMetrics: Array<{
         name: string;
@@ -456,6 +458,7 @@ export interface CpuMetric {
     instance: string;
     job: string;
     processor?: string;
+    logical_cores?: string;
     value: string;
 }
 
@@ -487,10 +490,10 @@ export interface MetricTimeSeries {
  * Информация о процессе
  */
 export interface ProcessInfo {
-    name?: string;
-    pid?: string;
-    working_set?: string;
-    [key: string]: string | undefined;
+    name: string;
+    instances: number;
+    memory: number;
+    cpu: number;
 }
 
 /**
@@ -507,12 +510,8 @@ export interface ProcessCpuUsage {
  */
 export interface ProcessListInfo {
     total: number;
-    processes: Array<{
-        name: string;
-        pid: string;
-        cpu: number;
-        memory: number;
-    }>;
+    processes: ProcessInfo[];
+   
 }
 
 

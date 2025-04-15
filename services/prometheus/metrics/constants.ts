@@ -58,7 +58,8 @@ export const PROMETHEUS_METRICS = {
         process: [
             'active_proccess_list',
             'proccess_cpu_usage_percent',
-            'active_proccess_memory_usage'
+            'active_proccess_memory_usage',
+            'cpu_usage_percent'
 
         ]
     }

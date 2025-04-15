@@ -1,7 +1,8 @@
 import fs from 'fs/promises'
 import path from 'path'
+import { ILoggerService, LogLevel, LoggerService } from './logger.interface'
 
-export class Logger {
+export class Logger implements ILoggerService {
     private static instance: Logger
     private readonly logDir: string
     private readonly logFile: string
@@ -59,11 +60,11 @@ export class Logger {
         }
     }
 
-    async log(service: string, level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]) {
+    async log(service: LoggerService, level: keyof LogLevel, message: string, ...meta: any[]): Promise<void> {
         await this.rotateLogIfNeeded()
         
         const timestamp = new Date().toISOString()
-        const logMessage = `[${level.toUpperCase()}][${service}][${timestamp}] ${message} ${args.length ? JSON.stringify(args) : ''}\n`
+        const logMessage = `[${level.toUpperCase()}][${service}][${timestamp}] ${message} ${meta.length ? JSON.stringify(meta) : ''}\n`
         
         if (level === 'error' || level === 'warn') {
             console[level](logMessage)
@@ -79,4 +80,21 @@ export class Logger {
             console.error('Failed to write to log file:', err)
         }
     }
+
+    async debug(service: LoggerService, message: string, ...meta: any[]): Promise<void> {
+        await this.log(service, 'debug', message, ...meta)
+    }
+
+    async info(service: LoggerService, message: string, ...meta: any[]): Promise<void> {
+        await this.log(service, 'info', message, ...meta)
+    }
+
+    async warn(service: LoggerService, message: string, ...meta: any[]): Promise<void> {
+        await this.log(service, 'warn', message, ...meta)
+    }
+
+    async error(service: LoggerService, message: string, ...meta: any[]): Promise<void> {
+        await this.log(service, 'error', message, ...meta)
+    }
+
 }

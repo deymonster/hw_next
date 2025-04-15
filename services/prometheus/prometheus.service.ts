@@ -12,7 +12,8 @@ import path from 'path'
 import fs from 'fs/promises'
 import { PrometheusParser } from "./prometheus.parser";
 import { MetricType, PROMETHEUS_METRICS } from "./metrics";
-import { Logger } from '@/services/logger/logger.service'
+import { Logger } from '../logger/logger.service'
+import { LogLevel, LoggerService } from '../logger/logger.interface'
 
 /**
  * Сервис для работы с Prometheus API
@@ -36,8 +37,8 @@ export class PrometheusService {
         }
     }> = new Map()
 
-    private async log(level: 'debug' | 'info' | 'warn' | 'error', message: string, ...args: any[]) {
-        await this.logger.log('PROMETHEUS_SERVICE', level, message, ...args)
+    private async log(level: keyof LogLevel, message: string, ...args: any[]) {
+        await this.logger.log(LoggerService.PROMETHEUS_SERVICE, level, message, ...args)
     }
 
     private readonly dynamicMetricsCache: Map<string, {

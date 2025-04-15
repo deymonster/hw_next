@@ -9,6 +9,7 @@ import { NetworkScannerService } from './network-scanner/network-scanner.service
 import { PrometheusService } from './prometheus/prometheus.service'
 import { CacheService } from './cache/cache.service'
 import { NotificationFactory } from './notifications/notification.factory'
+import { ILoggerService } from './logger/logger.interface'
 
 // Сервисы для работы с данными
 export interface IDataServices {
@@ -26,6 +27,7 @@ export interface IInfrastructureServices {
     notifications: NotificationFactory
     network_scanner: NetworkScannerService
     prometheus: PrometheusService
+    logger: ILoggerService
 }
 
 // Общий интерфейс всех сервисов
