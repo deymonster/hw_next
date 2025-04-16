@@ -89,6 +89,7 @@ export interface ActiveProcessMemoryUsage extends MetricBase {
     __name__: 'active_process_memory_usage'
     pid: string
     process: string
+    value: number
 }
 
 /**
