@@ -1,7 +1,7 @@
 'use client'
 
 import { Device } from "@prisma/client"
-import { useDeviceMetrics } from "@/hooks/useDeviceMetrics"
+import { useDeviceAllMetrics } from "@/hooks/useDeviceAllMetrics"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -15,7 +15,22 @@ interface DeviceDetailProps {
 
 export function DeviceDetail({device, onBack}: DeviceDetailProps) {
     // Используем тот же хук для получения метрик
-    const { metrics, error: metricsError, isConnecting } = useDeviceMetrics(device.ipAddress)
+    const { 
+      metrics, 
+      status: { sseConnecting, wsConnected, wsLoading }, 
+      errors: { sseError, processError },
+      actions: { reconnect } 
+    } = useDeviceAllMetrics(device.ipAddress)
+
+    const handleRetry = () => {
+      reconnect(); // Переподключение WebSocket
+    };
+
+    const getErrorMessage = (error: string | Error | null): string => {
+      if (!error) return '';
+      if (error instanceof Error) return error.message;
+      return error;
+  };
   
     return (
       <div className="space-y-6" data-device={device.ipAddress}>
@@ -30,34 +45,38 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
           </div>
         </div>
   
-        {/* Error State */}
-        {metricsError && (
-            <Card>
-            <CardContent className="pt-6">
-                <div className="flex items-center space-x-2 text-red-500">
-                <span>Error loading metrics: {metricsError.message}</span>
-                <Button 
-                    variant="outline" 
-                    size="default" 
-                    onClick={() => window.location.reload()}
-                >
-                    Retry
-                </Button>
-                </div>
-            </CardContent>
-            </Card>
+        {/* Error State - обновлен для обоих типов ошибок */}
+        {(sseError || processError) && (
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center space-x-2 text-red-500">
+                            <span>Error loading metrics: {getErrorMessage(sseError || processError)}</span>
+                            <Button 
+                                variant="outline" 
+                                size="default" 
+                                onClick={handleRetry}
+                            >
+                                Retry
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
         )}
   
-        {/* Loading State */}
-        {(isConnecting || (!metrics && !metricsError)) && (
-            <Card>
-            <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                <span>{isConnecting ? 'Connecting to device...' : 'Loading metrics...'}</span>
-                </div>
-            </CardContent>
-            </Card>
+        {/* Loading State - обновлен с учетом обоих состояний */}
+        {(sseConnecting || wsLoading) && (
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center space-x-2">
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <span>
+                                {sseConnecting ? 'Connecting to device...' : 
+                                 wsLoading ? 'Loading process data...' : 
+                                 'Loading metrics...'}
+                            </span>
+                        </div>
+                    </CardContent>
+                </Card>
         )}
   
         {/* Metrics Content */}
@@ -84,7 +103,15 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
   
             <TabsContent value="processes">
               {/* Здесь будет ProcessesSection */}
-              <ProcessList deviceId={device.ipAddress} />
+              <ProcessList 
+                deviceId={device.ipAddress}
+                data={metrics.processes}
+                isLoading={wsLoading}
+                isConnected={wsConnected}
+                error={processError}
+                lastUpdated={metrics.lastUpdated}
+                onReconnect={reconnect}
+              />
             </TabsContent>
           </Tabs>
         )}

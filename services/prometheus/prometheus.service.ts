@@ -184,7 +184,6 @@ export class PrometheusService {
                 networkMetrics,
                 diskMetrics,
                 memoryMetrics,
-                // processList: processParser.getProcessList(),
                 timestamp: now
             }
 

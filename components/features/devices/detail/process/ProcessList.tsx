@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
-import { useProcessMetrics } from '@/hooks/useProcessMetrics';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProcessHeader } from './ProcessHeader';
 import { ProcessTable } from './ProcessTable';
 import { ProcessError } from './ProcessError';
 import { ProcessSkeleton } from './ProcessSkeleton';
+import { ProcessListData } from '@/hooks/useProcessMetrics';
 
 interface ProcessListProps {
   deviceId: string;
-  className?: string;
+  data: ProcessListData | null;
+  isLoading: boolean;
+  isConnected: boolean;
+  error: string | null;
+  lastUpdated: number | null;
+  onReconnect: () => void;
 }
 
 type SortField = 'name' | 'pid' | 'cpu' | 'memory';
 type SortDirection = 'asc' | 'desc';
 
-export function ProcessList({ deviceId, className = '' }: ProcessListProps) {
-  const { isLoading, isConnected, error, data, lastUpdated, reconnect } = useProcessMetrics(deviceId);
+export function ProcessList({ 
+  data,
+  isLoading,
+  isConnected,
+  error,
+  lastUpdated,
+  onReconnect,
+ }: ProcessListProps) {
   const [sortField, setSortField] = useState<SortField>('cpu');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showAllProcesses, setShowAllProcesses] = useState(false);
@@ -32,10 +43,9 @@ export function ProcessList({ deviceId, className = '' }: ProcessListProps) {
     }
   };
 
-  const logicalCores = 1;
 
   return (
-    <Card className={`overflow-hidden ${className}`}>
+    <Card className="overflow-hidden">
       <ProcessHeader
         isConnected={isConnected}
         isLoading={isLoading}
@@ -43,11 +53,11 @@ export function ProcessList({ deviceId, className = '' }: ProcessListProps) {
         totalProcesses={data?.total || 0}
         showAllProcesses={showAllProcesses}
         setShowAllProcesses={setShowAllProcesses}
-        reconnect={reconnect}
+        reconnect={onReconnect}
       />
 
       <CardContent className="p-0">
-        {error && <ProcessError error={error} reconnect={reconnect} />}
+        {error && <ProcessError error={error} reconnect={onReconnect} />}
 
         {isLoading && !data && <ProcessSkeleton />}
 
@@ -58,7 +68,6 @@ export function ProcessList({ deviceId, className = '' }: ProcessListProps) {
             sortDirection={sortDirection}
             handleSort={handleSort}
             showAllProcesses={showAllProcesses}
-            logicalCores={logicalCores}
           />
         ) : (
           !isLoading && !error && (

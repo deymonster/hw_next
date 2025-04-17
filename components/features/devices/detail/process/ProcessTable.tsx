@@ -13,7 +13,6 @@ interface ProcessTableProps {
   sortDirection: SortDirection;
   handleSort: (field: SortField) => void;
   showAllProcesses: boolean;
-  logicalCores: number;
 }
 
 export function ProcessTable({ 
@@ -21,8 +20,7 @@ export function ProcessTable({
   sortField, 
   sortDirection, 
   handleSort,
-  showAllProcesses,
-  logicalCores
+  showAllProcesses
 }: ProcessTableProps) {
 
   
