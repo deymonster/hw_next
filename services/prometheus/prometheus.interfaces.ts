@@ -439,6 +439,10 @@ export interface DeviceMetrics {
     }>;
     timestamp?: number;
 }
+export interface MetricsResponse {
+    type: 'static' | 'dynamic' | 'system' | 'error';
+    data: DeviceMetrics;
+}
 
 /**
  * Точка временного ряда

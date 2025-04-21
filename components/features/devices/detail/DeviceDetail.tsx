@@ -1,6 +1,7 @@
 'use client'
 
 import { Device } from "@prisma/client"
+import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces'
 import { useDeviceAllMetrics } from "@/hooks/useDeviceAllMetrics"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -8,20 +9,60 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, RefreshCw } from "lucide-react"
 import { ProcessList } from "./process/ProcessList"
 
+import { SystemSection } from './system/SystemSection';
+import { HardwareSection } from './hardware/HardwareSection';
+import { PerformanceSection } from './perfomance/PerformanceSection';
+
 interface DeviceDetailProps {
     device: Device
     onBack: () => void
   }
 
+interface DeviceAllMetrics {
+    metrics: {
+        system: DeviceMetrics['systemInfo'] | null;
+        hardware: DeviceMetrics['hardwareInfo'] | null;
+        processorMetrics: DeviceMetrics['processorMetrics'] | null;
+        diskMetrics: DeviceMetrics['diskMetrics'] | null;
+        memoryMetrics: DeviceMetrics['memoryMetrics'] | null;
+        networkMetrics: DeviceMetrics['networkMetrics'] | null;
+        processes: any[] | null; // или конкретный тип для процессов
+        lastUpdated: number | null;
+    };
+    status: {
+        sseConnecting: boolean;
+        wsConnected: boolean;
+        wsLoading: boolean;
+    };
+    errors: {
+        sseError: Error | null;
+        processError: Error | null;
+    };
+    actions: {
+        reconnect: () => void;
+    };
+}
+
 export function DeviceDetail({device, onBack}: DeviceDetailProps) {
     // Используем тот же хук для получения метрик
     const { 
-      metrics, 
+      metrics: {
+        system,
+        hardware,
+        processorMetrics,
+        diskMetrics,
+        memoryMetrics,
+        networkMetrics,
+        processes,
+        lastUpdated
+      }, 
       status: { sseConnecting, wsConnected, wsLoading }, 
       errors: { sseError, processError },
       actions: { reconnect } 
     } = useDeviceAllMetrics(device.ipAddress)
 
+    
+    
     const handleRetry = () => {
       reconnect(); // Переподключение WebSocket
     };
@@ -31,6 +72,16 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
       if (error instanceof Error) return error.message;
       return error;
   };
+
+  console.log('Device detail Metrics:', {
+      system,
+      hardware,
+      processorMetrics,
+      diskMetrics,
+      memoryMetrics,
+      networkMetrics,
+      processes
+  });
   
     return (
       <div className="space-y-6" data-device={device.ipAddress}>
@@ -62,25 +113,23 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
                     </CardContent>
                 </Card>
         )}
+
+        {/* Loading States - разделяем состояния */}
+        {/* {sseConnecting && (
+            <Card>
+                <CardContent className="pt-6">
+                    <div className="flex items-center space-x-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>Connecting to device...</span>
+                    </div>
+                </CardContent>
+            </Card>
+        )} */}
   
-        {/* Loading State - обновлен с учетом обоих состояний */}
-        {(sseConnecting || wsLoading) && (
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center space-x-2">
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            <span>
-                                {sseConnecting ? 'Connecting to device...' : 
-                                 wsLoading ? 'Loading process data...' : 
-                                 'Loading metrics...'}
-                            </span>
-                        </div>
-                    </CardContent>
-                </Card>
-        )}
+        
   
         {/* Metrics Content */}
-        {metrics && (
+        
           <Tabs defaultValue="system">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="system">System</TabsTrigger>
@@ -90,31 +139,47 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
             </TabsList>
   
             <TabsContent value="system">
-              {/* Здесь будет SystemSection */}
+              <SystemSection systemInfo={system} />
             </TabsContent>
   
             <TabsContent value="hardware">
-              {/* Здесь будет HardwareSection */}
+              <HardwareSection hardwareInfo={hardware} />
             </TabsContent>
   
             <TabsContent value="performance">
-              {/* Здесь будет PerformanceSection */}
+                <PerformanceSection 
+                    processorMetrics={processorMetrics}
+                    memoryMetrics={memoryMetrics}
+                    diskMetrics={diskMetrics}
+                    networkMetrics={networkMetrics}
+                />
             </TabsContent>
   
             <TabsContent value="processes">
-              {/* Здесь будет ProcessesSection */}
-              <ProcessList 
-                deviceId={device.ipAddress}
-                data={metrics.processes}
-                isLoading={wsLoading}
-                isConnected={wsConnected}
-                error={processError}
-                lastUpdated={metrics.lastUpdated}
-                onReconnect={reconnect}
-              />
+              
+            {wsLoading ? (
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="flex items-center space-x-2">
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <span>Loading process data...</span>
+                        </div>
+                    </CardContent>
+                </Card>
+              ) : (
+                <ProcessList 
+                    deviceId={device.ipAddress}
+                    data={processes}
+                    isLoading={wsLoading}
+                    isConnected={wsConnected}
+                    error={processError}
+                    lastUpdated={lastUpdated}
+                    onReconnect={reconnect}
+                />
+              )}
             </TabsContent>
           </Tabs>
-        )}
+        
       </div>
     )
   }

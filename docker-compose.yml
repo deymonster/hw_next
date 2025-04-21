@@ -27,10 +27,9 @@ services:
     networks:
       - hw-network
     volumes:
-      - prom-data:/prometheus
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/targets:/etc/prometheus/targets
-      - ./prometheus/alerts:/etc/prometheus/alerts
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/targets:/etc/prometheus/targets:ro
+      - ./prometheus/alerts:/etc/prometheus/alerts:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'

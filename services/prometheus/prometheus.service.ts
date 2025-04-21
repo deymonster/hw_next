@@ -14,6 +14,7 @@ import { PrometheusParser } from "./prometheus.parser";
 import { MetricType, PROMETHEUS_METRICS } from "./metrics";
 import { Logger } from '../logger/logger.service'
 import { LogLevel, LoggerService } from '../logger/logger.interface'
+import { STATIC, DYNAMIC, PROCESS } from '@/mocks/prometheus.mock';
 
 /**
  * Сервис для работы с Prometheus API
@@ -74,8 +75,8 @@ export class PrometheusService {
         const response = await this.getMetricsByIp(deviceId, MetricType.STATIC)
         const parser = new PrometheusParser(response)
         const data = {
-            systemInfo: parser.getSystemInfo(),
-            hardwareInfo: parser.getHardwareInfo()
+            systemInfo: await parser.getSystemInfo(),
+            hardwareInfo: await parser.getHardwareInfo()
         }
 
         // Обновляем кэш
@@ -168,10 +169,10 @@ export class PrometheusService {
             // const processParser = new PrometheusParser(processResponse)
             
             const parseStartTime = Date.now();
-            const processorMetrics = dynamicParser.getProcessorMetrics()
-            const networkMetrics = dynamicParser.getNetworkMetrics()
-            const diskMetrics = dynamicParser.getDiskMetrics()
-            const memoryMetrics = dynamicParser.getMemoryMetrics()
+            const processorMetrics = await dynamicParser.getProcessorMetrics()
+            const networkMetrics = await dynamicParser.getNetworkMetrics()
+            const diskMetrics = await dynamicParser.getDiskMetrics()
+            const memoryMetrics = await dynamicParser.getMemoryMetrics()
 
             const parseTime = Date.now() - parseStartTime;
 
@@ -337,6 +338,25 @@ export class PrometheusService {
      * @returns Статус агента или массив статусов
      */
     async getAgentStatus(ipAddress?: string): Promise<AgentStatus | AgentStatus[]> {
+        
+        if (process.env.NODE_ENV === 'development') {
+            await new Promise(resolve => setTimeout(resolve, 500)); // Эмулируем задержку
+
+            const mockStatus: AgentStatus = {
+                health: 'up',
+                lastError: '',
+                lastScrape: new Date().toISOString(),
+                lastScrapeDuration: 0.1,
+                scrapeInterval: '15s',
+                scrapeTimeout: '10s',
+                up: true
+            };
+            if (!ipAddress) {
+                return [mockStatus];
+            }
+            return mockStatus;
+        }
+        
         try {
             const authHeader = this.getAuthHeader()
             const response = await fetch(`${this.config.url}/prometheus/api/v1/targets`, {
@@ -630,6 +650,21 @@ async getMetricsByIp(
         type,
         specificMetrics: specificMetrics?.length || 0
     })
+
+    if (process.env.NODE_ENV === 'development') {
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        switch(type) {
+            case MetricType.STATIC:
+            return STATIC;
+            case MetricType.PROCESS:
+                return PROCESS;
+            case MetricType.DYNAMIC:
+            default:
+                return DYNAMIC;
+            }
+
+    }
     
     try {
         // Определяем какие метрики запрашивать
@@ -826,7 +861,7 @@ async getMetricsByIp(
         try {
             
             const parser = await this.getParser(ipAddress)
-            const info = parser.getSystemInfo();
+            const info = await parser.getSystemInfo();
             
             return info;
         } catch (error) {
@@ -844,7 +879,7 @@ async getMetricsByIp(
         try {
             
             const parser = await this.getParser(ipAddress)
-            const info = parser.getSystemInfo();
+            const info = await parser.getSystemInfo();
             
             return info;
         } catch (error) {

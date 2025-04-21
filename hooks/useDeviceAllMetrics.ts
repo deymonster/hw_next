@@ -8,7 +8,9 @@ export function useDeviceAllMetrics(deviceId: string) {
         error: sseError,
         isConnecting: sseConnecting
     } = useDeviceMetrics(deviceId);
-
+    
+    
+    
     const {
         data: processMetrics,
         error: processError,
@@ -51,4 +53,5 @@ export function useDeviceAllMetrics(deviceId: string) {
         // - Add automatic service restart on network recovery
         // - Implement retry mechanism for failed connections
     };
+
 }
