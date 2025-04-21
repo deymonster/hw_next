@@ -1,19 +1,3 @@
-/**
- * API эндпоинт для получения метрик процессов через WebSocket
- * 
- * Этот эндпоинт создает WebSocket сервер на порту 3001 и позволяет
- * клиентам подключаться для получения информации о процессах в реальном времени.
- * 
- * URL для подключения: ws://localhost:3001/api/metrics/processes/{deviceId}
- * 
- * @example
- * // Пример использования на клиенте:
- * const ws = new WebSocket('ws://localhost:3001/api/metrics/processes/192.168.1.100');
- * ws.onmessage = (event) => {
- *   const data = JSON.parse(event.data);
- *   console.log('Получены данные о процессах:', data);
- * };
- */
 import { NextRequest } from 'next/server';
 import { WebSocketServer, WebSocket } from 'ws';
 import { services } from '@/services';
@@ -22,160 +6,189 @@ import { PrometheusParser } from '@/services/prometheus/prometheus.parser';
 import { MetricType } from '@/services/prometheus/metrics';
 import { LoggerService } from '@/services/logger/logger.interface';
 
-// Типизация для ошибок с кодом
 interface NodeError extends Error {
   code?: string;
 }
 
-// Глобальные переменные для предотвращения дублирования серверов при горячей перезагрузке
+// Global variables for WebSocket server management
 const wsConnections = new Map<string, Set<WebSocket>>();
 let wsServer: WebSocketServer | null = null;
 let httpServer: http.Server | null = null;
 let isServerStarted = false;
 
-// Используем глобальный объект для отслеживания инициализации сервера
 declare global {
   var wsServerInitialized: boolean;
 }
 
-/**
- * Инициализирует WebSocket сервер, если он еще не создан
- * @returns {WebSocketServer | null} Экземпляр WebSocket сервера или null при ошибке
- */
+// Function to terminate all connections and cleanup servers
+function cleanupWebSocketServer() {
+  if (wsServer) {
+    wsConnections.forEach(connections => {
+      connections.forEach(ws => {
+        try {
+          ws.terminate(); // Force close any hanging connections
+          ws.close();
+        } catch (error) {
+          services.infrastructure.logger.error(LoggerService.APP, '[WS] Error closing connection:', error);
+        }
+      });
+    });
+    wsConnections.clear();
+    
+    try {
+      wsServer.close(() => {
+        services.infrastructure.logger.info(LoggerService.APP, '[WS] WebSocket server closed');
+      });
+      if (httpServer) {
+        httpServer.close(() => {
+          services.infrastructure.logger.info(LoggerService.APP, '[WS] HTTP server closed');
+        });
+      }
+    } catch (error) {
+      services.infrastructure.logger.error(LoggerService.APP, '[WS] Error closing servers:', error);
+    }
+    
+    wsServer = null;
+    httpServer = null;
+    isServerStarted = false;
+  }
+}
+
 function initWebSocketServer(): WebSocketServer | null {
-  // Если сервер уже инициализирован и запущен, возвращаем его
-  if (wsServer && isServerStarted) return wsServer;
+  // Clean up existing server if running
+  if (isServerStarted) {
+    cleanupWebSocketServer();
+  }
 
   try {
-    // Создаем HTTP сервер только если он еще не существует
-    if (!httpServer) {
-      httpServer = http.createServer();
-      
-      // Обработка ошибок HTTP сервера
-      httpServer.on('error', (err: NodeError) => {
-        console.error('WebSocket server error:', err);
-        if (err.code === 'EADDRINUSE') {
-          console.log('Port 3001 is already in use. Not starting a new server instance.');
-          isServerStarted = true;
-          return null;
+    httpServer = http.createServer();
+    
+    httpServer.on('error', (err: NodeError) => {
+      services.infrastructure.logger.error(LoggerService.APP, '[WS] Server error:', err);
+      if (err.code === 'EADDRINUSE') {
+        services.infrastructure.logger.warn(LoggerService.APP, '[WS] Port 3001 is in use, cleaning up...');
+        cleanupWebSocketServer();
+        return null;
+      }
+    });
+
+    wsServer = new WebSocketServer({ noServer: true });
+    
+    wsServer.on('connection', (ws: WebSocket, req: any) => {
+      const url = new URL(req.url || '', 'http://localhost');
+      const pathParts = url.pathname.split('/');
+      const deviceId = pathParts[pathParts.length - 1];
+
+      // Close existing connections for this device
+      const existingConnections = wsConnections.get(deviceId);
+      if (existingConnections) {
+        existingConnections.forEach(connection => {
+          if (connection !== ws && connection.readyState === WebSocket.OPEN) {
+            try {
+              connection.terminate();
+              connection.close();
+            } catch (error) {
+              services.infrastructure.logger.error(LoggerService.APP, '[WS] Error closing existing connection:', error);
+            }
+          }
+        });
+        wsConnections.delete(deviceId);
+      }
+
+      // Set up new connection
+      wsConnections.set(deviceId, new Set([ws]));
+      services.infrastructure.logger.info(LoggerService.APP, `[WS] New connection established for device ${deviceId}`);
+
+      let interval: NodeJS.Timeout;
+
+      // Handle client connection errors
+      ws.on('error', (error) => {
+        services.infrastructure.logger.error(LoggerService.APP, `[WS] Client error for device ${deviceId}:`, error);
+        clearInterval(interval);
+        try {
+          ws.terminate();
+        } catch (e) {
+          services.infrastructure.logger.error(LoggerService.APP, '[WS] Error terminating connection:', e);
         }
       });
-    }
-    
-    // Создаем WebSocket сервер только если он еще не существует
-    if (!wsServer) {
-      wsServer = new WebSocketServer({ noServer: true });
-      
-      // Настраиваем обработчик подключений
-      wsServer.on('connection', (ws: WebSocket, req: any) => {
-        // Извлекаем deviceId из URL
-        const url = new URL(req.url || '', 'http://localhost');
-        const pathParts = url.pathname.split('/');
-        const deviceId = pathParts[pathParts.length - 1];
-        
-        services.infrastructure.logger.info(LoggerService.APP, `[WS] Process metrics connection opened for device ${deviceId}`);
-        
-        // Сохраняем соединение в Map для данного устройства
-        if (!wsConnections.has(deviceId)) {
-          wsConnections.set(deviceId, new Set());
-        }
-        const connections = wsConnections.get(deviceId);
-        if (connections) {
-          connections.add(ws);
-        }
-        
-        // Создаем интервал для отправки метрик процессов
-        const interval = setInterval(async () => {
-          try {
-            // Получаем метрики процессов через PrometheusService
-            const response = await services.infrastructure.prometheus.getMetricsByIp(
-              deviceId,
-              MetricType.PROCESS
-            );
-            
-            if (response && response.data && response.data.result) {
-              
-              
-              const parser = new PrometheusParser(response);
-              const processes = await parser.getProcessList();
 
-              services.infrastructure.logger.debug(LoggerService.APP, '[WS] Parsed processes:', {
-                total: processes.total,
-                sampleProcess: processes.processes[0]
-              });
-
-
-              // Отправляем данные через WebSocket если соединение активно
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(processes));
-              }
-            } else {
-              services.infrastructure.logger.error(LoggerService.APP, '[WS] Failed to fetch process metrics for ' + deviceId + ':', []);
-            }
-          } catch (error) {
-            services.infrastructure.logger.error(LoggerService.APP, '[WS] Error fetching process metrics:', error);
-          }
-        }, 5000); // Обновляем каждые 5 секунд
-        
-        // Очистка при закрытии соединения
-        ws.on('close', () => {
-          services.infrastructure.logger.info(LoggerService.APP, `[WS] Process metrics connection closed for device ${deviceId}`);
+      // Set up metrics interval
+      interval = setInterval(async () => {
+        if (ws.readyState !== WebSocket.OPEN) {
           clearInterval(interval);
+          return;
+        }
+
+        try {
+          const response = await services.infrastructure.prometheus.getMetricsByIp(
+            deviceId,
+            MetricType.PROCESS
+          );
           
-          // Удаляем соединение из списка
-          const deviceConnections = wsConnections.get(deviceId);
-          if (deviceConnections) {
-            deviceConnections.delete(ws);
-            if (deviceConnections.size === 0) {
-              wsConnections.delete(deviceId);
-            }
+          if (response?.data?.result) {
+            const parser = new PrometheusParser(response);
+            const processes = await parser.getProcessList();
+
+            ws.send(JSON.stringify(processes));
+          } else {
+            services.infrastructure.logger.warn(LoggerService.APP, `[WS] No process data for device ${deviceId}`);
           }
-        });
+        } catch (error) {
+          services.infrastructure.logger.error(LoggerService.APP, '[WS] Metrics fetch error:', error);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ error: 'Failed to fetch metrics' }));
+          }
+        }
+      }, 5000);
+
+      // Cleanup on connection close
+      ws.on('close', () => {
+        services.infrastructure.logger.info(LoggerService.APP, `[WS] Connection closed for device ${deviceId}`);
+        clearInterval(interval);
+        
+        const deviceConnections = wsConnections.get(deviceId);
+        if (deviceConnections) {
+          deviceConnections.delete(ws);
+          if (deviceConnections.size === 0) {
+            wsConnections.delete(deviceId);
+          }
+        }
       });
-    }
-    
-    // Пытаемся запустить сервер только если он еще не запущен
-    if (!isServerStarted) {
-      // Настраиваем обработку upgrade для WebSocket
-      httpServer.on('upgrade', (request, socket, head) => {
-        wsServer?.handleUpgrade(request, socket, head, (ws) => {
-          wsServer?.emit('connection', ws, request);
-        });
+    });
+
+    // Set up upgrade handling
+    httpServer.on('upgrade', (request, socket, head) => {
+      wsServer?.handleUpgrade(request, socket, head, (ws) => {
+        wsServer?.emit('connection', ws, request);
       });
-      
-      // Запускаем сервер с обработкой ошибок
-      httpServer.listen(3001, () => {
-        console.log('WebSocket server is running on port 3001');
-        isServerStarted = true;
-      });
-    }
-    
+    });
+
+    // Start the server
+    httpServer.listen(3001, () => {
+      services.infrastructure.logger.info(LoggerService.APP, '[WS] Server started on port 3001');
+      isServerStarted = true;
+    });
+
     return wsServer;
   } catch (error) {
-    console.error('Failed to initialize WebSocket server:', error);
+    services.infrastructure.logger.error(LoggerService.APP, '[WS] Server initialization error:', error);
+    cleanupWebSocketServer();
     return null;
   }
 }
 
-// Инициализируем сервер только один раз в глобальном контексте
+// Initialize server once
 if (typeof global !== 'undefined' && !global.wsServerInitialized) {
   initWebSocketServer();
   global.wsServerInitialized = true;
 }
 
-/**
- * Обработчик GET запросов к API эндпоинту
- * @param {NextRequest} request - Объект запроса Next.js
- * @param {Object} params - Параметры маршрута
- * @returns {Response} Ответ с информацией о WebSocket сервере
- */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ deviceId: string }> }
 ) {
   const { deviceId } = await params;
   
-  // Проверяем, что deviceId существует
   if (!deviceId) {
     return new Response(JSON.stringify({ error: 'Device ID is required' }), {
       status: 400,
@@ -183,58 +196,30 @@ export async function GET(
     });
   }
 
-  // Проверяем, что сервис Prometheus доступен
   try {
     await services.infrastructure.prometheus.getMetricsByIp(deviceId, MetricType.PROCESS);
   } catch (error) {
-    console.error(`Failed to connect to Prometheus for device ${deviceId}:`, error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    services.infrastructure.logger.error(LoggerService.APP, `[WS] Prometheus connection error for device ${deviceId}:`, error);
     return new Response(JSON.stringify({ 
       error: 'Failed to connect to metrics service',
-      details: errorMessage
+      details: error instanceof Error ? error.message : String(error)
     }), {
       status: 503,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  // Инициализируем WebSocket сервер если необходимо
-  if (typeof global !== 'undefined' && !global.wsServerInitialized) {
+  if (!isServerStarted) {
     initWebSocketServer();
-    global.wsServerInitialized = true;
   }
   
-  // Получаем IP адрес сервера
   const host = request.headers.get('host') || 'localhost:3000';
   const serverHost = host.split(':')[0];
   
-  // Возвращаем информацию о WebSocket сервере
   return new Response(JSON.stringify({
     message: 'WebSocket server is running',
-    connection: `ws://${serverHost}:3001/api/metrics/processes/${deviceId}`,
-    documentation: {
-      description: 'WebSocket API для получения метрик процессов в реальном времени',
-      messageFormat: {
-        type: 'processes',
-        data: {
-          total: 'Общее количество процессов',
-          processes: [
-            {
-              name: 'Имя процесса',
-              pid: 'ID процесса',
-              cpuUsage: 'Использование CPU в процентах',
-              memoryUsage: 'Использование памяти в байтах'
-            }
-          ]
-        },
-        timestamp: 'Время отправки сообщения (Unix timestamp)',
-        fetchTimeMs: 'Время получения данных в миллисекундах'
-      },
-      updateInterval: '5000 мс (5 секунд)'
-    }
+    connection: `ws://${serverHost}:3001/api/metrics/processes/${deviceId}`
   }), {
-    headers: {
-      'Content-Type': 'application/json'
-    }
+    headers: { 'Content-Type': 'application/json' }
   });
 }

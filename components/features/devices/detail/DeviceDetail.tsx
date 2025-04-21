@@ -6,7 +6,7 @@ import { useDeviceAllMetrics } from "@/hooks/useDeviceAllMetrics"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, RefreshCw } from "lucide-react"
+import { ArrowLeft, RefreshCw, AlertCircle } from "lucide-react"
 import { ProcessList } from "./process/ProcessList"
 
 import { SystemSection } from './system/SystemSection';
@@ -61,27 +61,22 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
       actions: { reconnect } 
     } = useDeviceAllMetrics(device.ipAddress)
 
-    
-    
     const handleRetry = () => {
       reconnect(); // Переподключение WebSocket
     };
 
     const getErrorMessage = (error: string | Error | null): string => {
       if (!error) return '';
-      if (error instanceof Error) return error.message;
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          return 'Unable to connect to the device. Please check if the device is online.';
+        }
+        return error.message;
+      };
       return error;
-  };
+    };
 
-  console.log('Device detail Metrics:', {
-      system,
-      hardware,
-      processorMetrics,
-      diskMetrics,
-      memoryMetrics,
-      networkMetrics,
-      processes
-  });
+  
   
     return (
       <div className="space-y-6" data-device={device.ipAddress}>
@@ -101,21 +96,22 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
                 <Card>
                     <CardContent className="pt-6">
                         <div className="flex items-center space-x-2 text-red-500">
-                            <span>Error loading metrics: {getErrorMessage(sseError || processError)}</span>
-                            <Button 
-                                variant="outline" 
-                                size="default" 
-                                onClick={handleRetry}
-                            >
-                                Retry
-                            </Button>
+                        <AlertCircle className="h-5 w-5" />
+                          <span>{getErrorMessage(sseError || processError)}</span>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={handleRetry}
+                          >
+                            Try Again
+                          </Button>
                         </div>
                     </CardContent>
                 </Card>
         )}
 
         {/* Loading States - разделяем состояния */}
-        {/* {sseConnecting && (
+        {sseConnecting && (
             <Card>
                 <CardContent className="pt-6">
                     <div className="flex items-center space-x-2">
@@ -124,13 +120,14 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
                     </div>
                 </CardContent>
             </Card>
-        )} */}
+        )}
   
         
   
         {/* Metrics Content */}
         
-          <Tabs defaultValue="system">
+          {!sseError && (
+            <Tabs defaultValue="system">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="system">System</TabsTrigger>
               <TabsTrigger value="hardware">Hardware</TabsTrigger>
@@ -179,6 +176,7 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
               )}
             </TabsContent>
           </Tabs>
+          )}
         
       </div>
     )
