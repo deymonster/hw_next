@@ -76,6 +76,8 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
       return error;
     };
 
+    
+
   
   
     return (
@@ -142,7 +144,8 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
             <TabsContent value="hardware">
               <HardwareSection hardwareInfo={hardware} />
             </TabsContent>
-  
+            
+            
             <TabsContent value="performance">
                 <PerformanceSection 
                     processorMetrics={processorMetrics}
