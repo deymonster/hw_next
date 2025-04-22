@@ -1,6 +1,7 @@
 import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces';
 import { Progress } from "@/components/ui/progress";
-import { formatBytes } from '@/lib/utils';
+import { formatBytes } from '@/utils/formatBytes';
+
 
 interface MemoryMetricsProps {
     metrics: DeviceMetrics['memoryMetrics'];
@@ -8,8 +9,15 @@ interface MemoryMetricsProps {
 
 export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
     if (!metrics) return <div>No memory data available</div>;
-
+    
     const usagePercent = (metrics.used / metrics.total) * 100;
+
+    const formatMemory = (value: number): string => {
+        if (value >= 1024) {
+            return `${(value / 1024).toFixed(2)} GB`;
+        }
+        return `${value.toFixed(2)} MB`;
+    };
 
     return (
         <div className="space-y-4">
@@ -27,7 +35,7 @@ export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
                         Used
                     </p>
                     <p className="text-lg font-medium">
-                        {formatBytes(metrics.used)}
+                        {formatMemory(metrics.used)}
                     </p>
                 </div>
                 <div className="space-y-1">
@@ -35,7 +43,7 @@ export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
                         Total
                     </p>
                     <p className="text-lg font-medium">
-                        {formatBytes(metrics.total)}
+                    {formatMemory(metrics.total)}
                     </p>
                 </div>
             </div>

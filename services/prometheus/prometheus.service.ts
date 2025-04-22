@@ -339,23 +339,23 @@ export class PrometheusService {
      */
     async getAgentStatus(ipAddress?: string): Promise<AgentStatus | AgentStatus[]> {
         
-        if (process.env.NODE_ENV === 'development') {
-            await new Promise(resolve => setTimeout(resolve, 500)); // Эмулируем задержку
+        // if (process.env.NODE_ENV === 'development') {
+        //     await new Promise(resolve => setTimeout(resolve, 500)); // Эмулируем задержку
 
-            const mockStatus: AgentStatus = {
-                health: 'up',
-                lastError: '',
-                lastScrape: new Date().toISOString(),
-                lastScrapeDuration: 0.1,
-                scrapeInterval: '15s',
-                scrapeTimeout: '10s',
-                up: true
-            };
-            if (!ipAddress) {
-                return [mockStatus];
-            }
-            return mockStatus;
-        }
+        //     const mockStatus: AgentStatus = {
+        //         health: 'up',
+        //         lastError: '',
+        //         lastScrape: new Date().toISOString(),
+        //         lastScrapeDuration: 0.1,
+        //         scrapeInterval: '15s',
+        //         scrapeTimeout: '10s',
+        //         up: true
+        //     };
+        //     if (!ipAddress) {
+        //         return [mockStatus];
+        //     }
+        //     return mockStatus;
+        // }
         
         try {
             const authHeader = this.getAuthHeader()
@@ -651,20 +651,20 @@ async getMetricsByIp(
         specificMetrics: specificMetrics?.length || 0
     })
 
-    if (process.env.NODE_ENV === 'development') {
-        await new Promise(resolve => setTimeout(resolve, 500));
+    // if (process.env.NODE_ENV === 'development') {
+    //     await new Promise(resolve => setTimeout(resolve, 500));
 
-        switch(type) {
-            case MetricType.STATIC:
-            return STATIC;
-            case MetricType.PROCESS:
-                return PROCESS;
-            case MetricType.DYNAMIC:
-            default:
-                return DYNAMIC;
-            }
+    //     switch(type) {
+    //         case MetricType.STATIC:
+    //         return STATIC;
+    //         case MetricType.PROCESS:
+    //             return PROCESS;
+    //         case MetricType.DYNAMIC:
+    //         default:
+    //             return DYNAMIC;
+    //         }
 
-    }
+    // }
     
     try {
         // Определяем какие метрики запрашивать

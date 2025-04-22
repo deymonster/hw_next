@@ -389,8 +389,19 @@ export interface DeviceMetrics {
         serialNumber: string;
     };
     hardwareInfo: {
+        bios: {
+            manufacturer: string;
+            date: string;
+            version: string;
+        };
         cpu: {
             model: string;
+        };
+        motherboard: {
+            manufacturer: string;
+            product: string;
+            serialNumber: string;
+            version: string;
         };
         memory: {
             modules: MemoryModuleInfo[]  // статическая информация о модулях
@@ -402,6 +413,10 @@ export interface DeviceMetrics {
                 total: number;  // общий объем памяти в МБ
             };
         }>;
+        network: Array<{
+            name: string;
+            status: string;
+        }>
     };
     memoryMetrics: MemoryMetrics;  // динамическая информация об использовании памяти
     diskMetrics: DiskMetrics[];    // динамическая информация о дисках
@@ -439,6 +454,7 @@ export interface DeviceMetrics {
     }>;
     timestamp?: number;
 }
+
 export interface MetricsResponse {
     type: 'static' | 'dynamic' | 'system' | 'error';
     data: DeviceMetrics;

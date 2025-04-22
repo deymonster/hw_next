@@ -37,10 +37,7 @@ export function NetworkMetrics({ metrics }: NetworkMetricsProps) {
         console.log('Metrics array is empty');
         return <div>No network interfaces found</div>;
     }
-    console.log('Все сетевые метрики:', metrics);
-
-    
-    
+        
 
     return (
         <div className="space-y-6">
