@@ -21,7 +21,7 @@ export class DeviceService
             where: {
                 ...(options?.status && { status: { in: options.status } }),
                 ...(options?.type && { type: options.type }),
-                ...(options?.locationId && { locationId: options.locationId })
+                ...(options?.departmentId && { departmentId: options.departmentId })
             },
             orderBy: options?.orderBy 
                 ? { [options.orderBy.field]: options.orderBy.direction }
@@ -64,9 +64,9 @@ export class DeviceService
         })
     }
 
-    async findByLocation(locationId: string): Promise<Device[]> {
+    async findByLocation(departmentId: string): Promise<Device[]> {
         return await this.model.findMany({
-            where: { locationId },
+            where: { departmentId },
             orderBy: { name: 'asc' }
         })
     }

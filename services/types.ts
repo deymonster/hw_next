@@ -10,6 +10,9 @@ import { PrometheusService } from './prometheus/prometheus.service'
 import { CacheService } from './cache/cache.service'
 import { NotificationFactory } from './notifications/notification.factory'
 import { ILoggerService } from './logger/logger.interface'
+import { DepartmentService } from './department/department.service'
+import { EmployeeService } from './employee/employee.service'
+
 
 // Сервисы для работы с данными
 export interface IDataServices {
@@ -19,6 +22,8 @@ export interface IDataServices {
     telegram_settings: TelegramSettingsService
     notification_settings: NotificationSettingsService
     device: DeviceService
+    department: DepartmentService
+    employee: EmployeeService
 }
 
 // Инфраструктурные сервисы

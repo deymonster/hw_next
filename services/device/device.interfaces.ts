@@ -10,7 +10,7 @@ import { Device, DeviceStatus, DeviceType } from '@prisma/client'
 export interface DeviceFilterOptions {
     status?: DeviceStatus[]
     type?: DeviceType
-    locationId?: string
+    departmentId?: string
     orderBy?: {
         field: 'name' | 'lastUpdate' | 'lastSeen'
         direction: 'asc' | 'desc'
@@ -23,14 +23,14 @@ export interface IDeviceCreateInput {
     agentKey: string
     type: DeviceType
     deviceTag?: string
-    locationId?: string
+    departmentId?: string
 }
 
 export interface IDeviceFindManyArgs {
     where?: {
         status?: DeviceStatus
         type?: DeviceType
-        locationId?: string
+        departmentId?: string
     }
     orderBy?: {
         [key: string]: 'asc' | 'desc'
@@ -45,7 +45,7 @@ export interface IDeviceRepository {
     // Специфичные методы для устройств
     findByAgentKey(agentKey: string): Promise<Device | null>
     findByIpAddress(ipAddress: string): Promise<Device | null>
-    findByLocation(locationId: string): Promise<Device[]>
+    findByLocation(departmentId: string): Promise<Device[]>
     findActiveDevices(): Promise<Device[]>
     updateStatus(id: string, status: DeviceStatus): Promise<Device>
     updateLastSeen(id: string): Promise<Device>

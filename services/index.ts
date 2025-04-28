@@ -10,7 +10,9 @@ import { DeviceService } from './device/device.service';
 import { NetworkScannerService } from './network-scanner/network-scanner.service';
 import { PrometheusService } from './prometheus/prometheus.service'
 import { Logger } from './logger/logger.service'
+import { DepartmentService } from './department/department.service';
 import type { IServices, IDataServices, IInfrastructureServices } from './types'
+import { EmployeeService } from "./employee/employee.service";
 
 class ServiceFactory {
     private static instance: ServiceFactory;
@@ -28,7 +30,9 @@ class ServiceFactory {
             smtp_settings: new SmtpSettingsService(prisma),
             telegram_settings: new TelegramSettingsService(prisma),
             notification_settings: new NotificationSettingsService(prisma),
-            device: deviceService
+            device: deviceService,
+            department: new DepartmentService(prisma),
+            employee: new EmployeeService(prisma)
         }
 
         const prometheusService = new PrometheusService({
