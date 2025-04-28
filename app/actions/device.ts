@@ -4,7 +4,6 @@ import { services } from '@/services/index';
 import { DeviceFilterOptions } from '@/services/device/device.interfaces'
 import { Device, DeviceStatus, DeviceType } from '@prisma/client';
 import { IDeviceCreateInput } from '@/services/device/device.interfaces'
-import { revalidatePath, revalidateTag, unstable_cache } from 'next/cache';
 import { getAgentStatuses } from './prometheus.actions';
 
 
