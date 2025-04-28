@@ -59,7 +59,11 @@ export const PROMETHEUS_METRICS = {
             'active_proccess_list',
             'proccess_cpu_usage_percent',
             'active_proccess_memory_usage',
-            'cpu_usage_percent'
+            'cpu_usage_percent',
+            'process_instance_count',
+            'process_group_memory_workingset_mb',
+            'process_group_memory_private_mb',
+            'process_group_cpu_usage_percent'
 
         ]
     }

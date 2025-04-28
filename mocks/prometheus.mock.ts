@@ -308,54 +308,54 @@ export const dynamicMetrics: PrometheusApiResponse = {
 };
 
 // Метрики процессов
-export const processMetrics: PrometheusApiResponse = {
-    status: 'success',
-    data: {
-        resultType: 'vector',
-        result: [
-            {
-                metric: {
-                    __name__: 'active_proccess_list',
-                    instance: 'localhost:9182',
-                    job: 'node'
-                },
-                value: [1625097600, '150']
-            },
-            {
-                metric: {
-                    __name__: 'proccess_cpu_usage_percent',
-                    instance: 'localhost:9182',
-                    job: 'node',
-                    pid: '1234',
-                    process: 'chrome'
-                },
-                value: [1625097600, '12.5']
-            },
-            {
-                metric: {
-                    __name__: 'active_proccess_memory_usage',
-                    instance: 'localhost:9182',
-                    job: 'node',
-                    pid: '1234',
-                    process: 'chrome'
-                },
-                value: [1625097600, '1073741824'] // 1GB
-            },
-            {
-                metric: {
-                    __name__: 'cpu_usage_percent',
-                    instance: 'localhost:9182',
-                    job: 'node',
-                    model: 'Apple M1 Pro',
-                    cores: '10',
-                    architecture: 'ARM64'
-                },
-                value: [1625097600, '20']
-            }
-        ]
-    }
-};
+// export const processMetrics: PrometheusApiResponse = {
+//     status: 'success',
+//     data: {
+//         resultType: 'vector',
+//         result: [
+//             {
+//                 metric: {
+//                     __name__: 'active_proccess_list',
+//                     instance: 'localhost:9182',
+//                     job: 'node'
+//                 },
+//                 value: [1625097600, '150']
+//             },
+//             {
+//                 metric: {
+//                     __name__: 'proccess_cpu_usage_percent',
+//                     instance: 'localhost:9182',
+//                     job: 'node',
+//                     pid: '1234',
+//                     process: 'chrome'
+//                 },
+//                 value: [1625097600, '12.5']
+//             },
+//             {
+//                 metric: {
+//                     __name__: 'active_proccess_memory_usage',
+//                     instance: 'localhost:9182',
+//                     job: 'node',
+//                     pid: '1234',
+//                     process: 'chrome'
+//                 },
+//                 value: [1625097600, '1073741824'] // 1GB
+//             },
+//             {
+//                 metric: {
+//                     __name__: 'cpu_usage_percent',
+//                     instance: 'localhost:9182',
+//                     job: 'node',
+//                     model: 'Apple M1 Pro',
+//                     cores: '10',
+//                     architecture: 'ARM64'
+//                 },
+//                 value: [1625097600, '20']
+//             }
+//         ]
+//     }
+// };
 
 export const DYNAMIC = dynamicMetrics;
-export const PROCESS = processMetrics;
-
+//export const PROCESS = processMetrics;
+ 

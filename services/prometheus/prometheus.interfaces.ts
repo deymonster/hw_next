@@ -96,9 +96,45 @@ export interface ActiveProcessMemoryUsage extends MetricBase {
  * Использование CPU процессом в процентах
  */
 export interface ProcessCpuUsagePercent extends MetricBase {
-    __name__: 'process_cpu_usage_percent'
+    __name__: 'procсess_cpu_usage_percent'
     pid: string
     process: string
+}
+
+/**
+ * Количество экземпляров процесса
+ * 
+ */
+export interface ProcessInstanceCount extends MetricBase {
+    __name__: 'process_instance_count';
+    process: string;
+}
+
+/**
+ * Использование памяти workingset группой процессов в процентах 
+ */
+export interface ProcessGroupMemoryWorkingSet extends MetricBase {
+    __name__: 'process_group_memory_workingset_mb';
+    process: string;
+    instances: string;
+}
+
+/**
+ * Использование памяти private группой процессов в процентах
+ */
+export interface ProcessGroupMemoryPrivate extends MetricBase {
+    __name__: 'process_group_memory_private_mb';
+    process: string;
+    instances: string;
+}
+
+/**
+ * Использование CPU группой процессов в процентах
+ */
+export interface ProcessGroupCpuUsage extends MetricBase {
+    __name__: 'process_group_cpu_usage_percent';
+    process: string;
+    instances: string;
 }
 
 // =====================================
@@ -513,8 +549,13 @@ export interface MetricTimeSeries {
 export interface ProcessInfo {
     name: string;
     instances: number;
-    memory: number;
-    cpu: number;
+    metrics: {
+        cpu: number;
+        memory: {
+            workingSet: number;
+            private: number;
+        };
+    };
 }
 
 /**

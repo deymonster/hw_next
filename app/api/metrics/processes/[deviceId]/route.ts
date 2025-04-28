@@ -126,9 +126,10 @@ function initWebSocketServer(): WebSocketServer | null {
           );
           
           if (response?.data?.result) {
+            services.infrastructure.logger.debug(LoggerService.APP, '[WS] Raw process metrics:', response.data.result);
             const parser = new PrometheusParser(response);
             const processes = await parser.getProcessList();
-
+            services.infrastructure.logger.debug(LoggerService.APP, '[WS] Parsed processes:', processes);
             ws.send(JSON.stringify(processes));
           } else {
             services.infrastructure.logger.warn(LoggerService.APP, `[WS] No process data for device ${deviceId}`);

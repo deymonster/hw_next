@@ -14,7 +14,7 @@ import { PrometheusParser } from "./prometheus.parser";
 import { MetricType, PROMETHEUS_METRICS } from "./metrics";
 import { Logger } from '../logger/logger.service'
 import { LogLevel, LoggerService } from '../logger/logger.interface'
-import { STATIC, DYNAMIC, PROCESS } from '@/mocks/prometheus.mock';
+// import { STATIC, DYNAMIC, PROCESS } from '@/mocks/prometheus.mock';
 
 /**
  * Сервис для работы с Prometheus API
@@ -157,16 +157,6 @@ export class PrometheusService {
             }
 
             const dynamicParser = new PrometheusParser(dynamicResponse)
-            
-            // Получаем метрики процессов
-            // const processStartTime = Date.now()
-            // const processResponse = await this.getMetricsByIp(deviceId, MetricType.PROCESS)
-            // const processFetchTime = Date.now() - processStartTime;
-            
-            // if (processFetchTime > 1000) { // Логируем только медленные запросы
-            //     await this.log('warn', `Slow process metrics fetch for ${deviceId}: ${processFetchTime}ms`);
-            // }
-            // const processParser = new PrometheusParser(processResponse)
             
             const parseStartTime = Date.now();
             const processorMetrics = await dynamicParser.getProcessorMetrics()
@@ -651,20 +641,7 @@ async getMetricsByIp(
         specificMetrics: specificMetrics?.length || 0
     })
 
-    // if (process.env.NODE_ENV === 'development') {
-    //     await new Promise(resolve => setTimeout(resolve, 500));
-
-    //     switch(type) {
-    //         case MetricType.STATIC:
-    //         return STATIC;
-    //         case MetricType.PROCESS:
-    //             return PROCESS;
-    //         case MetricType.DYNAMIC:
-    //         default:
-    //             return DYNAMIC;
-    //         }
-
-    // }
+    
     
     try {
         // Определяем какие метрики запрашивать

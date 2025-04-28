@@ -12,36 +12,13 @@ import { ProcessList } from "./process/ProcessList"
 import { SystemSection } from './system/SystemSection';
 import { HardwareSection } from './hardware/HardwareSection';
 import { PerformanceSection } from './perfomance/PerformanceSection';
+import { useEffect } from "react"
 
 interface DeviceDetailProps {
     device: Device
     onBack: () => void
   }
 
-interface DeviceAllMetrics {
-    metrics: {
-        system: DeviceMetrics['systemInfo'] | null;
-        hardware: DeviceMetrics['hardwareInfo'] | null;
-        processorMetrics: DeviceMetrics['processorMetrics'] | null;
-        diskMetrics: DeviceMetrics['diskMetrics'] | null;
-        memoryMetrics: DeviceMetrics['memoryMetrics'] | null;
-        networkMetrics: DeviceMetrics['networkMetrics'] | null;
-        processes: any[] | null; // или конкретный тип для процессов
-        lastUpdated: number | null;
-    };
-    status: {
-        sseConnecting: boolean;
-        wsConnected: boolean;
-        wsLoading: boolean;
-    };
-    errors: {
-        sseError: Error | null;
-        processError: Error | null;
-    };
-    actions: {
-        reconnect: () => void;
-    };
-}
 
 export function DeviceDetail({device, onBack}: DeviceDetailProps) {
     // Используем тот же хук для получения метрик
@@ -64,6 +41,18 @@ export function DeviceDetail({device, onBack}: DeviceDetailProps) {
     const handleRetry = () => {
       reconnect(); // Переподключение WebSocket
     };
+    
+    // useEffect(() => {
+    //   if (processes && processes.processes.length  > 0) {
+    //     const firstProcess = processes.processes[0];
+    //     console.log('Первый процесс:', {
+    //       name: firstProcess.name,
+    //       instances: firstProcess.instances,
+    //       memory: `${firstProcess.metrics.memory.workingSet.toFixed(2)} MB`,
+    //       cpu: `${firstProcess.metrics.cpu.toFixed(2)}%`
+    //     });
+    //   }
+    // }, [processes]);
 
     const getErrorMessage = (error: string | Error | null): string => {
       if (!error) return '';

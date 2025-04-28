@@ -1,10 +1,10 @@
 import React from 'react';
 import { ArrowUpDown } from 'lucide-react';
-import { ProcessInfo } from '@/hooks/useProcessMetrics';
+import { ProcessInfo } from '@/services/prometheus/prometheus.interfaces';
 
 
 
-type SortField = 'name' | 'pid' | 'cpu' | 'memory';
+type SortField = 'name' | 'instances' | 'cpu' | 'memory';
 type SortDirection = 'asc' | 'desc';
 
 interface ProcessTableProps {
@@ -12,25 +12,14 @@ interface ProcessTableProps {
   sortField: SortField;
   sortDirection: SortDirection;
   handleSort: (field: SortField) => void;
-  showAllProcesses: boolean;
 }
 
 export function ProcessTable({ 
   processes, 
   sortField, 
   sortDirection, 
-  handleSort,
-  showAllProcesses
+  handleSort
 }: ProcessTableProps) {
-
-  
-  // Format bytes to human-readable format
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 MB';
-    const megabytes = bytes / (1024 * 1024);
-    return `${megabytes.toFixed(2)} MB`;
-  };
-
 
   // Sort processes based on current sort field and direction
   const sortedProcesses = React.useMemo(() => {
@@ -41,14 +30,14 @@ export function ProcessTable({
         case 'name':
           comparison = a.name.localeCompare(b.name);
           break;
-        case 'pid':
+        case 'instances':
           comparison = a.instances - b.instances;
           break;
         case 'cpu':
-          comparison = a.cpu - b.cpu;
+          comparison = a.metrics.cpu - b.metrics.cpu;
           break;
         case 'memory':
-          comparison = a.memory - b.memory;
+          comparison = a.metrics.memory.workingSet - b.metrics.memory.workingSet;
           break;
       }
       
@@ -88,7 +77,7 @@ export function ProcessTable({
               {renderSortableHeader('Process Name', 'name')}
             </th>
             <th className="text-left p-3 font-medium text-muted-foreground text-sm">
-              {renderSortableHeader(showAllProcesses ? 'PID' : 'Instances', 'pid')}
+              {renderSortableHeader('Экземпляры', 'instances')}
             </th>
             <th className="text-right p-3 font-medium text-muted-foreground text-sm">
               {renderSortableHeader('CPU', 'cpu')}
@@ -116,24 +105,25 @@ export function ProcessTable({
                   <div className="w-16 bg-muted rounded-full h-1.5 overflow-hidden">
                     <div 
                       className={`h-full rounded-full ${
-                        process.cpu > 50 ? 'bg-orange-500' : 
-                        process.cpu > 20 ? 'bg-blue-500' : 'bg-green-500'
+                        process.metrics?.cpu > 50 ? 'bg-orange-500' : 
+                        process.metrics?.cpu > 20 ? 'bg-blue-500' : 'bg-green-500'
                       }`}
-                      style={{ width: `${normalizeCpuValue(process.cpu)}%` }}
+                      style={{ width: `${normalizeCpuValue(process.metrics.cpu || 0)}%` }}
                     />
                   </div>
                   <span className={`
-                    ${process.cpu > 50 ? 'text-orange-500' : 
-                    process.cpu > 20 ? 'text-blue-500' : 'text-green-500'}
+                    ${process.metrics?.cpu > 50 ? 'text-orange-500' : 
+                    process.metrics?.cpu > 20 ? 'text-blue-500' : 'text-green-500'}
                   `}>
-                    {process.cpu.toFixed(1)}%
+                    {(process.metrics?.cpu || 0).toFixed(1)}%
                   </span>
                 </div>
               </td>
               <td className="p-3 text-sm text-right">
-                {process.memory > 0 
-                    ? formatBytes(process.memory)
-                    : '0 B'}
+                {process.metrics.memory?.workingSet ? 
+                  `${process.metrics.memory.workingSet.toFixed(2)} MB` : 
+                  'N/A'
+                }
               </td>
             </tr>
           ))}

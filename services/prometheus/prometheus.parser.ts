@@ -31,6 +31,10 @@ import {
     MemoryMetrics,
     DiskMetrics,
     MemoryModuleInfo,
+    ProcessInstanceCount,
+    ProcessGroupMemoryWorkingSet,
+    ProcessGroupMemoryPrivate,
+    ProcessGroupCpuUsage,
 } from './prometheus.interfaces'
 import { Logger  } from '../logger/logger.service'
 import { LogLevel, LoggerService } from '../logger/logger.interface'
@@ -482,10 +486,15 @@ export class PrometheusParser {
     public async getProcessList(): Promise<ProcessListInfo> {
         
         const totalProcesses = Math.round(await this.getMetricValue('active_proccess_list'));
-        
         const processMemoryMetrics = await this.findMetrics<ActiveProcessMemoryUsage>('active_proccess_memory_usage');
         const processCpuMetrics = await this.findMetrics<ProcessCpuUsagePercent>('proccess_cpu_usage_percent');
-        
+
+        const instanceCountMetrics = await this.findMetrics<ProcessInstanceCount>('process_instance_count');
+        const workingSetMetrics = await this.findMetrics<ProcessGroupMemoryWorkingSet>('process_group_memory_workingset_mb');
+        const privateMemoryMetrics = await this.findMetrics<ProcessGroupMemoryPrivate>('process_group_memory_private_mb');
+        const groupCpuMetrics = await this.findMetrics<ProcessGroupCpuUsage>('process_group_cpu_usage_percent');
+
+
         if (!processMemoryMetrics.length || !processCpuMetrics.length) {
             await this.log('warn', 'No process metrics found')
             return {
@@ -495,59 +504,115 @@ export class PrometheusParser {
         }
 
         // Создаем Map для быстрого поиска CPU метрик по PID
-        const cpuByPid = new Map();
-        await Promise.all(processCpuMetrics.map(async metric => {
-            const value = await this.getMetricValue('proccess_cpu_usage_percent', {
-                pid: metric.pid,
-                process: metric.process
-            });
-            cpuByPid.set(metric.pid, value);
-        }));
+        // const cpuByPid = new Map();
+        // await Promise.all(processCpuMetrics.map(async metric => {
+        //     const value = await this.getMetricValue('proccess_cpu_usage_percent', {
+        //         pid: metric.pid,
+        //         process: metric.process
+        //     });
+        //     cpuByPid.set(metric.pid, value);
+        // }));
 
-        // Создаем Map для группировки процессов по имени
-        const processGroups = new Map<string, {
-            name: string;
-            totalCpu: number;
-            totalMemory: number;
-            pids: Set<string>;
-        }>();
+        // // Создаем Map для группировки процессов по имени
+        // const processGroups = new Map<string, {
+        //     name: string;
+        //     totalCpu: number;
+        //     totalMemory: number;
+        //     pids: Set<string>;
+        // }>();
         
-        // Формируем список процессов и группируем их только по метрикам памяти
-        for (const proc of processMemoryMetrics.filter(proc => proc.pid && proc.process)) {
-            // Используем значение памяти из текущего элемента 'proc'
-            const memory = Number(proc.value.toFixed(2)); 
-            const cpu = Number((cpuByPid.get(proc.pid) || 0).toFixed(1));
+        // // Формируем список процессов и группируем их 
+        // for (const proc of processMemoryMetrics.filter(proc => proc.pid && proc.process)) {
+        //     // Используем значение памяти из текущего элемента 'proc'
+        //     const memory = proc.value;
+        //     const cpu = cpuByPid.get(proc.pid) || 0;
             
-            // Группируем процессы по имени
-            if (!processGroups.has(proc.process)) {
-                processGroups.set(proc.process, {
-                    name: proc.process,
-                    totalCpu: cpu,
-                    totalMemory: memory,
-                    pids: new Set([proc.pid])
+        //     // Группируем процессы по имени
+        //     if (!processGroups.has(proc.process)) {
+        //         processGroups.set(proc.process, {
+        //             name: proc.process,
+        //             totalCpu: cpu,
+        //             totalMemory: memory,
+        //             pids: new Set([proc.pid])
+        //         });
+        //     } else {
+        //         const group = processGroups.get(proc.process)!;
+        //         group.totalCpu += cpu;
+        //         group.totalMemory += memory;
+        //         group.pids.add(proc.pid);
+        //     }
+        // }
+
+        // // Преобразуем сгруппированные процессы в массив 
+        // const groupedProcesses = Array.from(processGroups.values()).map(group => ({
+        //     name: group.name,
+        //     instances: group.pids.size,
+        //     memory: group.totalMemory, 
+        //     cpu: Number(group.totalCpu.toFixed(1)) // CPU уже в процентах
+        // }));
+
+        // // Сортируем процессы по использованию CPU
+        // groupedProcesses.sort((a, b) => b.cpu - a.cpu);
+        
+        // Создаем Map для группировки процессов
+        const processGroups = new Map<string, ProcessInfo>();
+
+        // Обрабатываем количество экземпляров
+        for (const metric of instanceCountMetrics) {
+            const processName = metric.process;
+            const instanceCount = await this.getMetricValue('process_instance_count', { process: processName });
+            processGroups.set(processName, {
+                name: processName,
+                instances: Number(instanceCount),
+                metrics: {
+                    cpu: 0,
+                    memory: {
+                        workingSet: 0,
+                        private: 0
+                    }
+                }
+            });
+        }
+
+        // Добавляем метрики WorkingSet памяти
+        for (const metric of workingSetMetrics) {
+            const process = processGroups.get(metric.process);
+            if (process) {
+                const workingSetMemory = await this.getMetricValue('process_group_memory_workingset_mb', {
+                    process: metric.process
                 });
-            } else {
-                const group = processGroups.get(proc.process)!;
-                group.totalCpu += cpu;
-                group.totalMemory += memory;
-                group.pids.add(proc.pid);
+                process.metrics.memory.workingSet = workingSetMemory;
             }
         }
 
-        // Преобразуем сгруппированные процессы в массив 
-        const groupedProcesses = Array.from(processGroups.values()).map(group => ({
-            name: group.name,
-            instances: group.pids.size,
-            memory: this.bytesToMB(group.totalMemory), // Конвертируем байты в МБ
-            cpu: Number(group.totalCpu.toFixed(1)) // CPU уже в процентах
-        }));
+        // Добавляем метрики Private памяти
+        for (const metric of privateMemoryMetrics) {
+            const process = processGroups.get(metric.process);
+            if (process) {
+                const privateMemory = await this.getMetricValue('process_group_memory_private_mb', {
+                    process: metric.process
+                });
+                process.metrics.memory.private = privateMemory;
+            }
+        }
 
-        // Сортируем процессы по использованию CPU
-        groupedProcesses.sort((a, b) => b.cpu - a.cpu);
-        
+        // Добавляем метрики CPU
+        for (const metric of groupCpuMetrics) {
+            const process = processGroups.get(metric.process);
+            if (process) {
+                const cpuValue = await this.getMetricValue('process_group_cpu_usage_percent', { 
+                    process: metric.process 
+                });
+                process.metrics.cpu = cpuValue;
+            }
+        }
+
+        // Преобразуем Map в массив и сортируем по использованию CPU
+        const processes = Array.from(processGroups.values())
+            .sort((a, b) => b.metrics.cpu - a.metrics.cpu);
         return {
-            total: totalProcesses,
-            processes: groupedProcesses
+            total: processes.length,
+            processes: processes
         };
     }
 
