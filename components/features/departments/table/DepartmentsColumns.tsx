@@ -13,13 +13,20 @@ export function createDepartmentColumns(t: (key: string) => string): ColumnDef<D
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="w-full justify-center"
                     >
                         {t('columns.name')}
                         <ArrowUpDown className='ml-2 h-4 w-4' />
                     </Button>
                 )
             },
-            cell: ({row}) => row.original.name
+            cell: ({row}) => {
+                return (
+                    <div className="text-center w-full">
+                        {row.original.name}
+                    </div>
+                )
+            }
         },
         
         {
@@ -29,6 +36,7 @@ export function createDepartmentColumns(t: (key: string) => string): ColumnDef<D
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="w-full justify-center"
                     >
                         {t('columns.deviceCount')}
                         <ArrowUpDown className='ml-2 h-4 w-4' />
@@ -37,9 +45,37 @@ export function createDepartmentColumns(t: (key: string) => string): ColumnDef<D
             },
             cell: ({row}) => {
                 return (
-                    <Badge variant="secondary">
-                        {row.original.deviceCount || 0}
-                    </Badge>
+                    <div className="text-center w-full">
+                        <Badge variant="secondary">
+                            {row.original.deviceCount || 0}
+                        </Badge>
+                    </div>
+                    
+                )
+            }
+        },
+
+        {
+            accessorKey: 'employeesCount',
+            header: ({column}) => {
+                return (
+                    <Button
+                        variant='ghost'
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="w-full justify-center"
+                    >
+                        {t('columns.employeesCount')}
+                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                    </Button>
+                )
+            },
+            cell: ({row}) => {
+                return (
+                    <div className="text-center w-full">
+                        <Badge variant="secondary">
+                            {row.original.employeesCount || 0}
+                        </Badge>
+                    </div>
                 )
             }
         }

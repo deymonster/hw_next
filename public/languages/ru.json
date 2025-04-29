@@ -414,7 +414,8 @@
 			},
 			"columns": {
 				"name": "Отдел",
-				"deviceCount": "Количество устройств"
+				"deviceCount": "Устройства",
+				"employeesCount": "Сотрудники"
 			},
 			"modal": {
 				"heading": "Добавление отдела",

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { Department } from '@prisma/client';
 import { getDepartments, getDepartmentDevicesCount, createDepartment, updateDepartment, deleteDepartment } from '@/app/actions/department';
 import { IDepartmentCreateInput } from '@/services/department/department.interface';
@@ -6,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 export type DepartmentWithDeviceCount = Department & {
     deviceCount: number;
+    employeesCount: number;
 }
 
 export function useDepartment() {
@@ -22,8 +22,9 @@ export function useDepartment() {
             const data = await getDepartments();
             const departmentsWithCount = await Promise.all(
                 data.map(async (dep) => {
-                    const count = await getDepartmentDevicesCount(dep.id);
-                    return { ...dep, deviceCount: count };
+                    const deviceCount = await getDepartmentDevicesCount(dep.id);
+                    const employeesCount = 0; // TODO implement employees count
+                    return { ...dep, deviceCount, employeesCount };
                 })
             );
             return departmentsWithCount;
