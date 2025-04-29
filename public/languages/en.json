@@ -42,7 +42,7 @@
 				"settings": "Settings",
 				"devices": "Devices",
 				"events": "Events",
-				"locations": "Locations",
+				"departments": "Departments",
 				"inventory": "Inventory",
 				"users": "Users"
 			}
@@ -349,6 +349,75 @@
 					"createdAt": "Created at"
 				}
 			}
+		},
+		"devices": {
+			"header":{
+				"heading": "Devices",
+				"description": "Manage devices that you monitor in NITRINO Monitoring"
+			},
+			"columns": {
+				"name": "Name",
+				"ipAddress": "IP-address",
+				"status": "Status",
+				"tag": "Tag"
+			},
+			"scanModal": {
+				"trigger":  "Scan devices",
+				"heading": "Scan devices",
+				"subnetLabel": "Subnet",
+				"scanButton": "Scan",
+				"successScanMessage": "Devices scan successfully completed",
+				"errorScanMessage": "Error during devices scanning",
+				"subnetError": "Error determining subnet",
+				"addButton": "Add",
+				"cancelButton": "Cancel",
+				"succesAddMessage": "Selected device added to monitoring",
+				"errorAddMessage": "Error adding device to monitoring",
+				"scanColumns": {
+					"ipAddress": "IP-Address",
+					"agentKey": "Agent key",
+					"status": "Status"
+				},
+				"status": {
+					"new": "New",
+					"registered": "Registered"
+				}
+
+			},
+			"actions": {
+					"updateIp": "Update IP",
+					"updatingIp": "Updating IP",
+					"updateIpSuccess": "IP address was successfully updated",
+					"errorUpdatingIp": "Error updating IP address",
+					"edit": "Edit",
+					"delete": "Delete",
+					"deleteSuccess": "Device successfully deleted",
+					"deleteError": "Error deleting device",
+					"deleteConfirmTitle": "Deliting device",
+					"deleteConfirmMessage": "Are you sure that you want to delete device \"{name}\"? This action cannot be undone"
+			}
+		},
+		"departments": {
+			"header": {
+				"heading": "Departments",
+				"description": "Manage departments that you use in NITRINO Monitoring"
+			},
+			"columns": {
+				"name": "Department",
+				"deviceCount": "Device count"
+			},
+			"modal": {
+				"heading": "Add department",
+				"nameLabel": "Department name",
+				"descriptionLabel": "Department description",
+				"namePlaceholder": "Enter department name",
+				"descriptionPlaceholder": "Enter department description",
+				"submitButton": "Add",
+				"cancelButton": "Cancel",
+				"success": "Success",
+				"error": "Error during add department"
+			},
+			"addDepartment": "Add"
 		}
 	},
 	"components": {

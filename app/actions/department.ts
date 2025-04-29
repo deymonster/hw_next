@@ -21,3 +21,7 @@ export async function deleteDepartment(id: string): Promise<Department> {
     return await services.data.department.delete(id);
 }
 
+export async function getDepartmentDevicesCount(id: string): Promise<number> {
+    return await services.data.department.getDevicesCount(id)
+}
+

@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl"
 import type { Route } from "./route.interface"
-import { Bell, Cpu, MapPin, Package, Settings, Users } from "lucide-react"
+import { Bell, Cpu, Building, Package, Settings, Users } from "lucide-react"
 import { SidebarItem } from "./SidebarItem"
 
 export function DashboardNav() {
@@ -28,9 +28,9 @@ export function DashboardNav() {
             icon: Package
         },
         {
-            label: t('locations'),
-            href: '/dashboard/locations',
-            icon: MapPin
+            label: t('departments'),
+            href: '/dashboard/departments',
+            icon: Building
         },
         {
             label: t('users'),

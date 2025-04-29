@@ -34,7 +34,7 @@
 				"settings": "Настройки",
 				"devices": "Устройства",
 				"events": "События",
-				"locations": "Местоположения",
+				"departments": "Отделы",
 				"inventory": "Инвентаризация",
 				"users": "Пользователи"
 			},
@@ -406,6 +406,29 @@
 					"deleteConfirmTitle": "Удаление устройства",
 					"deleteConfirmMessage": "Вы уверены, что хотите удалить устройство \"{name}\"? Это действие нельзя отменить. "
 			}
+		},
+		"departments": {
+			"header": {
+				"heading": "Отделы",
+				"description": "Управляйте отделами, которые вы используете в NITRINO Monitoring"
+			},
+			"columns": {
+				"name": "Отдел",
+				"deviceCount": "Количество устройств"
+			},
+			"modal": {
+				"heading": "Добавление отдела",
+				"nameLabel": "Название отдела",
+				"descriptionLabel": "Описание отдела",
+				"namePlaceholder": "Введите название отдела",
+				"descriptionPlaceholder": "Введите описание отдела",
+				"submitButton": "Добавить",
+				"cancelButton": "Отмена",
+				"success": "Отдел успешно добавлен",
+				"error": "Ошибка при добавлении отдела",
+				"submitting": "Добавление отдела..."
+			},
+			"addDepartment": "Добавить"
 		}
 	},
 	"components": {

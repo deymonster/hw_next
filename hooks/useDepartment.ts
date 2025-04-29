@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Department } from '@prisma/client';
-import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from '@/app/actions/department';
+import { getDepartments, getDepartmentDevicesCount, createDepartment, updateDepartment, deleteDepartment } from '@/app/actions/department';
 import { IDepartmentCreateInput } from '@/services/department/department.interface';
 
+export type DepartmentWithDeviceCount = Department & {
+    deviceCount: number;
+}
+
 export function useDepartment() {
-    const [departments, setDepartments] = useState<Department[]>([]);
+    const [departments, setDepartments] = useState<DepartmentWithDeviceCount[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -12,7 +16,14 @@ export function useDepartment() {
         try {
             setLoading(true);
             const data = await getDepartments();
-            setDepartments(data);
+            const departmentsWithCount = await Promise.all(
+                data.map(async (dep) => {
+                    const count = await getDepartmentDevicesCount(dep.id);
+                    return { ...dep, deviceCount: count };
+                })
+            );
+            
+            setDepartments(departmentsWithCount);
             setError(null);
         } catch (error: any) {
             setError(error.message);
@@ -29,7 +40,7 @@ export function useDepartment() {
         try {
             const newDepartment = await createDepartment(data);
             if (newDepartment) {
-                setDepartments([...departments, newDepartment]);
+                setDepartments([...departments, { ...newDepartment, deviceCount: 0 }]);
             }
             return newDepartment;
         } catch (error: any) {
@@ -42,8 +53,9 @@ export function useDepartment() {
         try {
             const updated = await updateDepartment(id, data);
             if (updated) {
+                const count = await getDepartmentDevicesCount(updated.id);
                 setDepartments(departments.map(dep => 
-                    dep.id === id ? updated : dep
+                    dep.id === id ? { ...updated, deviceCount: count } : dep
                 ));
             }
             return updated;
@@ -55,8 +67,10 @@ export function useDepartment() {
 
     const handleDelete = async (id: string) => {
         try {
-            await deleteDepartment(id);
-            setDepartments(departments.filter(dep => dep.id !== id));
+            const deleted = await deleteDepartment(id);
+            if (deleted) {
+                setDepartments(departments.filter(dep => dep.id !== id));
+            }
         } catch (error: any) {
             setError(error.message);
             throw error;
