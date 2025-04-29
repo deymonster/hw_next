@@ -30,7 +30,7 @@ export function DepartmentsTable() {
         return (
             <div className="flex flex-col items-center justify-center p-4 text-red-500">
                 <p>Ошибка загрузки отделов</p>
-                <Button onClick={refresh} className="mt-2">
+                <Button onClick={() => refresh()} className="mt-2">
                     Повторить
                 </Button>
             </div>

@@ -12,6 +12,7 @@ import { AddDepartmentForm, addDepartmentSchema } from "@/schemas/department/add
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useCallback, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
 
 
 interface AddDepartmentModalProps {
@@ -22,6 +23,7 @@ interface AddDepartmentModalProps {
 
 export function AddDepartmentModal({ isOpen, onClose }: AddDepartmentModalProps) {
     const t = useTranslations('dashboard.departments.modal')
+    const queryClient = useQueryClient()
     const { create } = useDepartment()
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -43,6 +45,7 @@ export function AddDepartmentModal({ isOpen, onClose }: AddDepartmentModalProps)
         try {
             setIsSubmitting(true)
             await create(data)
+            queryClient.invalidateQueries({ queryKey: ['departments'] })
             toast.success(t('success'))
             handleModalClose()
         } catch (error) {
