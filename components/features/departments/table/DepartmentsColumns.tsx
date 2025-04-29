@@ -2,10 +2,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
-import { DepartmentWithDeviceCount } from "@/hooks/useDepartment"
+import { DepartmentWithCounts } from "@/hooks/useDepartment"
 
-export function createDepartmentColumns(t: (key: string) => string): ColumnDef<DepartmentWithDeviceCount>[] {
-    const columns: ColumnDef<DepartmentWithDeviceCount>[] = [
+export function createDepartmentColumns(t: (key: string) => string): ColumnDef<DepartmentWithCounts>[] {
+    const columns: ColumnDef<DepartmentWithCounts>[] = [
         {
             accessorKey: 'name',
             header: ({column}) => {

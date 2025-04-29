@@ -10,7 +10,7 @@ export class DepartmentService
     constructor(prisma: PrismaClient) {
         super(prisma, (p) => p.department)
     }
-
+    
     async findByName(name: string): Promise<Department | null> {
         return await this.model.findFirst({
             where: { name }
@@ -32,6 +32,33 @@ export class DepartmentService
         return await this.prisma.device.count({
             where: { departmentId }
         })
+    }
+
+    async getEmployeesCount(departmentId: string): Promise<number> {
+        return await this.prisma.employee.count({
+            where: { departmentId }
+        })
+    }
+
+    async findAllWithCounts(): Promise<(Department & { deviceCount: number; employeesCount: number })[]> {
+        const departments = await this.findAll();
+        
+        const departmentsWithCounts = await Promise.all(
+            departments.map(async (department) => {
+                const [deviceCount, employeesCount] = await Promise.all([
+                    this.getDevicesCount(department.id),
+                    this.getEmployeesCount(department.id)
+                ]);
+                
+                return {
+                    ...department,
+                    deviceCount,
+                    employeesCount
+                };
+            })
+        );
+        
+        return departmentsWithCounts;
     }
 }
 

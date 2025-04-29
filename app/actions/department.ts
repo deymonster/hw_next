@@ -3,6 +3,7 @@
 import { services } from '@/services/index';
 import { Department } from '@prisma/client';
 import { IDepartmentCreateInput } from '@/services/department/department.interface';
+import { DepartmentWithCounts } from '@/hooks/useDepartment';
 
 
 export async function getDepartments(): Promise<Department[]> {
@@ -23,5 +24,9 @@ export async function deleteDepartment(id: string): Promise<Department> {
 
 export async function getDepartmentDevicesCount(id: string): Promise<number> {
     return await services.data.department.getDevicesCount(id)
+}
+
+export async function getDepartmentsWithCounts(): Promise<DepartmentWithCounts[]> {
+    return await services.data.department.findAllWithCounts();
 }
 
