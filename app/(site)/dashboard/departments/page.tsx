@@ -1,6 +1,5 @@
 
 
-import { AddDepartment } from '@/components/features/departments/add/AddDepartment'
 import { DepartmentsTable } from '@/components/features/departments/table/DepartmentsTable'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
@@ -22,7 +21,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function DepartmentsPage() {
   return (
     <>
-      <AddDepartment />
       <DepartmentsTable />
     </>
        
