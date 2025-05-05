@@ -407,15 +407,27 @@
 				"deviceCount": "Device count"
 			},
 			"modal": {
-				"heading": "Add department",
-				"nameLabel": "Department name",
-				"descriptionLabel": "Department description",
-				"namePlaceholder": "Enter department name",
-				"descriptionPlaceholder": "Enter department description",
-				"submitButton": "Add",
-				"cancelButton": "Cancel",
-				"success": "Success",
-				"error": "Error during add department"
+				"add": {
+					"heading": "Adding department",
+					"nameLabel": "Name",
+					"descriptionLabel": "Description",
+					"namePlaceholder": "Enter department name",
+					"descriptionPlaceholder": "Enter department description",
+					"submitButton": "Add",
+					"cancelButton": "Cancel",
+					"success": "Department successfully added",
+					"error": "Error adding department",
+					"submitting": "Adding department..."
+				},
+				"edit": {
+					"heading": "Editing department",
+					"nameLabel": "Name",
+					"descriptionLabel": "Description",
+					"submitButton": "Update",
+					"success": "Department successfully changed",
+					"error": "Error changing department",
+					"submitting": "Updating department..."
+				}
 			},
 			"addDepartment": "Add"
 		}

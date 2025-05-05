@@ -1,6 +1,5 @@
 'use client'
 
-import { Heading } from "@/components/ui/elements/Heading";
 import { useTranslations } from "next-intl";
 import { AddDepartmentModal } from "./forms/AddModal"
 import { Button } from "@/components/ui/button";

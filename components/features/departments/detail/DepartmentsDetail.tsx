@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button"
 import { DepartmentWithCounts } from "@/hooks/useDepartment"
-import { ArrowLeft, Building2, FileText, Monitor, Pencil, Trash, UserPlus, Users } from "lucide-react"
+import { Building2, Check, FileText, Monitor, Pencil, Trash, UserPlus, Users, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useState } from "react"
@@ -12,7 +12,7 @@ import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 import { useQueryClient } from "@tanstack/react-query"
 import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
-
+import { EditDepartmentModal } from "../edit/forms/EditModal"
 
 interface DepartmentDetailProps {
     department: DepartmentWithCounts
@@ -23,6 +23,7 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
     const t = useTranslations('dashboard.departments')
     const { delete: deleteDepartment } = useDepartment()
     const [isDeleting, setIsDeleting] = useState(false)
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const queryClient = useQueryClient()
 
     const handleDelete = async () => {
@@ -45,42 +46,46 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
         }
     }
 
+
     return (
         <div className="space-y-6 mt-6">
+           
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">{department.name}</h2>
-                    <p className="text-sm-text-muted-foreground">{department.description}</p>
+                    <p className="text-sm text-muted-foreground">{department.description || 'Нет описания'}</p>
                 </div>
 
+                
                 <div className="flex items-center space-x-2">
-                <Button variant="outline" size="icon">
-                        <Pencil className="h-4 w-4" />
-                    </Button>
-                    <ConfirmModal
-                        heading="Удаление отдела"
-                        message={`Вы действительно хотите удалить отдел "${department.name}"? Это действие нельзя отменить.`}
-                        onConfirm={(e) => {
-                            e.stopPropagation();
-                            handleDelete();
-                        }}
-                        onCancel={(e) => {
-                            if (e && e.stopPropagation) {
-                                e.stopPropagation();
-                            }
-                        }}
-                    >
-                        <Button 
-                        variant="destructive" 
-                        size="icon"
-                        disabled={isDeleting}
-                        >
-                        <Trash className="h-4 w-4" />
-                    </Button>
-                    </ConfirmModal>
+                            <Button 
+                                variant="outline" 
+                                size="icon"
+                                onClick={() => setIsEditModalOpen(true)}
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                            <ConfirmModal
+                                heading="Удаление отдела"
+                                message={`Вы действительно хотите удалить отдел "${department.name}"? Это действие нельзя отменить.`}
+                                onConfirm={handleDelete}
+                            >
+                                <Button 
+                                    variant="destructive" 
+                                    size="icon"
+                                    disabled={isDeleting}
+                                >
+                                    <Trash className="h-4 w-4" />
+                                </Button>
+                            </ConfirmModal>
                     
                 </div>
             </div>
+            <EditDepartmentModal 
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                department={department}
+            />
 
             <Tabs defaultValue="info">
                 <TabsList className="grid w-full grid-cols-2">
@@ -90,7 +95,7 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
 
                 <TabsContent value="info">
                     <Card>
-                    <CardContent className="pt-6">
+                        <CardContent className="pt-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
@@ -99,6 +104,8 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">{department.name}</p>
                                 </div>
+
+
 
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">

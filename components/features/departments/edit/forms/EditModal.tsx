@@ -13,25 +13,25 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useCallback, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
+import { Department } from "@prisma/client"
 
-
-interface AddDepartmentModalProps {
+interface EditDepartmentModalProps {
     isOpen: boolean
     onClose: () => void
+    department: Department
 }
 
-
-export function AddDepartmentModal({ isOpen, onClose }: AddDepartmentModalProps) {
-    const t = useTranslations('dashboard.departments.modal.add')
+export function EditDepartmentModal({ isOpen, onClose, department }: EditDepartmentModalProps) {
+    const t = useTranslations('dashboard.departments.modal.edit')
     const queryClient = useQueryClient()
-    const { create } = useDepartment()
+    const { update } = useDepartment()
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const form = useForm<AddDepartmentForm>({
         resolver: zodResolver(addDepartmentSchema),
         defaultValues: {
-            name: '',
-            description: ''
+            name: department.name,
+            description: department.description || ''
         }
     })
     const { isValid } = form.formState
@@ -44,7 +44,7 @@ export function AddDepartmentModal({ isOpen, onClose }: AddDepartmentModalProps)
     const onSubmit = async (data: AddDepartmentForm) => {
         try {
             setIsSubmitting(true)
-            await create(data)
+            await update(department.id, data)
             queryClient.invalidateQueries({ queryKey: ['departments'] })
             toast.success(t('success'))
             handleModalClose()
@@ -55,8 +55,6 @@ export function AddDepartmentModal({ isOpen, onClose }: AddDepartmentModalProps)
         }
     }
 
-    
-
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleModalClose() }}>
             <DialogContent>
@@ -66,37 +64,37 @@ export function AddDepartmentModal({ isOpen, onClose }: AddDepartmentModalProps)
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
                         <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('nameLabel')}</FormLabel>
-                                        <FormControl>
-                                            <Input 
-                                                {...field}
-                                                disabled={isSubmitting}
-                                                placeholder={t('namePlaceholder')}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
-                            />
+                            control={form.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t('nameLabel')}</FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            {...field}
+                                            disabled={isSubmitting}
+                                            
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
 
                         <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('descriptionLabel')}</FormLabel>
-                                        <FormControl>
-                                            <Input 
-                                                {...field}
-                                                disabled={isSubmitting}
-                                                placeholder={t('descriptionPlaceholder')}
-                                            />
-                                        </FormControl>
-                                    </FormItem>
-                                )}
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t('descriptionLabel')}</FormLabel>
+                                    <FormControl>
+                                        <Input 
+                                            {...field}
+                                            disabled={isSubmitting}
+                                            
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                            )}
                         />
                         <DialogFooter>
                             <Button

@@ -418,16 +418,27 @@
 				"employeesCount": "Сотрудники"
 			},
 			"modal": {
-				"heading": "Добавление отдела",
-				"nameLabel": "Название отдела",
-				"descriptionLabel": "Описание отдела",
-				"namePlaceholder": "Введите название отдела",
-				"descriptionPlaceholder": "Введите описание отдела",
-				"submitButton": "Добавить",
-				"cancelButton": "Отмена",
-				"success": "Отдел успешно добавлен",
-				"error": "Ошибка при добавлении отдела",
-				"submitting": "Добавление отдела..."
+				"add": {
+					"heading": "Добавление отдела",
+					"nameLabel": "Название",
+					"descriptionLabel": "Описание",
+					"namePlaceholder": "Введите название отдела",
+					"descriptionPlaceholder": "Введите описание отдела",
+					"submitButton": "Добавить",
+					"cancelButton": "Отмена",
+					"success": "Отдел успешно добавлен",
+					"error": "Ошибка при добавлении отдела",
+					"submitting": "Добавление отдела..."
+				},
+				"edit": {
+					"heading": "Редактирование отдела",
+					"nameLabel": "Название",
+					"descriptionLabel": "Описание",
+					"submitButton": "Сохранить",
+					"success": "Отдел успешно обновлен",
+					"error": "Ошибка при изменени отдела",
+					"submitting": "Сохранение отдела..."
+				}
 			},
 			"addDepartment": "Добавить"
 		}
