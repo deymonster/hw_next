@@ -1,5 +1,5 @@
 import { Department } from '@prisma/client';
-import { getDepartments, getDepartmentsWithCounts, createDepartment, updateDepartment, deleteDepartment } from '@/app/actions/department';
+import { getDepartmentsWithCounts, createDepartment, updateDepartment, deleteDepartment } from '@/app/actions/department';
 import { IDepartmentCreateInput } from '@/services/department/department.interface';
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 

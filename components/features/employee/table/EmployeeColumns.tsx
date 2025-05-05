@@ -1,0 +1,80 @@
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { ColumnDef } from "@tanstack/react-table"
+import { ArrowUpDown } from "lucide-react"
+import { Employee, Department, Device } from "@prisma/client"
+
+type EmployeeWithRelations = Employee & {
+    department?: Department | null;
+    devices?: Device[];
+}
+
+export function createEmployeeColumns(t: (key: string) => string): ColumnDef<Employee>[] {
+    const columns: ColumnDef<EmployeeWithRelations>[] = [
+        {
+            accessorKey: 'fullName',
+            header: ({column}) => {
+                return (
+                    <Button
+                        variant='ghost'
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="w-full justify-center"
+                    >
+                        {t('table.columns.fullName')}
+                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                    </Button>
+                )
+            },
+            cell: ({row}) => (
+                <div className="text-center w-full">
+                    {`${row.original.firstName} ${row.original.lastName}`}
+                </div>
+            )
+        },
+        
+        
+        {
+            accessorKey: 'department',
+            header: ({column}) => {
+                return (
+                    <Button
+                        variant='ghost'
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="w-full justify-center"
+                    >
+                        {t('table.columns.department')}
+                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                    </Button>
+                )
+            },
+            cell: ({row}) => (
+                <div className="text-center w-full">
+                    {row.original.department?.name || t('noDepartment')}
+                </div>
+            )
+        },
+        {
+            accessorKey: 'devices',
+            header: ({column}) => {
+                return (
+                    <Button
+                        variant='ghost'
+                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                        className="w-full justify-center"
+                    >
+                        {t('table.columns.devicesCount')}
+                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                    </Button>
+                )
+            },
+            cell: ({row}) => (
+                <div className="text-center w-full">
+                    <Badge variant="secondary">
+                        {row.original.devices?.length || 0}
+                    </Badge>
+                </div>
+            )
+        }
+    ]
+    return columns
+}

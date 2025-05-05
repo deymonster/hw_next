@@ -36,7 +36,7 @@
 				"events": "События",
 				"departments": "Отделы",
 				"inventory": "Инвентаризация",
-				"users": "Пользователи"
+				"users": "Сотрудники"
 			},
 			"userNav": {
 				"home": "Главная",
@@ -441,6 +441,59 @@
 				}
 			},
 			"addDepartment": "Добавить"
+		},
+		"employees": {
+			"header": {
+				"heading": "Сотрудники",
+				"description": "Управление сотрудниками компании"
+			},
+			"table": {
+				"columns": {
+					"fullName": "ФИО",
+					"position": "Должность",
+					"email": "Email",
+					"phone": "Телефон",
+					"department": "Отдел",
+					"devicesCount": "Устройства"
+					},
+				"empty": "Сотрудники не найдены",
+				"loading": "Загрузка списка сотрудников...",
+				"search": "Поиск сотрудников...",
+				"searchPlaceholder": "Поиск по имени или фамилии..."
+			},
+
+			"modal": {
+				"add": {
+					"heading": "Добавление сотрудника",
+					"nameLabel": "Имя",
+					"lastNameLabel": "Фамилия",
+					"namePlaceholder": "Введите имя сотрудника",
+					"lastNamePlaceholder": "Введите фамилию сотрудника",
+					"positionLabel": "Должность",
+					"positionPlaceholder": "Введите должность сотрудника",
+					"emailLabel": "Email",
+					"emailPlaceholder": "Введите email сотрудника",
+					"phoneLabel": "Телефон",
+					"phonePlaceholder": "Введите телефон сотрудника",
+					"departmentLabel": "Отдел",
+					"departmentPlaceholder": "Выберите отдел",
+					"submitButton": "Добавить",
+					"cancelButton": "Отмена",
+					"success": "Сотрудник успешно добавлен",
+					"error": "Ошибка при добавлении сотрудника",
+					"submitting": "Добавление сотрудника..."
+				},
+				"edit": {
+					"heading": "Редактирование сотрудника",
+					"nameLabel": "Имя",
+					"lastNameLabel": "Фамилия",
+					"submitButton": "Сохранить",
+					"success": "Данные сотрудника успешно обновлены",
+					"error": "Ошибка при обновлении сотрудника",
+					"submitting": "Обновление сотрудника..."
+				}
+			},
+			"addEmployee": "Добавить"
 		}
 	},
 	"components": {

@@ -38,4 +38,7 @@ export interface IEmployeeRepository {
     findByEmail(email: string): Promise<Employee | null>
     findByDepartment(departmentId: string): Promise<Employee[]>
     findByRole(position: string): Promise<Employee[]>
+    getDevicesCount(employeeId: string): Promise<number>
+    unassignDevices(employeeId: string): Promise<void>
+    delete(id: string, unassignDevices?: boolean): Promise<Employee>
 }

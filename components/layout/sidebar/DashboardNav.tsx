@@ -34,7 +34,7 @@ export function DashboardNav() {
         },
         {
             label: t('users'),
-            href: '/dashboard/users',
+            href: '/dashboard/employees',
             icon: Users
         }
     ]
