@@ -29,7 +29,11 @@ export function createEmployeeColumns(t: (key: string) => string): ColumnDef<Emp
                 <div className="text-center w-full">
                     {`${row.original.firstName} ${row.original.lastName}`}
                 </div>
-            )
+            ),
+            filterFn: (row, columnId, filterValue) => {
+                const fullName = `${row.original.firstName} ${row.original.lastName}`.toLowerCase();
+                return fullName.includes(filterValue.toLowerCase());
+            }
         },
         
         
