@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+	* {
+        @apply border-border transition-colors duration-200;
+    }
 	:root {
 		--background: 240, 7%, 97%;
 		--foreground: 240, 7%, 6%;
@@ -76,13 +79,33 @@
 }
 
 ::-webkit-scrollbar {
-	width: 9px;
+	width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-	@apply bg-background;
+	@apply bg-background/50;
 }
 
 ::-webkit-scrollbar-thumb {
 	@apply rounded-full bg-secondary;
+	hover:bg-secondary/80 transition-colors;
+}
+
+/* Стили для выделения текста */
+::selection {
+    @apply bg-accent text-accent-foreground;
+}
+
+::-moz-selection {
+    @apply bg-accent text-accent-foreground;
+}
+
+/* Специальные стили для выделения в модальных окнах */
+.dialog-content ::selection {
+    @apply bg-secondary/50 text-foreground;
+}
+
+.dialog-content ::-moz-selection {
+    @apply bg-secondary/50 text-foreground;
 }

@@ -57,7 +57,7 @@ export function EditDepartmentModal({ isOpen, onClose, department }: EditDepartm
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleModalClose() }}>
-            <DialogContent>
+            <DialogContent className="dialog-content">
                 <DialogHeader>
                     <DialogTitle>{t('heading')}</DialogTitle>
                 </DialogHeader>
