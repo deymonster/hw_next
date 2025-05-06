@@ -486,11 +486,25 @@
 				"edit": {
 					"heading": "Редактирование сотрудника",
 					"nameLabel": "Имя",
+					"firstNamePlaceholder": "Введите имя сотрудника",
 					"lastNameLabel": "Фамилия",
+					"lastNamePlaceholder": "Введите фамилию сотрудника",
+					"emailLabel": "Email",
+					"emailPlaceholder":"Введите email сотрудника",
+					"phoneLabel": "Телефон",
+					"phonePlaceholder": "Введите телефон сотрудника",
+					"departmentLabel": "Отдел",
+					"departmentPlaceholder": "Выберите отдел",
+					"positionLabel": "Должность",
+					"positionPlaceholder": "Введите должность сотрудника",
 					"submitButton": "Сохранить",
 					"success": "Данные сотрудника успешно обновлены",
 					"error": "Ошибка при обновлении сотрудника",
 					"submitting": "Обновление сотрудника..."
+				},
+				"delete": {
+					"confirmTitle": "Удаление сотрудника",
+					"confirmMessage": "Вы уверены, что хотите удалить сотрудника \"{name}\"? Это действие нельзя отменить. "
 				}
 			},
 			"addEmployee": "Добавить"

@@ -10,21 +10,28 @@ import { useEmployees } from "@/hooks/useEmployee"
 import { Heading } from "@/components/ui/elements/Heading"
 import { ArrowLeft } from "lucide-react"
 import { AddEmployee } from "../add/AddEmployee"
+import { EmployeeDetail } from "../detail/EmployeeDetail"
 
 
 
 export function EmployeesTable() {
     const t = useTranslations('dashboard.employees')
     const { employees, isLoading, error, refetch } = useEmployees()
-    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null)
     const columns = useMemo(() => createEmployeeColumns((key: string) => t(key)), [t])
+
+    // Получаем данные выбранного сотрудника из кэша
+    const selectedEmployee = useMemo(() => {
+        if (!selectedEmployeeId || !employees) return null
+        return employees.find(emp => emp.id === selectedEmployeeId) || null
+    }, [selectedEmployeeId, employees])
 
     if (isLoading) {
         return <div className="flex items-center justify-center p-4">Загрузка сотрудников...</div>
     }
 
     const handleRowClick = (employee: Employee) => {
-        setSelectedEmployee(employee)
+        setSelectedEmployeeId(employee.id)
     }
 
     if (error) {
@@ -54,16 +61,16 @@ export function EmployeesTable() {
                         <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => setSelectedEmployee(null)}
+                            onClick={() => setSelectedEmployeeId(null)}
                         >
                             <ArrowLeft className="h-4 w-4 mr-1" />
                         </Button>
                         Назад
                     </div>
-                    {/* <EmployeeDetail 
+                    <EmployeeDetail 
                         employee={selectedEmployee}
-                        onBack={() => setSelectedEmployee(null)}
-                    /> */}
+                        onBack={() => setSelectedEmployeeId(null)}
+                    />
                 </>
             ) : (
                 <div className='mt-5'>

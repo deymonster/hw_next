@@ -430,6 +430,73 @@
 				}
 			},
 			"addDepartment": "Add"
+		},
+		"employees": {
+			"header": {
+				"heading": "Employees",
+				"description": "Manage employees of your company"
+			},
+			"table": {
+				"columns": {
+					"fullName": "Full Name",
+					"position": "Position",
+					"email": "Email",
+					"phone": "Phone",
+					"department": "Department",
+					"devicesCount": "Devices"
+					},
+				"empty": "Employees not found",
+				"loading": "Loading list of employees...",
+				"search": "Search employees...",
+				"searchPlaceholder": "Search by first name, last name..."
+			},
+
+			"modal": {
+				"add": {
+					"heading": "Adding employee",
+					"nameLabel": "Name",
+					"lastNameLabel": "Last name",
+					"namePlaceholder": "Enter employee name",
+					"lastNamePlaceholder": "Enter employee last name",
+					"positionLabel": "Position",
+					"positionPlaceholder": "Enter employee position",
+					"emailLabel": "Email",
+					"emailPlaceholder": "Enter employee email",
+					"phoneLabel": "Phone",
+					"phonePlaceholder": "Enter employee phone",
+					"departmentLabel": "Department",
+					"departmentPlaceholder": "Select department",
+					"submitButton": "Add",
+					"cancelButton": "Cancel",
+					"success": "Employee successfully added",
+					"error": "Error adding employee",
+					"submitting": "Adding employee..."
+				},
+				"edit": {
+					"heading": "Editing employee",
+					"nameLabel": "Name",
+					"firstNamePlaceholder": "Enter employee name",
+					"lastNameLabel": "Last name",
+					"lastNamePlaceholder": "Enter employee last name",
+					"emailLabel": "Email",
+					"emailPlaceholder": "Enter employee email",
+					"phoneLabel": "Phone",
+					"phonePlaceholder": "Enter employee phone",
+					"departmentLabel": "Department",
+					"departmentPlaceholder": "Select department",
+					"positionLabel": "Position",
+					"positionPlaceholder": "Enter employee position",
+					"submitButton": "Update",
+					"success": "Employee successfully changed",
+					"error": "Error changing employee",
+					"submitting": "Updating employee..."
+				},
+				"delete": {
+					"confirmTitle": "Deleting employee",
+					"confirmMessage": "Are you sure want to delete employee \"{name}\"? This action cannot be undone. "
+				}
+			},
+			"addEmployee": "Add"
 		}
 	},
 	"components": {

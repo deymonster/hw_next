@@ -1,9 +1,8 @@
 'use client'
 
-
 import { Button } from "@/components/ui/button"
 import { DepartmentWithCounts } from "@/hooks/useDepartment"
-import { Building2, Check, FileText, Monitor, Pencil, Trash, UserPlus, Users, X } from "lucide-react"
+import { Building2, FileText, Monitor, Pencil, Trash, UserPlus, Users, X } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useState } from "react"

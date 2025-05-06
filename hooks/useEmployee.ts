@@ -6,6 +6,7 @@ import {
     deleteEmployee 
 } from '@/app/actions/employee'
 import { EmployeeFilterOptions, IEmployeeCreateInput } from '@/services/employee/employee.interfaces'
+import { Employee } from '@prisma/client'
 
 
 export const EMPLOYEES_QUERY_KEY = ['employees'] as const
@@ -30,9 +31,18 @@ export function useEmployees(options?: EmployeeFilterOptions) {
     const updateMutation = useMutation({
         mutationFn: ({ id, data }: { id: string; data: Partial<IEmployeeCreateInput> }) => 
             updateEmployee(id, data),
-        onSuccess: () => {
-            // Инвалидируем кэш после успешного обновления
+        onSuccess: (updatedEmployee) => {
+            // Обновляем все связанные запросы
             queryClient.invalidateQueries({ queryKey: EMPLOYEES_QUERY_KEY })
+            
+            // Обновляем кэш для списка сотрудников
+            queryClient.setQueryData(EMPLOYEES_QUERY_KEY, (oldData: Employee[] | undefined) => {
+                if (!oldData) return [updatedEmployee]
+                return oldData.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp)
+            })
+
+            // Обновляем кэш для конкретного сотрудника
+            queryClient.setQueryData(['employee', updatedEmployee.id], updatedEmployee)
         }
     })
 
@@ -40,9 +50,11 @@ export function useEmployees(options?: EmployeeFilterOptions) {
     const deleteMutation = useMutation({
         mutationFn: ({ id, unassignDevices }: { id: string; unassignDevices?: boolean }) => 
             deleteEmployee(id, unassignDevices),
-        onSuccess: () => {
+        onSuccess: (_, { id }) => {
             // Инвалидируем кэш после успешного удаления
             queryClient.invalidateQueries({ queryKey: EMPLOYEES_QUERY_KEY })
+            // Удаляем кэш конкретного сотрудника
+            queryClient.removeQueries({ queryKey: [...EMPLOYEES_QUERY_KEY, id] })
         }
     })
 

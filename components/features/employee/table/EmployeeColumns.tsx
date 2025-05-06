@@ -73,9 +73,7 @@ export function createEmployeeColumns(t: (key: string) => string): ColumnDef<Emp
             },
             cell: ({row}) => (
                 <div className="text-center w-full">
-                    <Badge variant="secondary">
                         {row.original.devices?.length || 0}
-                    </Badge>
                 </div>
             )
         }
