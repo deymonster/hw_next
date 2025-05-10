@@ -519,6 +519,25 @@
 					"unselectAll": "Снять выделение"
 				}
 			},
+			"detail": {
+				"lastActivity": "Последняя активность",
+				"noData": "Нет данных",
+				"online": "Онлайн",
+				"offline": "Оффлайн",
+				"noDevices": "Нет назначенных устройств",
+				"assignedDevices": "Назначенные устройства",
+				"manageDevices": "Управление устройствами",
+				"deviceCount": "Количество устройств",
+				"position": "Должность",
+				"phoneNotSet": "Не указан",
+				"phone": "Телефон",
+				"email": "Email",
+				"departmentNotSet": "Не назначен",
+				"department": "Отдел",
+				"fullName": "ФИО",
+				"devices": "Устройства",
+				"info": "Информация"
+			},
 			"addEmployee": "Добавить"
 		}
 	},

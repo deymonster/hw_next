@@ -508,6 +508,25 @@
 					"unselectAll": "Unselect all"
 				}
 			},
+			"detail": {
+				"lastActivity": "Last Activity",
+				"noData": "No data",
+				"online": "Online",
+				"offline": "Offline",
+				"noDevices": "No assigned devices",
+				"assignedDevices": "Assigned Devices",
+        		"manageDevices": "Manage Devices",
+				"deviceCount": "Device count",
+				"position": "Position",
+				"phoneNotSet": "Not set",
+				"phone": "Phone",
+				"email": "Email",
+				"departmentNotSet": "Not assigned",
+				"department": "Department",
+				"fullName": "Full name",
+				"devices": "Devices",
+				"info": "Information"
+			},
 			"addEmployee": "Add"
 		}
 	},

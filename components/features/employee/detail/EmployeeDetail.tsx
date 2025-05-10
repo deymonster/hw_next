@@ -100,8 +100,8 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
 
             <Tabs defaultValue="info">
                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="info">Информация</TabsTrigger>
-                    <TabsTrigger value="devices">Устройства</TabsTrigger>
+                    <TabsTrigger value="info">{t('detail.info')}</TabsTrigger>
+                    <TabsTrigger value="devices">{t('detail.devices')}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="info">
@@ -111,7 +111,7 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <User2 className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">ФИО</h3>
+                                        <h3 className="font-medium">{t('detail.fullName')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">
                                         {`${employee.firstName} ${employee.lastName}`}
@@ -121,17 +121,17 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Отдел</h3>
+                                        <h3 className="font-medium">{t('detail.department')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">
-                                        {employee.department?.name || 'Не назначен'}
+                                        {employee.department?.name || t('detail.departmentNotSet')}
                                     </p>
                                 </div>
 
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Mail className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Email</h3>
+                                        <h3 className="font-medium">{t('detail.email')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">{employee.email}</p>
                                 </div>
@@ -139,17 +139,17 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Phone className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Телефон</h3>
+                                        <h3 className="font-medium">{t('detail.phone')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">
-                                        {employee.phone || 'Не указан'}
+                                        {employee.phone || t('detail.phoneNotSet')}
                                     </p>
                                 </div>
 
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Briefcase className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Должность</h3>
+                                        <h3 className="font-medium">{t('detail.position')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">{employee.position}</p>
                                 </div>
@@ -157,7 +157,7 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Monitor className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Количество устройств</h3>
+                                        <h3 className="font-medium">{t('detail.deviceCount')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">
                                         {employee.devices?.length || 0}
@@ -171,17 +171,18 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
                 <TabsContent value="devices">
                     <Card>
                         <CardContent className="pt-6">
-                            <div className="flex justify-end mb-4">
+                            <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-medium">{t('detail.assignedDevices')}</h3>
                             <Button onClick={() => setIsDevicesModalOpen(true)}>
                                     <Monitor className="mr-2 h-4 w-4" />
-                                    Добавить устройство
+                                    {t('detail.manageDevices')}
                                 </Button>
                             </div>
                             
                             <div className="space-y-4">
                             {!employee.devices || employee.devices.length === 0 ? (
                                 <div className="text-center text-muted-foreground py-8">
-                                    <p>Нет назначенных устройств</p>
+                                    <p>{t('detail.noDevices')}</p>
                                 </div>
                             ) : (
                                 employee.devices.map(device => (
@@ -201,14 +202,14 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
                                                         </span>
                                                         <div 
                                                             className={`w-2 h-2 rounded-full ${device.status?.isOnline ? 'bg-green-500' : 'bg-red-500'}`}
-                                                            title={device.status?.isOnline ? 'Онлайн' : 'Оффлайн'}
+                                                            title={device.status?.isOnline ? t('detail.online') : t('detail.offline')}
                                                         />
                                                     </div>
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mt-1">
-                                                    Последняя активность: {device.status?.lastSeen 
-                                                        ? new Date(device.status.lastSeen).toLocaleString() 
-                                                        : 'Нет данных'}
+                                                {t('detail.lastActivity')}: {device.status?.lastSeen 
+                                                    ? new Date(device.status.lastSeen).toLocaleString() 
+                                                    : t('detail.noData')}
                                                 </p>
                                             </div>
                                         </div>
