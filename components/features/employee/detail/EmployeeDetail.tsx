@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useState } from "react"
 import { useEmployees } from "@/hooks/useEmployee"
-import { Department, Device, Employee } from "@prisma/client"
+import { Department, Device, DeviceStatus, Employee } from "@prisma/client"
 import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 import { useQueryClient } from "@tanstack/react-query"
@@ -12,10 +12,17 @@ import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
 import { Button } from "@/components/ui/button"
 import { Briefcase, Building2, Mail, Monitor, Phone, Trash2, User2 } from "lucide-react"
 import { EditEmployeeModal } from "../edit/forms/EditModal"
+import { ManageDevicesModal } from "../device/forms/ManageDevicesModal"
 
 type EmployeeWithRelations = Employee & {
     department?: Department | null;
-    devices?: Device[];
+    devices?: (Device & {
+        status?: {
+            isOnline: boolean;
+            lastSeen: Date | null;
+            deviceStatus: DeviceStatus;
+        }
+    })[];
 }
 
 interface EmployeeDetailProps {
@@ -28,6 +35,7 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
     const { deleteEmployee } = useEmployees()
     const [isDeleting, setIsDeleting] = useState(false)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false)
     const queryClient = useQueryClient()
 
     const handleDelete = async () => {
@@ -164,12 +172,55 @@ export  function EmployeeDetail({ employee, onBack }: EmployeeDetailProps) {
                     <Card>
                         <CardContent className="pt-6">
                             <div className="flex justify-end mb-4">
-                                <Button>
+                            <Button onClick={() => setIsDevicesModalOpen(true)}>
                                     <Monitor className="mr-2 h-4 w-4" />
                                     Добавить устройство
                                 </Button>
                             </div>
-                            {/* Здесь будет таблица устройств */}
+                            
+                            <div className="space-y-4">
+                            {!employee.devices || employee.devices.length === 0 ? (
+                                <div className="text-center text-muted-foreground py-8">
+                                    <p>Нет назначенных устройств</p>
+                                </div>
+                            ) : (
+                                employee.devices.map(device => (
+                                    <div key={device.id} className="bg-secondary/20 rounded-lg p-4 hover:bg-secondary/30 transition-colors">
+                                        <div className="flex items-start space-x-4">
+                                            <div className="bg-primary/10 rounded-full p-2">
+                                                <Monitor className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-sm font-medium">
+                                                        {device.name}
+                                                    </h3>
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="text-xs bg-secondary rounded-full px-2 py-1">
+                                                            {device.ipAddress}
+                                                        </span>
+                                                        <div 
+                                                            className={`w-2 h-2 rounded-full ${device.status?.isOnline ? 'bg-green-500' : 'bg-red-500'}`}
+                                                            title={device.status?.isOnline ? 'Онлайн' : 'Оффлайн'}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    Последняя активность: {device.status?.lastSeen 
+                                                        ? new Date(device.status.lastSeen).toLocaleString() 
+                                                        : 'Нет данных'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                            </div>
+                            <ManageDevicesModal
+                                isOpen={isDevicesModalOpen}
+                                onClose={() => setIsDevicesModalOpen(false)}
+                                employee={employee}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>

@@ -17,6 +17,11 @@ export interface IEmployeeCreateInput {
     phone?: string
     position?: string
     departmentId?: string
+    devices?: {
+        set?: { id: string }[]
+        connect?: { id: string }[]
+        disconnect?: { id: string }[]
+    }
 }
 
 export interface IEmployeeFindManyArgs {

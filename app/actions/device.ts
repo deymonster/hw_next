@@ -45,7 +45,17 @@ export async function createDevice(data: IDeviceCreateInput): Promise<{
 
 export async function getDevices(options?: DeviceFilterOptions) {
   console.log('[GET_DEVICES] Fetching devices from database directly (no cache)');
-  return services.data.device.findAll(options);
+  try {
+    const devices = await services.data.device.findAll(options);
+    console.log('[GET_DEVICES] Результат запроса:', {
+      count: devices?.length || 0,
+      devices: devices || []
+    });
+    return devices;
+  } catch (error) {
+    console.error('[GET_DEVICES] Ошибка при получении устройств:', error);
+    throw error;
+  }
 }
 
 export async function getDevicesStats() {
@@ -130,6 +140,31 @@ export async function updateAllDeviceStatuses(): Promise<number> {
     } catch (error) {
         console.error('Failed to update device statuses:', error);
         return 0;
+    }
+}
+
+export async function getDeviceStatus(id: string): Promise<{
+    success: boolean,
+    data?: {
+        isOnline: boolean,
+        lastSeen: Date | null,
+        status: DeviceStatus
+    },
+    error?: string
+}> {
+    console.log('[DEVICE_STATUS] Getting status for device:', id);
+    try {
+        const status = await services.data.device.getDeviceStatus(id);
+        return {
+            success: true,
+            data: status
+        };
+    } catch (error) {
+        console.error('[DEVICE_STATUS] Error:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get device status'
+        };
     }
 }
 

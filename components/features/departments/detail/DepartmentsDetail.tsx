@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { DepartmentWithCounts } from "@/hooks/useDepartment"
-import { Building2, FileText, Monitor, Pencil, Trash, UserPlus, Users, X } from "lucide-react"
+import { Building2, FileText, Monitor, Pencil, Trash, Users } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useState } from "react"
@@ -139,13 +139,38 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
                 <TabsContent value="employees">
                     <Card>
                         <CardContent className="pt-6">
-                            <div className="flex justify-end mb-4">
-                                <Button>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    Добавить сотрудника
-                                </Button>
-                            </div>
-                            {/* Здесь будет таблица сотрудников */}
+                        {department.employees && department.employees.length > 0 ? (
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-3 gap-4 font-medium text-sm text-muted-foreground pb-2 border-b">
+                                        <div>ФИО</div>
+                                        <div>Должность</div>
+                                        <div>Контакты</div>
+                                    </div>
+                                    {department.employees.map((employee) => (
+                                        <div key={employee.id} className="grid grid-cols-3 gap-4 text-sm">
+                                            <div className="flex items-center space-x-2">
+                                                <Users className="h-4 w-4 text-muted-foreground" />
+                                                <span>{`${employee.lastName} ${employee.firstName}`}</span>
+                                            </div>
+                                            <div>{employee.position}</div>
+                                            <div className="space-y-1">
+                                                {employee.email && (
+                                                    <div className="text-muted-foreground">{employee.email}</div>
+                                                )}
+                                                {employee.phone && (
+                                                    <div className="text-muted-foreground">{employee.phone}</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center text-muted-foreground py-8">
+                                    <Users className="h-8 w-8 mx-auto mb-2" />
+                                    <p>В этом отделе пока нет сотрудников</p>
+                                </div>
+                            )}
+                            
                         </CardContent>
                     </Card>
                 </TabsContent>

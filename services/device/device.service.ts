@@ -123,5 +123,32 @@ export class DeviceService
         })
     }
 
+    async getDeviceStatus(id: string): Promise<{
+        isOnline: boolean,
+        lastSeen: Date | null,
+        status: DeviceStatus
+    }> {
+        const device = await this.model.findUnique({
+            where: { id },
+            select: {
+                lastSeen: true,
+                status: true
+            }
+        })
+
+        if (!device) {
+            throw new Error('Device not found')
+        }
+
+        const isOnline = device.lastSeen
+            ? new Date().getTime() - device.lastSeen.getTime() < 5 * 60 * 1000
+            : false
+        return {
+            isOnline,
+            lastSeen: device.lastSeen,
+            status: device.status
+        }
+    }
+
 
 }

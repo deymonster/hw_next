@@ -40,8 +40,33 @@ export class DepartmentService
         })
     }
 
-    async findAllWithCounts(): Promise<(Department & { deviceCount: number; employeesCount: number })[]> {
-        const departments = await this.findAll();
+    async findAllWithCounts(): Promise<(Department & { 
+        deviceCount: number; 
+        employeesCount: number;
+        employees: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            email: string | null;
+            phone: string | null;
+            position: string | null; 
+        }[];
+    })[]> {
+        const departments = await this.model.findMany({
+            include: {
+                employees: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
+                        position: true
+                    }
+                }
+            },
+            orderBy: { name: 'asc' }
+        });
         
         const departmentsWithCounts = await Promise.all(
             departments.map(async (department) => {
@@ -53,7 +78,8 @@ export class DepartmentService
                 return {
                     ...department,
                     deviceCount,
-                    employeesCount
+                    employeesCount,
+                    employees: department.employees
                 };
             })
         );

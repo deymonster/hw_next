@@ -175,6 +175,7 @@ export function useDevices(options?: UseDevicesOptions) {
         }
     }, [options, setIsLoading])
 
+    
 
     return {
         devices,

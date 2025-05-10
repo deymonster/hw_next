@@ -6,6 +6,14 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 export type DepartmentWithCounts = Department & {
     deviceCount: number;
     employeesCount: number;
+    employees?: {
+        id: string;
+        firstName: string;
+        lastName: string;
+        email: string | null;
+        phone: string | null;
+        position: string | null;
+    }[];
 }
 
 export function useDepartment() {

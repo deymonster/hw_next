@@ -494,6 +494,18 @@
 				"delete": {
 					"confirmTitle": "Deleting employee",
 					"confirmMessage": "Are you sure want to delete employee \"{name}\"? This action cannot be undone. "
+				},
+				"devices": {
+					"heading": "Manage Employee Devices",
+					"loading": "Loading devices...",
+					"noDevices": "No devices available",
+					"submit": "Save",
+					"cancel": "Cancel",
+					"success": "Employee devices successfully updated",
+					"submitting": "Saving...",
+					"error": "Error updating devices",
+					"selectAll": "Select all devices",
+					"unselectAll": "Unselect all"
 				}
 			},
 			"addEmployee": "Add"

@@ -46,9 +46,7 @@ export function createDepartmentColumns(t: (key: string) => string): ColumnDef<D
             cell: ({row}) => {
                 return (
                     <div className="text-center w-full">
-                        <Badge variant="secondary">
                             {row.original.deviceCount || 0}
-                        </Badge>
                     </div>
                     
                 )
@@ -72,9 +70,7 @@ export function createDepartmentColumns(t: (key: string) => string): ColumnDef<D
             cell: ({row}) => {
                 return (
                     <div className="text-center w-full">
-                        <Badge variant="secondary">
                             {row.original.employeesCount || 0}
-                        </Badge>
                     </div>
                 )
             }
