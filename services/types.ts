@@ -12,6 +12,8 @@ import { NotificationFactory } from './notifications/notification.factory'
 import { ILoggerService } from './logger/logger.interface'
 import { DepartmentService } from './department/department.service'
 import { EmployeeService } from './employee/employee.service'
+import { InventoryService } from './inventory/inventory.service'
+
 
 
 // Сервисы для работы с данными
@@ -24,6 +26,7 @@ export interface IDataServices {
     device: DeviceService
     department: DepartmentService
     employee: EmployeeService
+    inventory: InventoryService
 }
 
 // Инфраструктурные сервисы

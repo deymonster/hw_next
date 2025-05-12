@@ -24,6 +24,7 @@ model User {
   notificationSettings NotificationSettings?
   smtpSettings         SmtpSettings?
   telegramSettings     TelegramSettings?
+  inventories          Inventory[]
 }
 
 model Event {
@@ -110,6 +111,7 @@ model Device {
   lastSeen       DateTime? 
   department     Department?    @relation("DepartmentDevices", fields: [departmentId], references: [id])
   employee       Employee?    @relation(fields: [employeeId], references: [id]) 
+  inventoryItems InventoryItem[]
 
   @@index([status])
   @@index([agentKey])
@@ -128,6 +130,7 @@ model Employee {
   departmentId    String?
   department      Department? @relation(fields: [departmentId], references: [id]) 
   devices         Device[]
+  inventoryItems  InventoryItem[]
 
   @@index([departmentId]) 
 }
@@ -140,6 +143,59 @@ model Department {
   updatedAt   DateTime @updatedAt
   devices     Device[] @relation("DepartmentDevices")
   employees   Employee[]
+  inventoryItems InventoryItem[]
+}
+
+model Inventory {
+  id           String    @id @default(uuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  startDate    DateTime  @default(now())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  items        InventoryItem[]
+
+  @@index([userId])
+  @@index([startDate])
+
+}
+
+model InventoryItem {
+  id           String     @id @default(uuid())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deviceId     String
+  device       Device   @relation(fields: [deviceId], references: [id])
+  inventoryId  String
+  inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  // Информация об устройстве на момент инвентаризации
+  deviceName   String    // Имя устройства
+  ipAddress    String    // IP адрес
+  serialNumber String?   // Серийный номер
+
+  // Данные об устройстве (если устройство доступно)
+  processor     String?
+  motherboard   Json?
+  memory        Json? // массив планок памяти [{name: "Hynix", size: "8Gb"}]
+  storage       Json? // массив накопителей
+  networkCards  Json? // массив сетевых карт
+  videoCards    Json? // массив видеокарт
+
+  // Метрики
+  diskUsage     Json? // массив использования дисков %
+
+  // Информация о принадлежности
+  employeeId   String?   
+  employee     Employee? @relation(fields: [employeeId], references: [id])
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  @@index([deviceId])
+  @@index([inventoryId])
+  @@index([employeeId])
+  @@index([departmentId])
+
 }
 
 enum Role {
@@ -180,3 +236,5 @@ enum DeviceType {
   WINDOWS
   LINUX
 }
+
+

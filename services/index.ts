@@ -13,6 +13,7 @@ import { Logger } from './logger/logger.service'
 import { DepartmentService } from './department/department.service';
 import type { IServices, IDataServices, IInfrastructureServices } from './types'
 import { EmployeeService } from "./employee/employee.service";
+import { InventoryService } from './inventory/inventory.service';
 
 class ServiceFactory {
     private static instance: ServiceFactory;
@@ -32,7 +33,8 @@ class ServiceFactory {
             notification_settings: new NotificationSettingsService(prisma),
             device: deviceService,
             department: new DepartmentService(prisma),
-            employee: new EmployeeService(prisma)
+            employee: new EmployeeService(prisma),
+            inventory: new InventoryService(prisma)
         }
 
         const prometheusService = new PrometheusService({
