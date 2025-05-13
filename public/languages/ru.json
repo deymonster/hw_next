@@ -558,7 +558,8 @@
 				"refetch": "Повторить",
 				"searchPlaceholder": "Поиск по дате...",
 				"dateFrom": "Дата с",
-				"dateTo": "Дата по"
+				"dateTo": "Дата по",
+				"create": "Создать инвентаризацию"
 			},
 			"status": {
 				"inProgress": "В процессе",

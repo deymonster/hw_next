@@ -8,6 +8,7 @@ import { createInventoryColumns } from "./InventoryColumns"
 import { Heading } from "@/components/ui/elements/Heading"
 import { useInventory } from "@/hooks/useInventory"
 import { DatePicker } from "@/components/ui/elements/DatePicker"
+import { AddInventory } from "../add/AddInventory"
 
 
 interface DateRange {
@@ -93,6 +94,7 @@ export function InventoryTable() {
                     description={t('header.description')}
                     size='lg'
                 />
+                <AddInventory />
             </div>
             <div className='mt-5'>
             <DateRangeFilter />
