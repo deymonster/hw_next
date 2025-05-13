@@ -556,7 +556,9 @@
 				"error": "Ошибка при загрузке инвентаризаций",
 				"empty": "Инвентаризаций не найдено",
 				"refetch": "Повторить",
-				"searchPlaceholder": "Поиск по дате..."
+				"searchPlaceholder": "Поиск по дате...",
+				"dateFrom": "Дата с",
+				"dateTo": "Дата по"
 			},
 			"status": {
 				"inProgress": "В процессе",

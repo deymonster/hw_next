@@ -1,13 +1,19 @@
 'use client'
 
 import { useTranslations } from "next-intl"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/ui/elements/DataTable"
 import { createInventoryColumns } from "./InventoryColumns"
 import { Heading } from "@/components/ui/elements/Heading"
 import { useInventory } from "@/hooks/useInventory"
+import { DatePicker } from "@/components/ui/elements/DatePicker"
 
+
+interface DateRange {
+    from: Date | undefined
+    to: Date | undefined
+}
 
 export function InventoryTable() {
     const t = useTranslations('dashboard.inventory')
@@ -17,14 +23,48 @@ export function InventoryTable() {
         inventoriesError, 
         refetch 
     } = useInventory()
-    const formattedInventories = useMemo(() => 
-        inventories.map(inventory => ({
+    const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined })
+
+    const formattedInventories = useMemo(() => {
+        let filtered = inventories.map(inventory => ({
             ...inventory,
             items: inventory.items || [],
             departments: inventory.departments || []
-        })), [inventories])
+        }))
+
+        // Фильтрация по диапазону дат
+        if (dateRange.from || dateRange.to) {
+            filtered = filtered.filter(inventory => {
+                const createdAt = new Date(inventory.createdAt)
+                const isAfterFrom = !dateRange.from || createdAt >= dateRange.from
+                const isBeforeTo = !dateRange.to || createdAt <= dateRange.to
+                return isAfterFrom && isBeforeTo
+            })
+        }
+
+        return filtered
+    }, [inventories, dateRange])
+
     const columns = useMemo(() => createInventoryColumns((key: string) => t(key)), [t])
 
+    const DateRangeFilter = () => (
+        <div className="flex items-center gap-2 mb-4">
+            <DatePicker
+                value={dateRange.from}
+                onChange={(date) => setDateRange(prev => ({ ...prev, from: date }))}
+                placeholder={t('table.dateFrom')}
+                className="w-[200px]"
+            />
+            <span className="text-muted-foreground">—</span>
+            <DatePicker
+                value={dateRange.to}
+                onChange={(date) => setDateRange(prev => ({ ...prev, to: date }))}
+                placeholder={t('table.dateTo')}
+                className="w-[200px]"
+            />
+        </div>
+    )
+    
     if (isLoadingInventories) {
         return (
             <div className="flex items-center justify-center p-4">
@@ -55,6 +95,7 @@ export function InventoryTable() {
                 />
             </div>
             <div className='mt-5'>
+            <DateRangeFilter />
             <DataTable 
                     columns={columns}
                     data={formattedInventories}
@@ -63,11 +104,6 @@ export function InventoryTable() {
                         pageSize: 10,
                         showPageSize: true,
                         showPageNumber: true
-                    }}
-                    filtering={{
-                        enabled: true,
-                        column: 'createdAt',
-                        placeholder: t('table.searchPlaceholder')
                     }}
                 />
             </div>
