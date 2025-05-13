@@ -144,6 +144,7 @@ model Department {
   devices     Device[] @relation("DepartmentDevices")
   employees   Employee[]
   inventoryItems InventoryItem[]
+  inventories Inventory[]
 }
 
 model Inventory {
@@ -154,6 +155,7 @@ model Inventory {
   userId       String
   user         User      @relation(fields: [userId], references: [id])
   items        InventoryItem[]
+  departments  Department[] 
 
   @@index([userId])
   @@index([startDate])
@@ -168,11 +170,6 @@ model InventoryItem {
   device       Device   @relation(fields: [deviceId], references: [id])
   inventoryId  String
   inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
-
-  // Информация об устройстве на момент инвентаризации
-  deviceName   String    // Имя устройства
-  ipAddress    String    // IP адрес
-  serialNumber String?   // Серийный номер
 
   // Данные об устройстве (если устройство доступно)
   processor     String?

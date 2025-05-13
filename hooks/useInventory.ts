@@ -6,46 +6,118 @@ import {
     addInventoryItem,
     removeInventoryItem,
     getLatestInventory,
-    getInventoryWithItems
+    getInventoryWithItems,
+    getInventories,
+    ActionResponse
 } from '@/app/actions/inventory'
 import { IInventoryItemCreateInput } from '@/services/inventory/inventory.interface'
+import { Department, Inventory, Role, User } from '@prisma/client'
 
 /**
  * Ключ для кэширования запросов инвентаризации
  */
 export const INVENTORY_QUERY_KEY = ['inventory'] as const
 
-/**
- * Хук для управления инвентаризацией
- * @param userId - Идентификатор пользователя (опционально)
- * @returns {Object} Объект с методами и состоянием для работы с инвентаризацией
- * 
- * @property {Object} latestInventory - Последняя инвентаризация пользователя
- * @property {boolean} isLoading - Флаг загрузки данных
- * @property {Error} error - Ошибка при загрузке данных
- * 
- * @property {Function} createInventory - Создание новой инвентаризации
- * @property {Function} addInventoryItem - Добавление устройства в инвентаризацию
- * @property {Function} removeInventoryItem - Удаление устройства из инвентаризации
- * @property {Function} getInventoryDetails - Получение детальной информации об инвентаризации
- * 
- * @property {boolean} isCreating - Флаг создания инвентаризации
- * @property {boolean} isAddingItem - Флаг добавления устройства
- * @property {boolean} isRemovingItem - Флаг удаления устройства
- * 
- * @property {Error} createError - Ошибка при создании инвентаризации
- * @property {Error} addItemError - Ошибка при добавлении устройства
- * @property {Error} removeItemError - Ошибка при удалении устройства
- * 
- * @property {Function} refetch - Обновление данных инвентаризации
- */
-export function useInventory(userId?: string) {
+// Расширяем тип Inventory для включения связанных данных
+interface InventoryWithRelations extends Inventory {
+    user: {
+        id: string;
+        name: string;
+        // Делаем остальные поля опциональными
+        createdAt?: Date;
+        updatedAt?: Date;
+        email?: string;
+        password?: string;
+        role?: Role;
+        emailVerified?: boolean;
+        verificationToken?: string | null;
+        resetToken?: string | null;
+        resetTokenExpires?: Date | null;
+        image?: string | null;
+    }
+    items?: any[]
+    departments?: Department[]
+}
+
+
+interface UseInventoryReturn {
+    inventories: InventoryWithRelations[]
+    isLoadingInventories: boolean
+    inventoriesError: Error | null
+    
+    latestInventory: InventoryWithRelations | null
+    isLoading: boolean
+    error: Error | null
+
+    createInventory: (userId: string) => void
+    addInventoryItem: (params: { inventoryId: string; item: IInventoryItemCreateInput }) => void
+    removeInventoryItem: (params: { inventoryId: string; itemId: string }) => void
+    getInventoryDetails: (inventoryId: string) => Promise<ActionResponse<Inventory>>
+
+    isCreating: boolean
+    isAddingItem: boolean
+    isRemovingItem: boolean
+
+    createError: Error | null
+    addItemError: Error | null
+    removeItemError: Error | null
+
+    refetch: () => void
+}
+
+
+export function useInventory(userId?: string): UseInventoryReturn {
     const queryClient = useQueryClient()
+
+    /**
+     * Запрос всех инвентаризаций
+     */
+    const { 
+        data: inventoriesResponse,
+        isLoading: isLoadingInventories,
+        error: inventoriesError
+    } = useQuery({
+        queryKey: [...INVENTORY_QUERY_KEY, 'all', userId],
+        queryFn: () => getInventories(userId),
+        select: (data) => {
+            if (data.success && data.data) {
+                return {
+                    success: true,
+                    data: data.data.map(inventory => ({
+                        ...inventory,
+                        user: {
+                            id: inventory.userId,
+                            name: inventory.user?.name || 'Unknown',
+                            // Добавляем опциональные поля с undefined
+                            createdAt: undefined,
+                            updatedAt: undefined,
+                            email: undefined,
+                            password: undefined,
+                            role: undefined,
+                            emailVerified: undefined,
+                            verificationToken: undefined,
+                            resetToken: undefined,
+                            resetTokenExpires: undefined,
+                            image: undefined
+                        },
+                        items: [],
+                        departments: []
+                    })) as InventoryWithRelations[]
+                }
+            }
+            return { success: false, data: [] }
+        },
+        enabled: true
+    })
 
     /**
      * Запрос последней инвентаризации пользователя
      */
-    const { data: latestInventory = null, isLoading, error } = useQuery({
+    const { 
+        data: latestInventoryResponse, 
+        isLoading, 
+        error 
+    } = useQuery({
         queryKey: [...INVENTORY_QUERY_KEY, 'latest', userId],
         queryFn: () => userId ? getLatestInventory(userId) : null,
         enabled: !!userId
@@ -72,8 +144,13 @@ export function useInventory(userId?: string) {
             // Обновляем все связанные запросы
             queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEY })
             
-            // Обновляем кэш для конкретной инвентаризации
-            queryClient.setQueryData([...INVENTORY_QUERY_KEY, 'details', updatedInventory.data.id], updatedInventory)
+            // Проверяем наличие данных перед обновлением кэша
+            if (updatedInventory.success && updatedInventory.data) {
+                queryClient.setQueryData(
+                    [...INVENTORY_QUERY_KEY, 'details', updatedInventory.data.id], 
+                    updatedInventory
+                )
+            }
         }
     })
 
@@ -100,7 +177,11 @@ export function useInventory(userId?: string) {
     }
 
     return {
-        latestInventory,
+        inventories: (inventoriesResponse?.success && inventoriesResponse.data) || [],
+        isLoadingInventories,
+        inventoriesError,
+
+        latestInventory: (latestInventoryResponse?.success && latestInventoryResponse.data) || null,
         isLoading,
         error,
 

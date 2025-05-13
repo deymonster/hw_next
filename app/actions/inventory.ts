@@ -2,13 +2,26 @@
 
 import { services } from "@/services"
 import { IInventoryItemCreateInput } from "@/services/inventory/inventory.interface"
+import { Inventory as PrismaInventory, InventoryItem as PrismaInventoryItem } from "@prisma/client"
+
+
+/**
+ * Интерфейс инвентаризации с расширенными данными
+ */
+interface Inventory extends PrismaInventory {
+    items: PrismaInventoryItem[]
+    user: {
+        id: string
+        name: string
+    }
+}
 
 
 /**
  * Интерфейс ответа серверного действия
  * @template T - Тип возвращаемых данных
  */
-interface ActionResponse<T = void> {
+export interface ActionResponse<T = void> {
     success: boolean        // Флаг успешности операции
     data?: T               // Опциональные данные операции
     error?: string         // Сообщение об ошибке, если операция не удалась
@@ -17,15 +30,19 @@ interface ActionResponse<T = void> {
 /**
  * Создает новую инвентаризацию для указанного пользователя
  * @param userId - Идентификатор пользователя, создающего инвентаризацию
- * @returns {Promise<ActionResponse>} Объект с результатом операции и созданной инвентаризацией
+ * @returns {Promise<ActionResponse<Inventory>>} Объект с результатом операции и созданной инвентаризацией
  */
-export async function createInventory(userId: string): Promise<ActionResponse<any>> {
+export async function createInventory(userId: string): Promise<ActionResponse<Inventory>> {
+    if (!userId) {
+        return { success: false, error: 'ID пользователя обязателен' }
+    }
+    
     try {
         const inventory = await services.data.inventory.create({
             userId,
             startDate: new Date()
         })
-        return { success: true, data: inventory }
+        return { success: true, data: inventory as Inventory }
     } catch (error) {
         return { success: false, error: (error as Error).message }
     }
@@ -35,9 +52,13 @@ export async function createInventory(userId: string): Promise<ActionResponse<an
  * Добавляет устройство в существующую инвентаризацию
  * @param inventoryId - Идентификатор инвентаризации
  * @param item - Данные устройства для добавления в инвентаризацию
- * @returns {Promise<ActionResponse>} Объект с результатом операции и добавленным устройством
+ * @returns {Promise<ActionResponse<PrismaInventoryItem>>} Объект с результатом операции и добавленным устройством
  */
-export async function addInventoryItem(inventoryId: string, item: IInventoryItemCreateInput): Promise<ActionResponse<any>> {
+export async function addInventoryItem(inventoryId: string, item: IInventoryItemCreateInput): Promise<ActionResponse<PrismaInventoryItem>> {
+    
+    if (!inventoryId || !item.deviceId) {
+        return { success: false, error: 'ID инвентаризации и устройства обязательны' }
+    }
     try {
         const newItem = await services.data.inventory.addItem(inventoryId, item)
         return { success: true, data: newItem }
@@ -50,7 +71,7 @@ export async function addInventoryItem(inventoryId: string, item: IInventoryItem
  * Удаляет устройство из инвентаризации
  * @param inventoryId - Идентификатор инвентаризации
  * @param itemId - Идентификатор устройства для удаления
- * @returns {Promise<ActionResponse>} Объект с результатом операции
+ * @returns {Promise<ActionResponse<void>>} Объект с результатом операции
  */
 export async function removeInventoryItem(inventoryId: string, itemId: string): Promise<ActionResponse> {
     try {
@@ -64,12 +85,15 @@ export async function removeInventoryItem(inventoryId: string, itemId: string): 
 /**
  * Получает последнюю инвентаризацию пользователя
  * @param userId - Идентификатор пользователя
- * @returns {Promise<ActionResponse>} Объект с результатом операции и данными последней инвентаризации
+ * @returns {Promise<ActionResponse<Inventory | null>>} Объект с результатом операции и данными последней инвентаризации
  */
-export async function getLatestInventory(userId: string): Promise<ActionResponse<any>> {
+export async function getLatestInventory(userId: string): Promise<ActionResponse<Inventory | null>> {
+    if (!userId) {
+        return { success: false, error: 'ID пользователя обязателен' }
+    }
     try {
         const inventory = await services.data.inventory.getLatestInventory(userId)
-        return { success: true, data: inventory }
+        return { success: true, data: inventory as Inventory | null }
     } catch (error) {
         return { success: false, error: (error as Error).message }
     }
@@ -78,12 +102,36 @@ export async function getLatestInventory(userId: string): Promise<ActionResponse
 /**
  * Получает инвентаризацию вместе со всеми её элементами
  * @param id - Идентификатор инвентаризации
- * @returns {Promise<ActionResponse>} Объект с результатом операции и данными инвентаризации с элементами
+ * @returns {Promise<ActionResponse<Inventory>>} Объект с результатом операции и данными инвентаризации с элементами
  */
-export async function getInventoryWithItems(id: string): Promise<ActionResponse<any>> {
+export async function getInventoryWithItems(id: string): Promise<ActionResponse<Inventory>> {
+    if (!id) {
+        return { success: false, error: 'ID инвентаризации обязателен' }
+    }
     try {
         const inventory = await services.data.inventory.findWithItems(id)
-        return { success: true, data: inventory }
+        return { success: true, data: inventory as Inventory }
+    } catch (error) {
+        return { success: false, error: (error as Error).message }
+    }
+}
+
+/**
+ * Получает список всех инвентаризаций
+ * @param userId - Опциональный идентификатор пользователя для фильтрации
+ * @returns {Promise<ActionResponse<Inventory[]>>} Объект с результатом операции и списком инвентаризаций
+ */
+export async function getInventories(userId?: string): Promise<ActionResponse<Inventory[]>>{
+    try {
+        const inventories = await services.data.inventory.findMany({
+            where: userId ? { userId } : undefined,
+            orderBy: { startDate: 'desc' },
+            include: {
+                items: true,
+                user: true
+            }
+        })
+        return { success: true, data: inventories as Inventory[] }
     } catch (error) {
         return { success: false, error: (error as Error).message }
     }
