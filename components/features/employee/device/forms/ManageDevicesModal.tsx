@@ -103,7 +103,7 @@ export function ManageDevicesModal({ isOpen, onClose, employee }: ManageDevicesM
                             </div>
                         ) : (
                             <>
-                                <div className="flex items-start space-x-3 pb-2 border-b">
+                                <div className="flex items-start space-x-3 pb-4 border-b">
                                     <Checkbox
                                         id="select-all"
                                         checked={allDevices?.length > 0 && selectedDevices.size === allDevices?.length}
@@ -116,6 +116,7 @@ export function ManageDevicesModal({ isOpen, onClose, employee }: ManageDevicesM
                                         {selectedDevices.size > 0 ? t('unselectAll') : t('selectAll')}
                                     </label>
                                 </div>
+                                <div className="space-y-4 pt-2">
                                 {allDevices.map(device => (
                                     <div key={device.id} className="flex items-start space-x-3">
                                         <Checkbox
@@ -135,7 +136,9 @@ export function ManageDevicesModal({ isOpen, onClose, employee }: ManageDevicesM
                                             </p>
                                         </div>
                                     </div>
-                            ))}
+                                ))}
+                                </div>
+                                    
                             </>
                             
                         )}

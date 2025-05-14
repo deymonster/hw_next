@@ -7,14 +7,14 @@ import { useState } from "react"
 import { AddInventoryModal } from "./forms/AddModal"
 
 export function AddInventory() {
-    const t = useTranslations('dashboard.inventory.table')
+    const t = useTranslations('dashboard.inventory')
     const [isModalOpen, setIsModalOpen] = useState(false)
     
     return (
         <div className='flex items-center gap-x-4'>
             <Button onClick={() => setIsModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
-                {t('create')}
+                {t('table.create')}
             </Button>
             <AddInventoryModal 
                 isOpen={isModalOpen}
