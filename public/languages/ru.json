@@ -579,7 +579,11 @@
 							"selectAll": "Выбрать все",
                             "unselectAll": "Снять выбор",
                             "departmentPlaceholder": "Выберите отдел",
-                            "nextButton": "Далее"
+                            "nextButton": "Далее",
+							"loading": "Загрузка отделов...",
+							"errors": {
+								"required": "Отдел обязателен для выбора"
+							}
                         }
                     }
 				}

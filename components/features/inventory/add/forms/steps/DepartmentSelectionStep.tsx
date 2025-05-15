@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form"
+import { Form, FormField, FormItem } from "@/components/ui/form"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useDepartment } from "@/hooks/useDepartment"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -10,6 +10,7 @@ import { z } from "zod"
 import { useTranslations } from "next-intl"
 import { ScrollArea } from "@/components/ui/scrollarea"
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 
 
 const departmentSelectionSchema = z.object({
@@ -24,7 +25,7 @@ interface DepartmentSelectionStepProps {
 
 export function DepartmentSelectionStep({ onNext }: DepartmentSelectionStepProps) {
     const t = useTranslations('dashboard.inventory.modal.create.steps.department')
-    const { departments } = useDepartment()
+    const { departments, loading: isLoading } = useDepartment()
     const [selectedDepts, setSelectedDepts] = useState<Set<string>>(new Set())
 
     const form = useForm<DepartmentSelectionForm>({
@@ -35,16 +36,14 @@ export function DepartmentSelectionStep({ onNext }: DepartmentSelectionStepProps
     })
 
     const toggleDepartment = (deptId: string) => {
-        setSelectedDepts(prev => {
-            const next = new Set(prev)
-            if (next.has(deptId)) {
-                next.delete(deptId)
-            } else {
-                next.add(deptId)
-            }
-            return next
-        })
-        form.setValue('departments', Array.from(selectedDepts), { shouldValidate: true })
+        const newSelectedDepts = new Set(selectedDepts)
+        if (newSelectedDepts.has(deptId)) {
+            newSelectedDepts.delete(deptId)
+        } else {
+            newSelectedDepts.add(deptId)
+        }
+        setSelectedDepts(newSelectedDepts)
+        form.setValue('departments', Array.from(newSelectedDepts), { shouldValidate: true })
     }
 
     const toggleAllDepartments = (checked: boolean) => {
@@ -70,39 +69,62 @@ export function DepartmentSelectionStep({ onNext }: DepartmentSelectionStepProps
 
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    <ScrollArea className="h-[300px] pr-4">
-                        <div className="space-y-4">
-                            <div className="flex items-start space-x-3 pb-4 border-b">
-                                <Checkbox
-                                    id="select-all"
-                                    checked={departments?.length > 0 && selectedDepts.size === departments?.length}
-                                    onCheckedChange={toggleAllDepartments}
-                                />
-                                <label
-                                    htmlFor="select-all"
-                                    className="text-sm font-medium leading-none cursor-pointer"
-                                >
-                                    {selectedDepts.size > 0 ? t('unselectAll') : t('selectAll')}
-                                </label>
-                            </div>
+                    <div className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="departments"
+                            render={() => (
+                                <FormItem>
+                                    <ScrollArea className="h-[300px] pr-4">
+                                        <div className="space-y-4">
+                                            {isLoading ?  (
+                                                <div className="flex items-center justify-center p-4">
+                                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                                <span className="ml-2">{t('loading')}</span>
+                                            </div>
+                                            ): (
+                                                <>
+                                            <div className="flex items-start space-x-3 pb-4 border-b">
+                                                <Checkbox
+                                                    id="select-all"
+                                                    checked={departments?.length > 0 && selectedDepts.size === departments?.length}
+                                                    onCheckedChange={toggleAllDepartments}
+                                                />
+                                                <label
+                                                    htmlFor="select-all"
+                                                    className="text-sm font-medium leading-none cursor-pointer"
+                                                >
+                                                    {selectedDepts.size > 0 ? t('unselectAll') : t('selectAll')}
+                                                </label>
+                                            </div>
                             
-                            {departments?.map(dept => (
-                                <div key={dept.id} className="flex items-start space-x-3">
-                                    <Checkbox
-                                        id={dept.id}
-                                        checked={selectedDepts.has(dept.id)}
-                                        onCheckedChange={() => toggleDepartment(dept.id)}
-                                    />
-                                    <label
-                                        htmlFor={dept.id}
-                                        className="text-sm font-medium leading-none cursor-pointer"
-                                    >
-                                        {dept.name}
-                                    </label>
-                                </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
+                                            {departments?.map(dept => (
+                                                <div key={dept.id} className="flex items-start space-x-3">
+                                                    <Checkbox
+                                                        id={dept.id}
+                                                        checked={selectedDepts.has(dept.id)}
+                                                        onCheckedChange={() => toggleDepartment(dept.id)}
+                                                    />
+                                                    <label
+                                                        htmlFor={dept.id}
+                                                        className="text-sm font-medium leading-none cursor-pointer"
+                                                    >
+                                                        {dept.name}
+                                                    </label>
+                                                </div>
+                                            ))}
+                                            </>
+                                            )}
+                                            
+                                        </div>
+                                    </ScrollArea>
+                                    <div className="text-sm font-medium text-destructive mt-2">
+                                        {form.formState.errors.departments && t('errors.required')}
+                                    </div>
+                                </FormItem>
+                            )}
+                        />
+                    </div>
 
                     <div className="flex justify-end">
                         <Button type="submit">{t('nextButton')}</Button>
