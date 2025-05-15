@@ -11,6 +11,7 @@ export interface DeviceFilterOptions {
     status?: DeviceStatus[]
     type?: DeviceType
     departmentId?: string
+    employeeId?: string
     orderBy?: {
         field: 'name' | 'lastUpdate' | 'lastSeen'
         direction: 'asc' | 'desc'

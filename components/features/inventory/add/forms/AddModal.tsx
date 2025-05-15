@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { DepartmentSelectionStep } from "./steps/DepartmentSelectionStep"
-// import { DeviceSelectionStep } from "./steps/DeviceSelectionStep"
+import { DeviceSelectionStep } from "./steps/DeviceSelectionStep"
 // import { HardwareInfoStep } from "./steps/HardwareInfoStep"
 // import { FinalStep } from "./steps/FinalStep"
 
@@ -44,7 +44,14 @@ export function AddInventoryModal({ isOpen, onClose }: AddInventoryModalProps) {
                 setCurrentStep(2)
             }}
         />,
-        2: null,
+        2: <DeviceSelectionStep 
+            departments={selectedDepartments}
+            onNext={(devices) => {
+                setSelectedDevices(devices)
+                setCurrentStep(3)
+            }}
+            onBack={() => setCurrentStep(1)}
+        />,
         3: null,
         4: null
         // 2: <DeviceSelectionStep 
