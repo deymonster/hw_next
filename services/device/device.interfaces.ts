@@ -50,4 +50,5 @@ export interface IDeviceRepository {
     findActiveDevices(): Promise<Device[]>
     updateStatus(id: string, status: DeviceStatus): Promise<Device>
     updateLastSeen(id: string): Promise<Device>
+    updateDepartmentDevices(departmentId: string, deviceIds: string[]): Promise<void>
 }

@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl"
 import { useQueryClient } from "@tanstack/react-query"
 import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
 import { EditDepartmentModal } from "../edit/forms/EditModal"
+import { ManageDepartmentDevicesModal } from "../device/ManageDepartmentDevicesModal"
 
 interface DepartmentDetailProps {
     department: DepartmentWithCounts
@@ -20,9 +21,10 @@ interface DepartmentDetailProps {
 
 export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) {
     const t = useTranslations('dashboard.departments')
-    const { delete: deleteDepartment } = useDepartment()
+    const { deleteDepartment } = useDepartment()
     const [isDeleting, setIsDeleting] = useState(false)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isDevicesModalOpen, setIsDevicesModalOpen] = useState(false)
     const queryClient = useQueryClient()
 
     const handleDelete = async () => {
@@ -87,9 +89,10 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
             />
 
             <Tabs defaultValue="info">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="info">Информация</TabsTrigger>
-                    <TabsTrigger value="employees">Сотрудники</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="info">{t('detail.info')}</TabsTrigger>
+                    <TabsTrigger value="employees">{t('detail.employees')}</TabsTrigger>
+                    <TabsTrigger value="devices">Устройства</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="info">
@@ -99,7 +102,7 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Название</h3>
+                                        <h3 className="font-medium">{t('detail.departmentName')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">{department.name}</p>
                                 </div>
@@ -109,17 +112,17 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <FileText className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Описание</h3>
+                                        <h3 className="font-medium">{t('detail.departmentDescription')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">
-                                        {department.description || 'Нет описания'}
+                                        {department.description || t('detail.noDepartmentDescription')}
                                     </p>
                                 </div>
 
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Monitor className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Количество устройств</h3>
+                                        <h3 className="font-medium">{t('detail.deviceCount')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">{department.deviceCount}</p>
                                 </div>
@@ -127,7 +130,7 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
                                 <div className="bg-secondary/20 rounded-lg p-4">
                                     <div className="flex items-center space-x-2 mb-2">
                                         <Users className="h-4 w-4 text-muted-foreground" />
-                                        <h3 className="font-medium">Количество сотрудников</h3>
+                                        <h3 className="font-medium">{t('detail.employeeCount')}</h3>
                                     </div>
                                     <p className="text-sm text-muted-foreground pl-6">{department.employeesCount}</p>
                                 </div>
@@ -142,9 +145,9 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
                         {department.employees && department.employees.length > 0 ? (
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-3 gap-4 font-medium text-sm text-muted-foreground pb-2 border-b">
-                                        <div>ФИО</div>
-                                        <div>Должность</div>
-                                        <div>Контакты</div>
+                                        <div>{t('detail.fullName')}</div>
+                                        <div>{t('detail.position')}</div>
+                                        <div>{t('detail.contacts')}</div>
                                     </div>
                                     {department.employees.map((employee) => (
                                         <div key={employee.id} className="grid grid-cols-3 gap-4 text-sm">
@@ -167,10 +170,69 @@ export function DepartmentDetail( {department, onBack }: DepartmentDetailProps) 
                             ) : (
                                 <div className="text-center text-muted-foreground py-8">
                                     <Users className="h-8 w-8 mx-auto mb-2" />
-                                    <p>В этом отделе пока нет сотрудников</p>
+                                    <p>{t('detail.noEmployee')}</p>
                                 </div>
                             )}
                             
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="devices">
+                    <Card>
+                        <CardContent className="pt-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-medium">{t('detail.assignedDevices')}</h3>
+                                <Button onClick={() => setIsDevicesModalOpen(true)}>
+                                    <Monitor className="mr-2 h-4 w-4" />
+                                    {t('detail.manageDevices')}
+                                </Button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                {!department.devices || department.devices.length === 0 ? (
+                                    <div className="text-center text-muted-foreground py-8">
+                                        <Monitor className="h-8 w-8 mx-auto mb-2" />
+                                        <p>{t('detail.noDevices')}</p>
+                                    </div>
+                                ) : (
+                                    department.devices.map(device => (
+                                        <div key={device.id} className="bg-secondary/20 rounded-lg p-4 hover:bg-secondary/30 transition-colors">
+                                            <div className="flex items-start space-x-4">
+                                                <div className="bg-primary/10 rounded-full p-2">
+                                                    <Monitor className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <h3 className="text-sm font-medium">
+                                                            {device.name}
+                                                        </h3>
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className="text-xs bg-secondary rounded-full px-2 py-1">
+                                                                {device.ipAddress}
+                                                            </span>
+                                                            <div 
+                                                                className={`w-2 h-2 rounded-full ${device.deviceStatus?.isOnline ? 'bg-green-500' : 'bg-red-500'}`}
+                                                                title={device.deviceStatus?.isOnline ? t('detail.online') : t('detail.offline')}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {t('detail.lastActivity')}: {device.deviceStatus?.lastSeen 
+                                                            ? new Date(device.deviceStatus.lastSeen).toLocaleString() 
+                                                            : t('detail.noData')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            <ManageDepartmentDevicesModal
+                                isOpen={isDevicesModalOpen}
+                                onClose={() => setIsDevicesModalOpen(false)}
+                                department={department}
+                            />
                         </CardContent>
                     </Card>
                 </TabsContent>

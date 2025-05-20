@@ -11,6 +11,11 @@ export interface DepartmentFilterOptions {
 export interface IDepartmentCreateInput {
     name: string
     description?: string
+    devices?: {
+        set?: { id: string }[]
+        connect?: { id: string }[]
+        disconnect?: { id: string }[]
+    }
 }
 
 export interface IDepartmentFindManyArgs {

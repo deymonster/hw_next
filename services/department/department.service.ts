@@ -1,4 +1,4 @@
-import { Department, PrismaClient } from "@prisma/client"
+import { Department, Device, DeviceStatus, DeviceType, PrismaClient } from "@prisma/client"
 import { BaseRepository } from "../base.service"
 import { IDepartmentCreateInput, IDepartmentFindManyArgs, IDepartmentRepository, DepartmentFilterOptions } from './department.interface'
 
@@ -51,6 +51,7 @@ export class DepartmentService
             phone: string | null;
             position: string | null; 
         }[];
+        devices: Device[];
     })[]> {
         const departments = await this.model.findMany({
             include: {
@@ -63,7 +64,8 @@ export class DepartmentService
                         phone: true,
                         position: true
                     }
-                }
+                },
+                devices: true
             },
             orderBy: { name: 'asc' }
         });
@@ -79,7 +81,8 @@ export class DepartmentService
                     ...department,
                     deviceCount,
                     employeesCount,
-                    employees: department.employees
+                    employees: department.employees,
+                    devices: department.devices
                 };
             })
         );

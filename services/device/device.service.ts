@@ -150,5 +150,21 @@ export class DeviceService
         }
     }
 
+    async updateDepartmentDevices(departmentId: string, deviceIds: string[]): Promise<void> {
+        // Сначала сбрасываем все существующие связи
+        await this.model.updateMany({
+            where: { departmentId },
+            data: { departmentId: null }
+        });
+
+        // Затем устанавливаем новые связи
+        if (deviceIds.length > 0) {
+            await this.model.updateMany({
+                where: { id: { in: deviceIds } },
+                data: { departmentId }
+            });
+        }
+    }
+
 
 }

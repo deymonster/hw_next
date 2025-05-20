@@ -1,5 +1,6 @@
 
 import { InventoryTable } from '@/components/features/inventory/table/InventoryTable'
+import { InventoryProvider } from '@/contexts/InventoryContext'
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 
@@ -19,7 +20,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function InventoryPage() {
   return (
     <>
-      <InventoryTable />
+    <InventoryProvider>
+        <InventoryTable />
+    </InventoryProvider>
+      
     </>
   )
 }

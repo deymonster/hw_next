@@ -168,4 +168,13 @@ export async function getDeviceStatus(id: string): Promise<{
     }
 }
 
+export async function updateDepartmentDevices({ id, deviceIds}: {id: string, deviceIds: string[]}): Promise<void> {
+    try {
+        await services.data.device.updateDepartmentDevices(id, deviceIds)
+    } catch (error) {
+        console.error('[UPDATE_DEPARTMENT_DEVICES] Error:', error);
+        throw error
+    }
+}
+
 

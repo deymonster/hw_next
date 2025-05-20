@@ -13,11 +13,15 @@ import { Heading } from "@/components/ui/elements/Heading";
 
 
 export function DepartmentsTable() {
-    // Состояние для хранения выбранного отдела
     const t = useTranslations('dashboard.departments')
-    const { departments, loading: isLoading, error, refresh } = useDepartment();
-    const [selectedDepartment, setSelectedDepartment] = useState<DepartmentWithCounts | null>(null);
+    const { departments, isLoading, error, refetch } = useDepartment();
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
     const columns = useMemo(() => createDepartmentColumns((key: string) => t(key)), [t])
+
+    const selectedDepartment = useMemo(() => {
+        if (!selectedDepartmentId || !departments) return null
+        return departments.find(dep => dep.id === selectedDepartmentId) || null
+    }, [selectedDepartmentId, departments])
 
     // Обработка состояния загрузки
     if (isLoading) {
@@ -25,7 +29,7 @@ export function DepartmentsTable() {
     }
 
     const handleRowClick = (department: DepartmentWithCounts) => {
-        setSelectedDepartment(department);
+        setSelectedDepartmentId(department.id);
     }
 
     // Обработка ошибки
@@ -33,7 +37,7 @@ export function DepartmentsTable() {
         return (
             <div className="flex flex-col items-center justify-center p-4 text-red-500">
                 <p>Ошибка загрузки отделов</p>
-                <Button onClick={() => refresh()} className="mt-2">
+                <Button onClick={() => refetch()} className="mt-2">
                     Повторить
                 </Button>
             </div>
@@ -56,7 +60,7 @@ export function DepartmentsTable() {
                         <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => setSelectedDepartment(null)}
+                            onClick={() => setSelectedDepartmentId(null)}
                         >
                             <ArrowLeft className="h-4 w-4 mr-1" />
                         </Button>
@@ -64,7 +68,7 @@ export function DepartmentsTable() {
                     </div>
                     <DepartmentDetail 
                         department={selectedDepartment}
-                        onBack={() => setSelectedDepartment(null)}
+                        onBack={() => setSelectedDepartmentId(null)}
                     />
                 </>
             ) : (
