@@ -8,7 +8,8 @@ import { DeviceSelectionStep } from "./steps/DeviceSelectionStep"
 import { HardwareInfoStep } from "./steps/HardwareInfoStep"
 import { useDepartmentDevices } from "@/hooks/useDepartmentDevices"
 import { toast } from "sonner"
-// import { FinalStep } from "./steps/FinalStep"
+import { FinalStep } from "./steps/FinalStep"
+import { useInventory } from "@/hooks/useInventory"
 
 interface AddInventoryModalProps {
     isOpen: boolean
@@ -24,7 +25,8 @@ export function AddInventoryModal({ isOpen, onClose }: AddInventoryModalProps) {
     const [selectedDevices, setSelectedDevices] = useState<string[]>([])
     const [hardwareInfo, setHardwareInfo] = useState<any>(null)
     const { devices } = useDepartmentDevices({ departments: selectedDepartments })
-
+    const { refetch } = useInventory()
+    
     const getStepTitle = (step: Step) => {
         switch (step) {
             case 1:
@@ -38,6 +40,10 @@ export function AddInventoryModal({ isOpen, onClose }: AddInventoryModalProps) {
             default:
                 return ''
         }
+    }
+    const handleClose = () => {
+        refetch()
+        onClose()
     }
 
     const checkDevicesStatus = (deviceIds: string[]) => {
@@ -89,15 +95,11 @@ export function AddInventoryModal({ isOpen, onClose }: AddInventoryModalProps) {
                 }}
             onBack={() => setCurrentStep(2)}
         />,
-        4: null
         
-        // 4: <FinalStep 
-        //     departments={selectedDepartments}
-        //     devices={selectedDevices}
-        //     hardwareInfo={hardwareInfo}
-        //     onFinish={onClose}
-        //     onBack={() => setCurrentStep(3)}
-        // />
+        4: <FinalStep 
+            onFinish={handleClose}
+            onBack={() => setCurrentStep(3)}
+        />
     } 
 
     return (

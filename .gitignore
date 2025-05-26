@@ -48,3 +48,6 @@ next-env.d.ts
 
 # go files
 *.go
+
+# Alermanager yml
+/prometheus/alertmanager.yml

@@ -49,7 +49,7 @@ interface UseInventoryReturn {
     isLoading: boolean
     error: Error | null
 
-    createInventory: (userId: string) => void
+    createInventory: (userId: string) => Promise<string>
     addInventoryItem: (params: { inventoryId: string; item: IInventoryItemCreateInput }) => void
     removeInventoryItem: (params: { inventoryId: string; itemId: string }) => void
     getInventoryDetails: (inventoryId: string) => Promise<ActionResponse<Inventory>>
@@ -78,12 +78,45 @@ export function useInventory(userId?: string): UseInventoryReturn {
         error: inventoriesError
     } = useQuery({
         queryKey: [...INVENTORY_QUERY_KEY, 'all', userId],
-        queryFn: () => getInventories(userId),
+        queryFn: async () => {
+            // Получаем список инвентаризаций
+            const inventoriesData = await getInventories(userId);
+            
+            // Если успешно получили данные
+            if (inventoriesData.success && inventoriesData.data) {
+                // Для каждой инвентаризации загружаем детали с элементами
+                const inventoriesWithItems = await Promise.all(
+                    inventoriesData.data.map(async (inventory) => {
+                        try {
+                            // Получаем детали инвентаризации с элементами
+                            const details = await getInventoryWithItems(inventory.id);
+                            if (details.success && details.data) {
+                                return {
+                                    ...inventory,
+                                    items: details.data.items || []
+                                };
+                            }
+                            return inventory;
+                        } catch (error) {
+                            console.error(`Ошибка при загрузке элементов инвентаризации ${inventory.id}:`, error);
+                            return inventory;
+                        }
+                    })
+                );
+                
+                return {
+                    success: true,
+                    data: inventoriesWithItems
+                };
+            }
+            
+            return inventoriesData;
+        },
         select: (data) => {
             if (data.success && data.data) {
                 return {
                     success: true,
-                    data: data.data.map(inventory => ({
+                    data: data.data.map((inventory: any) => ({
                         ...inventory,
                         user: {
                             id: inventory.userId,
@@ -100,8 +133,8 @@ export function useInventory(userId?: string): UseInventoryReturn {
                             resetTokenExpires: undefined,
                             image: undefined
                         },
-                        items: [],
-                        departments: []
+                        items: inventory.items || [],
+                        departments: inventory.departments || []
                     })) as InventoryWithRelations[]
                 }
             }
@@ -133,6 +166,29 @@ export function useInventory(userId?: string): UseInventoryReturn {
             queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEY })
         }
     })
+
+    /**
+     * Создание новой инвентаризации с возвратом ID
+     * @param userId - ID пользователя
+     * @returns Promise с ID созданной инвентаризации
+     */
+    const createInventoryWithId = async (userId: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            createMutation.mutate(userId, {
+                onSuccess: (data) => {
+                    if (data.success && data.data) {
+                        resolve(data.data.id);
+                    } else {
+                        reject(new Error('Не удалось создать инвентаризацию'));
+                    }
+                },
+                onError: (error) => {
+                    reject(error);
+                }
+            });
+        });
+    };
+
 
     /**
      * Мутация для добавления устройства в инвентаризацию
@@ -185,7 +241,7 @@ export function useInventory(userId?: string): UseInventoryReturn {
         isLoading,
         error,
 
-        createInventory: createMutation.mutate,
+        createInventory: createInventoryWithId,
         addInventoryItem: addItemMutation.mutate,
         removeInventoryItem: removeItemMutation.mutate,
         getInventoryDetails,
