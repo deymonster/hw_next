@@ -12,7 +12,7 @@ import { ProcessList } from "./process/ProcessList"
 import { SystemSection } from './system/SystemSection';
 import { HardwareSection } from './hardware/HardwareSection';
 import { PerformanceSection } from './perfomance/PerformanceSection';
-import { useEffect } from "react"
+
 
 interface DeviceDetailProps {
     device: Device

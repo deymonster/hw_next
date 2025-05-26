@@ -3,6 +3,7 @@ import { createDevice } from "@/app/actions/device"
 import { DeviceType } from "@prisma/client"
 import { useState } from "react"
 
+// Данный хук испоьзуется только для полуения данный в окне сканирования
 export const useDeviceInfo = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)

@@ -1,8 +1,9 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { getDevices, getDeviceStatus } from '@/app/actions/device'
+import { getDevices } from '@/app/actions/device'
 import { Device } from '@prisma/client'
+import { getAgentStatus } from '@/app/actions/prometheus.actions'
 
 interface DeviceOnlineStatus {
     isOnline: boolean
@@ -33,14 +34,15 @@ export function useDepartmentDevices(options?: { departments?: string[] }) {
             if (departmentDevices.length > 0) {
                 return Promise.all(
                     departmentDevices.map(async (device): Promise<DeviceWithOnlineStatus> => {
-                        const statusResult = await getDeviceStatus(device.id);
+                        const statusResult = await getAgentStatus(device.ipAddress);
+                        const agentStatus = statusResult.success && statusResult.data && 
+                                           !Array.isArray(statusResult.data) ? statusResult.data : null;
                         return {
-                            ...device,
-                            onlineStatus: (statusResult.success && statusResult.data) ? {
-                                isOnline: statusResult.data.isOnline,
-                                lastSeen: statusResult.data.lastSeen
-                            } : null
-                        };
+                        ...device,
+                        onlineStatus: agentStatus ? {
+                            isOnline: agentStatus.up,
+                            lastSeen: device.lastSeen} : null
+                    };
                     })
                 );
             }

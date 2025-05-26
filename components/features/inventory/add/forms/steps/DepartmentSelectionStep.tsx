@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl"
 import { ScrollArea } from "@/components/ui/scrollarea"
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
-import { useInventory } from "@/contexts/InventoryContext"
+import { useInventoryContext } from "@/contexts/InventoryContext"
 
 
 const departmentSelectionSchema = z.object({
@@ -26,8 +26,8 @@ interface DepartmentSelectionStepProps {
 
 export function DepartmentSelectionStep({ onNext }: DepartmentSelectionStepProps) {
     const t = useTranslations('dashboard.inventory.modal.create.steps.department')
-    const { departments, loading: isLoading } = useDepartment()
-    const { state, setSelectedDepartments } = useInventory()
+    const { departments, isLoading } = useDepartment()
+    const { state, setSelectedDepartments } = useInventoryContext()
     const [selectedDepts, setSelectedDepts] = useState<Set<string>>(new Set(state.selectedDepartments))
 
     const form = useForm<DepartmentSelectionForm>({

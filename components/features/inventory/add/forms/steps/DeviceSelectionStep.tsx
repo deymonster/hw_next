@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scrollarea"
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useDepartmentDevices } from "@/hooks/useDepartmentDevices"
-import { useInventory } from "@/contexts/InventoryContext"
+import { useInventoryContext } from "@/contexts/InventoryContext"
 
 const deviceSelectionSchema = z.object({
     devices: z.array(z.string()).min(1, "Выберите хотя бы одно устройство")
@@ -29,13 +29,15 @@ interface DeviceSelectionStepProps {
 export function DeviceSelectionStep({ departments, onNext, onBack }: DeviceSelectionStepProps) {
     const t = useTranslations('dashboard.inventory.modal.create.steps.devices')
     const { devices, isLoading } = useDepartmentDevices({ departments })
-    const { state, setSelectedDevices: setDeviceContext } = useInventory()
-    const [selectedDevices, setSelectedDevices] = useState<Set<string>>(new Set(state.selectedDevices))
+    const { state, setSelectedDevices: setDeviceContext } = useInventoryContext()
+    const [selectedDevices, setSelectedDevices] = useState<Set<string>>(
+        new Set(state.selectedDevices.map(device => device.id))
+    )
 
     const form = useForm<DeviceSelectionForm>({
         resolver: zodResolver(deviceSelectionSchema),
         defaultValues: {
-            devices: state.selectedDevices
+            devices: state.selectedDevices.map(device => device.id)
         }
     })
 
@@ -62,7 +64,10 @@ export function DeviceSelectionStep({ departments, onNext, onBack }: DeviceSelec
     }
 
     const onSubmit = (data: DeviceSelectionForm) => {
-        setDeviceContext(Array.from(selectedDevices))
+        const selectedDeviceObjects = devices?.filter(device => 
+            selectedDevices.has(device.id)
+        ) || []
+        setDeviceContext(selectedDeviceObjects)
         onNext(Array.from(selectedDevices))
     }
 

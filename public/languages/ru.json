@@ -630,6 +630,27 @@
 							"errors": {
 								"required": "Необходимо выбрать хотя бы одно устройство"
 							}
+						},
+						"hardware": {
+							"title": "Сбор данных",
+							"description": "Сбор данных устройств",
+							"nextButton": "Далее",
+							"backButton": "Назад",
+							"loading": "Загрузка информации об устройствах...",
+							"loadingProgress": "Прогресс: {progress}%",
+							"statusLoading": "Сбор данных устройств...",
+							"statusSuccess": "Сбор данных успешно завершен",
+							"statusError": "Ошибка при сборе данных",
+							"fetchingInfo": "Получение информации...",
+							"errorFetchingInfo": "Ошибка при получении информации",
+							"cpu": "Процессор",
+							"memory": "Оперативная память",
+							"os":"Операционная система",
+							"collectionComplete": "Сбор  данных завершен",
+							"collectionCompleteWithErrors": "Сбор данных завершен с ошибками",
+							"devicesProcessed": "Обработано устройств: {total}",
+							"successCount": "Устройств успешно обработано: {count}",
+							"errorCount": "Устройств с ошибками: {count}"
 						}
                     }
 				}

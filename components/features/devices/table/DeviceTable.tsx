@@ -45,10 +45,8 @@ export function DevicesTable() {
   } = useQuery({
     queryKey: ['devices'],
     queryFn: async () => {
-      console.log('[QUERY] Fetching devices...')
       const devices = await fetchDevices()
       await fetchStats() // обновляем статистику
-      console.log('[QUERY] Fetched devices:', devices)
       return devices
     }
   })

@@ -155,6 +155,7 @@ export async function getDeviceStatus(id: string): Promise<{
     console.log('[DEVICE_STATUS] Getting status for device:', id);
     try {
         const status = await services.data.device.getDeviceStatus(id);
+        console.log('[DEVICE_STATUS] status for device:', status);
         return {
             success: true,
             data: status
