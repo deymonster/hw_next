@@ -2,7 +2,7 @@
 
 import { services } from "@/services"
 import { IInventoryItemCreateInput } from "@/services/inventory/inventory.interface"
-import { Inventory as PrismaInventory, InventoryItem as PrismaInventoryItem } from "@prisma/client"
+import { Department, Inventory as PrismaInventory, InventoryItem as PrismaInventoryItem, User } from "@prisma/client"
 
 
 /**
@@ -10,10 +10,8 @@ import { Inventory as PrismaInventory, InventoryItem as PrismaInventoryItem } fr
  */
 interface Inventory extends PrismaInventory {
     items: PrismaInventoryItem[]
-    user: {
-        id: string
-        name: string
-    }
+    user: User
+    departments: Department[]
 }
 
 
@@ -32,7 +30,7 @@ export interface ActionResponse<T = void> {
  * @param userId - Идентификатор пользователя, создающего инвентаризацию
  * @returns {Promise<ActionResponse<Inventory>>} Объект с результатом операции и созданной инвентаризацией
  */
-export async function createInventory(userId: string): Promise<ActionResponse<Inventory>> {
+export async function createInventory(userId: string, departmentIds?: string[]): Promise<ActionResponse<Inventory>> {
     if (!userId) {
         return { success: false, error: 'ID пользователя обязателен' }
     }
@@ -40,7 +38,10 @@ export async function createInventory(userId: string): Promise<ActionResponse<In
     try {
         const inventory = await services.data.inventory.create({
             userId,
-            startDate: new Date()
+            startDate: new Date(),
+            departments: departmentIds ? {
+                connect: departmentIds.map(id => ({ id }))
+            } : undefined
         })
         return { success: true, data: inventory as Inventory }
     } catch (error) {
@@ -117,20 +118,22 @@ export async function getInventoryWithItems(id: string): Promise<ActionResponse<
 }
 
 /**
- * Получает список всех инвентаризаций
+ * Получает список всех инвентаризаций c элементами
  * @param userId - Опциональный идентификатор пользователя для фильтрации
  * @returns {Promise<ActionResponse<Inventory[]>>} Объект с результатом операции и списком инвентаризаций
  */
 export async function getInventories(userId?: string): Promise<ActionResponse<Inventory[]>>{
     try {
-        const inventories = await services.data.inventory.findMany({
+        const inventories = await services.data.inventory.findAllWithItems({
             where: userId ? { userId } : undefined,
             orderBy: { startDate: 'desc' },
             include: {
                 items: true,
-                user: true
+                user: true,
+                departments: true
             }
         })
+        
         return { success: true, data: inventories as Inventory[] }
     } catch (error) {
         return { success: false, error: (error as Error).message }

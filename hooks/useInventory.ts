@@ -11,7 +11,7 @@ import {
     ActionResponse
 } from '@/app/actions/inventory'
 import { IInventoryItemCreateInput } from '@/services/inventory/inventory.interface'
-import { Department, Inventory, Role, User } from '@prisma/client'
+import { Department, Inventory, Role } from '@prisma/client'
 
 /**
  * Ключ для кэширования запросов инвентаризации
@@ -49,7 +49,7 @@ interface UseInventoryReturn {
     isLoading: boolean
     error: Error | null
 
-    createInventory: (userId: string) => Promise<string>
+    createInventory: (userId: string, departmentIds?: string[]) => Promise<string>
     addInventoryItem: (params: { inventoryId: string; item: IInventoryItemCreateInput }) => void
     removeInventoryItem: (params: { inventoryId: string; itemId: string }) => void
     getInventoryDetails: (inventoryId: string) => Promise<ActionResponse<Inventory>>
@@ -79,38 +79,8 @@ export function useInventory(userId?: string): UseInventoryReturn {
     } = useQuery({
         queryKey: [...INVENTORY_QUERY_KEY, 'all', userId],
         queryFn: async () => {
-            // Получаем список инвентаризаций
-            const inventoriesData = await getInventories(userId);
-            
-            // Если успешно получили данные
-            if (inventoriesData.success && inventoriesData.data) {
-                // Для каждой инвентаризации загружаем детали с элементами
-                const inventoriesWithItems = await Promise.all(
-                    inventoriesData.data.map(async (inventory) => {
-                        try {
-                            // Получаем детали инвентаризации с элементами
-                            const details = await getInventoryWithItems(inventory.id);
-                            if (details.success && details.data) {
-                                return {
-                                    ...inventory,
-                                    items: details.data.items || []
-                                };
-                            }
-                            return inventory;
-                        } catch (error) {
-                            console.error(`Ошибка при загрузке элементов инвентаризации ${inventory.id}:`, error);
-                            return inventory;
-                        }
-                    })
-                );
-                
-                return {
-                    success: true,
-                    data: inventoriesWithItems
-                };
-            }
-            
-            return inventoriesData;
+            // Получаем список инвентаризаций с элементами и связанными данными
+            return await getInventories(userId);
         },
         select: (data) => {
             if (data.success && data.data) {
@@ -120,18 +90,7 @@ export function useInventory(userId?: string): UseInventoryReturn {
                         ...inventory,
                         user: {
                             id: inventory.userId,
-                            name: inventory.user?.name || 'Unknown',
-                            // Добавляем опциональные поля с undefined
-                            createdAt: undefined,
-                            updatedAt: undefined,
-                            email: undefined,
-                            password: undefined,
-                            role: undefined,
-                            emailVerified: undefined,
-                            verificationToken: undefined,
-                            resetToken: undefined,
-                            resetTokenExpires: undefined,
-                            image: undefined
+                            name: inventory.user?.name || 'Unknown'
                         },
                         items: inventory.items || [],
                         departments: inventory.departments || []
@@ -160,7 +119,8 @@ export function useInventory(userId?: string): UseInventoryReturn {
      * Мутация для создания новой инвентаризации
      */
     const createMutation = useMutation({
-        mutationFn: (userId: string) => createInventory(userId),
+        mutationFn: (params: { userId: string, departmentIds?: string[] }) => 
+            createInventory(params.userId, params.departmentIds),
         onSuccess: () => {
             // Инвалидируем кэш после успешного создания
             queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEY })
@@ -172,9 +132,9 @@ export function useInventory(userId?: string): UseInventoryReturn {
      * @param userId - ID пользователя
      * @returns Promise с ID созданной инвентаризации
      */
-    const createInventoryWithId = async (userId: string): Promise<string> => {
+    const createInventoryWithId = async (userId: string, departmentIds?: string[]): Promise<string> => {
         return new Promise((resolve, reject) => {
-            createMutation.mutate(userId, {
+            createMutation.mutate({ userId, departmentIds}, {
                 onSuccess: (data) => {
                     if (data.success && data.data) {
                         resolve(data.data.id);
@@ -237,7 +197,15 @@ export function useInventory(userId?: string): UseInventoryReturn {
         isLoadingInventories,
         inventoriesError,
 
-        latestInventory: (latestInventoryResponse?.success && latestInventoryResponse.data) || null,
+        latestInventory: latestInventoryResponse?.success && latestInventoryResponse.data ? {
+            ...latestInventoryResponse.data,
+            user: {
+                id: latestInventoryResponse.data.userId,
+                name: latestInventoryResponse.data.user?.name || 'Unknown',
+            },
+            items: latestInventoryResponse.data.items || [],
+            departments: latestInventoryResponse.data.departments || []
+        } as InventoryWithRelations : null,
         isLoading,
         error,
 

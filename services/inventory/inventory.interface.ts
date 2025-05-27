@@ -5,6 +5,9 @@ import { IBaseRepository } from "../base.interfaces"
 export interface IInventoryCreateInput {
     userId: string
     startDate?: Date
+    departments?: {
+        connect: { id: string }[]
+    }
 }
 
 export interface IInventoryItemCreateInput {
@@ -37,6 +40,7 @@ export interface IInventoryFindManyArgs {
     include?: {
         items?: boolean
         user?: boolean
+        departments?: boolean
     }
 }
 
@@ -46,4 +50,5 @@ export interface IInventoryRepository extends IBaseRepository<Inventory, IInvent
     addItem(inventoryId: string, item: IInventoryItemCreateInput): Promise<InventoryItem>
     removeItem(inventoryId: string, itemId: string): Promise<void>
     getLatestInventory(userId: string): Promise<Inventory | null>
+    findAllWithItems(args?: IInventoryFindManyArgs): Promise<(Inventory & { items: InventoryItem[] })[]>
 }

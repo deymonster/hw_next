@@ -88,7 +88,7 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
             }
 
             // Создаем новую инвентаризацию и получаем её ID
-            const newInventoryId = await createInventory(session.user.id)
+            const newInventoryId = await createInventory(session.user.id, state.selectedDepartments.length > 0 ? state.selectedDepartments : undefined)
             setInventoryId(newInventoryId)
 
         } catch (error) {

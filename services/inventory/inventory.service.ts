@@ -14,7 +14,8 @@ export class InventoryService
         const inventory = await this.model.findUnique({
             where: { id },
             include: {
-                items: true
+                items: true,
+                departments: true
             }
         })
 
@@ -23,6 +24,20 @@ export class InventoryService
         }
 
         return inventory
+    }
+
+    async findAllWithItems(args: IInventoryFindManyArgs): Promise<Array<Inventory & { items: InventoryItem[] }>> {
+        const inventories = await this.model.findMany({
+            where: args?.where,
+            orderBy: args?.orderBy,
+            include: {
+                items: true,
+                user: args?.include?.user || false,
+                departments: true
+            }
+        })
+        
+        return inventories
     }
 
     async addItem(inventoryId: string, item: IInventoryItemCreateInput): Promise<InventoryItem> {
@@ -56,7 +71,8 @@ export class InventoryService
             where: { userId },
             orderBy: { startDate: 'desc' },
             include: {
-                items: true
+                items: true,
+                departments: true
             }
         })
     }

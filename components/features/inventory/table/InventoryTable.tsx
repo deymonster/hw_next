@@ -9,6 +9,7 @@ import { Heading } from "@/components/ui/elements/Heading"
 import { useInventory } from "@/hooks/useInventory"
 import { DatePicker } from "@/components/ui/elements/DatePicker"
 import { AddInventory } from "../add/AddInventory"
+import { useSession } from "next-auth/react"
 
 
 interface DateRange {
@@ -18,13 +19,18 @@ interface DateRange {
 
 export function InventoryTable() {
     const t = useTranslations('dashboard.inventory')
+    
+    const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined })
+    const { data: session } = useSession() 
+
+    const userId = session?.user?.id 
+
     const { 
         inventories, 
         isLoadingInventories, 
         inventoriesError, 
         refetch 
-    } = useInventory()
-    const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined })
+    } = useInventory(userId)
 
     const formattedInventories = useMemo(() => {
         let filtered = inventories.map(inventory => ({
@@ -42,7 +48,12 @@ export function InventoryTable() {
                 return isAfterFrom && isBeforeTo
             })
         }
-
+        console.log('Raw inventories:', inventories);
+        console.log('Formatted inventories:', filtered.map(inv => ({
+            id: inv.id,
+            itemsCount: inv.items.length,
+            items: inv.items
+        })))
         return filtered
     }, [inventories, dateRange])
 
