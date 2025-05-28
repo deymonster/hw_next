@@ -23,17 +23,6 @@ interface InventoryWithRelations extends Inventory {
     user: {
         id: string;
         name: string;
-        // Делаем остальные поля опциональными
-        createdAt?: Date;
-        updatedAt?: Date;
-        email?: string;
-        password?: string;
-        role?: Role;
-        emailVerified?: boolean;
-        verificationToken?: string | null;
-        resetToken?: string | null;
-        resetTokenExpires?: Date | null;
-        image?: string | null;
     }
     items?: any[]
     departments?: Department[]
@@ -51,6 +40,7 @@ interface UseInventoryReturn {
 
     createInventory: (userId: string, departmentIds?: string[]) => Promise<string>
     addInventoryItem: (params: { inventoryId: string; item: IInventoryItemCreateInput }) => void
+    addInventoryItemAsync: (params: { inventoryId: string; item: IInventoryItemCreateInput }) => Promise<any>
     removeInventoryItem: (params: { inventoryId: string; itemId: string }) => void
     getInventoryDetails: (inventoryId: string) => Promise<ActionResponse<Inventory>>
 
@@ -149,9 +139,8 @@ export function useInventory(userId?: string): UseInventoryReturn {
         });
     };
 
-
     /**
-     * Мутация для добавления устройства в инвентаризацию
+     * Мутация для асинхронного добавления устройства в инвентаризацию
      */
     const addItemMutation = useMutation({
         mutationFn: ({ inventoryId, item }: { inventoryId: string; item: IInventoryItemCreateInput }) => 
@@ -169,6 +158,25 @@ export function useInventory(userId?: string): UseInventoryReturn {
             }
         }
     })
+
+    /**
+     * Добавляет устройство в инвентаризацию и возвращает Promise с результатом
+     * @param params - Параметры для добавления устройства
+     * @returns Promise с результатом операции
+     */
+    const addInventoryItemAsync = (params: { inventoryId: string; item: IInventoryItemCreateInput }): Promise<any> => {
+        return new Promise((resolve, reject) => {
+            addItemMutation.mutate(params, {
+                onSuccess: (data) => {
+                    resolve(data);
+                },
+                onError: (error) => {
+                    reject(error);
+                }
+            });
+        });
+    };
+
 
     /**
      * Мутация для удаления устройства из инвентаризации
@@ -211,6 +219,7 @@ export function useInventory(userId?: string): UseInventoryReturn {
 
         createInventory: createInventoryWithId,
         addInventoryItem: addItemMutation.mutate,
+        addInventoryItemAsync,
         removeInventoryItem: removeItemMutation.mutate,
         getInventoryDetails,
 

@@ -13,8 +13,6 @@ export interface IInventoryCreateInput {
 export interface IInventoryItemCreateInput {
     deviceId: string
     inventoryId: string
-    deviceName: string
-    ipAddress: string
     serialNumber?: string
     processor?: string
     motherboard?: any

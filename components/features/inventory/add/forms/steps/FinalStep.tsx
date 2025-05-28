@@ -17,17 +17,19 @@ interface FinalStepProps {
 export function FinalStep({ onFinish, onBack }: FinalStepProps) {
     const t = useTranslations('dashboard.inventory.modal.create.steps.final')
     const { state, resetState } = useInventoryContext()
-    const { createInventory, addInventoryItem, refetch } = useInventory()
+    const { createInventory, addInventoryItemAsync, refetch } = useInventory()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isSuccess, setIsSuccess] = useState(false)
     const [currentItemIndex, setCurrentItemIndex] = useState(0)
     const [inventoryId, setInventoryId] = useState<string | null>(null)
     const { data: session } = useSession()
-    
+    const [processedDeviceIds, setProcessedDeviceIds] = useState<Set<string>>(new Set())
+
     const totalItems = state.inventoryItems.length
     const progress = totalItems > 0 ? Math.round((currentItemIndex / totalItems) * 100) : 0
 
     useEffect(() => {
+        console.log('Устройства для добавления:', state.inventoryItems);
         const addItems = async () => {
             if (!inventoryId || currentItemIndex >= totalItems) {
                 if (currentItemIndex >= totalItems && inventoryId) {
@@ -47,14 +49,18 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 
             try {
                 const item = state.inventoryItems[currentItemIndex]
-
-                await addInventoryItem({
+                console.log(`[FinalStep] Добавление элемента ${currentItemIndex + 1}/${totalItems}:`, item);
+                
+                if (processedDeviceIds.has(item.deviceId)) {
+                    console.log(`[FinalStep] Устройство ${item.deviceId} уже было добавлено, пропускаем`);
+                    setCurrentItemIndex(prev => prev + 1);
+                    return;
+                }
+                const result = await addInventoryItemAsync({
                     inventoryId,
                     item: {
                         deviceId: item.deviceId,
                         inventoryId: inventoryId,
-                        deviceName: item.deviceName,
-                        ipAddress: item.ipAddress,
                         processor: item.processor || undefined,
                         motherboard: item.motherboard,
                         memory: item.memory,
@@ -62,10 +68,12 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
                         networkCards: item.networkCards,
                         videoCards: item.videoCards,
                         diskUsage: item.diskUsage,
-                        serialNumber: item.serialNumber || undefined
+                        // serialNumber: item.serialNumber || undefined
                     }
                 })
 
+                setProcessedDeviceIds(prev => new Set(prev).add(item.deviceId))
+                console.log(`[FinalStep] Элемент ${currentItemIndex + 1} добавлен успешно:`, result);
                 setCurrentItemIndex(prev => prev + 1)
             } catch (error) {
                 console.error('[FinalStep] Ошибка при добавлении элемента инвентаризации:', error)
@@ -74,7 +82,7 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 
         }
         addItems()
-    }, [inventoryId, currentItemIndex, totalItems])
+    }, [inventoryId, currentItemIndex, totalItems, processedDeviceIds])
 
     const handleSubmit = async () => {
         try {
