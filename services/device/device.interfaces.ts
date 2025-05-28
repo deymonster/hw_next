@@ -16,6 +16,7 @@ export interface DeviceFilterOptions {
         field: 'name' | 'lastUpdate' | 'lastSeen'
         direction: 'asc' | 'desc'
     }
+    OR?: Array<{departmentId: string}>
 }
 
 export interface IDeviceCreateInput {

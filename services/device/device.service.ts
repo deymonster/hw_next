@@ -17,16 +17,23 @@ export class DeviceService
     }
 
     async findAll(options?: DeviceFilterOptions): Promise<Device[]> {
+        // Создаем базовые условия where
+        const whereConditions: any = {
+            ...(options?.status && { status: { in: options.status } }),
+            ...(options?.type && { type: options.type }),
+            ...(options?.departmentId && { departmentId: options.departmentId })
+        };
+        
+        // Если есть условие OR, добавляем его
+        if (options && 'OR' in options) {
+            whereConditions.OR = (options as any).OR;
+        }
         return await this.model.findMany({
-            where: {
-                ...(options?.status && { status: { in: options.status } }),
-                ...(options?.type && { type: options.type }),
-                ...(options?.departmentId && { departmentId: options.departmentId })
-            },
+            where: whereConditions,
             orderBy: options?.orderBy 
                 ? { [options.orderBy.field]: options.orderBy.direction }
                 : { lastUpdate: 'desc' } 
-        })
+        });
     }
 
     async getDeviceStats(): Promise<{

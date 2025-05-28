@@ -42,6 +42,11 @@ export function AddInventoryModal({ isOpen, onClose }: AddInventoryModalProps) {
         }
     }
     const handleClose = () => {
+        setCurrentStep(1)
+        setSelectedDepartments([])
+        setSelectedDevices([])
+        setHardwareInfo(null)
+
         refetch()
         onClose()
     }
@@ -103,7 +108,9 @@ export function AddInventoryModal({ isOpen, onClose }: AddInventoryModalProps) {
     } 
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
+        <Dialog open={isOpen} onOpenChange={(open) => {
+            if (!open) handleClose();
+        }}>
             <DialogContent className="max-w-xl">
                 <DialogHeader>
                     <DialogTitle>
