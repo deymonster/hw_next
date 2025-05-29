@@ -8,10 +8,12 @@ import {
     getLatestInventory,
     getInventoryWithItems,
     getInventories,
-    ActionResponse
+    ActionResponse,
+    deleteInventory
 } from '@/app/actions/inventory'
 import { IInventoryItemCreateInput } from '@/services/inventory/inventory.interface'
-import { Department, Inventory, Role } from '@prisma/client'
+import { Department, Device, Employee, Inventory } from '@prisma/client'
+import * as XLSX from 'xlsx'
 
 /**
  * Ключ для кэширования запросов инвентаризации
@@ -19,12 +21,16 @@ import { Department, Inventory, Role } from '@prisma/client'
 export const INVENTORY_QUERY_KEY = ['inventory'] as const
 
 // Расширяем тип Inventory для включения связанных данных
-interface InventoryWithRelations extends Inventory {
+export interface InventoryWithRelations extends Inventory {
     user: {
         id: string;
         name: string;
     }
-    items?: any[]
+    items?: (any & {
+        device?: Device
+        employee?: Employee
+        department?: Department
+    })[]
     departments?: Department[]
 }
 
@@ -33,6 +39,11 @@ interface UseInventoryReturn {
     inventories: InventoryWithRelations[]
     isLoadingInventories: boolean
     inventoriesError: Error | null
+
+    deleteInventory: (id: string) => void
+    deleteInventoryAsync: (id: string) => Promise<ActionResponse<void>>
+    isDeleting: boolean
+    deleteError: Error | null
     
     latestInventory: InventoryWithRelations | null
     isLoading: boolean
@@ -43,6 +54,7 @@ interface UseInventoryReturn {
     addInventoryItemAsync: (params: { inventoryId: string; item: IInventoryItemCreateInput }) => Promise<any>
     removeInventoryItem: (params: { inventoryId: string; itemId: string }) => void
     getInventoryDetails: (inventoryId: string) => Promise<ActionResponse<Inventory>>
+    exportToExcel: (inventoryId: string, fileName?: string) => Promise<void>
 
     isCreating: boolean
     isAddingItem: boolean
@@ -140,6 +152,43 @@ export function useInventory(userId?: string): UseInventoryReturn {
     };
 
     /**
+    * Мутация для удаления инвентаризации
+    */
+    const deleteMutation = useMutation({
+        mutationFn: (id: string) => deleteInventory(id),
+        onSuccess: (_, deletedId) => {
+            // Инвалидируем общий кэш инвентаризаций
+            queryClient.invalidateQueries({ queryKey: INVENTORY_QUERY_KEY })
+            
+            // Удаляем кэш конкретной инвентаризации
+            queryClient.removeQueries({ 
+                queryKey: [...INVENTORY_QUERY_KEY, 'details', deletedId]
+            })
+
+            // Если удаляется инвентаризация текущего пользователя,
+            // инвалидируем кэш последней инвентаризации
+            if (userId) {
+                queryClient.invalidateQueries({ 
+                    queryKey: [...INVENTORY_QUERY_KEY, 'latest', userId]
+                })
+            }
+        }
+    })
+
+    /**
+     * Асинхронное удаление инвентаризации с возвратом результата
+     */
+    const deleteInventoryAsync = (id: string): Promise<ActionResponse<void>> => {
+        return new Promise((resolve, reject) => {
+            deleteMutation.mutate(id, {
+                onSuccess: (data: ActionResponse<void>) => resolve(data),
+                onError: (error) => reject(error)
+            })
+        })
+    }
+
+
+    /**
      * Мутация для асинхронного добавления устройства в инвентаризацию
      */
     const addItemMutation = useMutation({
@@ -200,7 +249,69 @@ export function useInventory(userId?: string): UseInventoryReturn {
         return await getInventoryWithItems(inventoryId)
     }
 
+    /**
+     * Экспортирует данные инвентаризации в Excel файл
+     * @param inventoryId - Идентификатор инвентаризации
+     * @param fileName - Имя файла (опционально)
+     */
+    const exportToExcel = async (inventoryId: string, fileName?: string): Promise<void> => {
+        try {
+            const response = await getInventoryWithItems(inventoryId)
+
+            if (!response.success || !response.data) {
+                throw new Error('Не удалось получить данные инвентаризации')
+            }
+            const inventory = response.data
+
+            const inventoryItems = inventory.items?.map(item =>{
+                const motherboard = item.motherboard ? JSON.stringify(item.motherboard) : ''
+                const memory = item.memory ? JSON.stringify(item.memory) : ''
+                const storage = item.storage ? JSON.stringify(item.storage) : ''
+                const networkCards = item.networkCards ? JSON.stringify(item.networkCards) : ''
+                const videoCards = item.videoCards ? JSON.stringify(item.videoCards) : ''
+                const diskUsage = item.diskUsage ? JSON.stringify(item.diskUsage) : ''
+
+                return {
+                    'ID устройства': item.id,
+                    'Название': item.device?.name ? item.device.name : 'Неизвестно',
+                    'IP адрес': item.device?.ipAddress || '',
+                    'Серийный номер': item.device?.serialNumber || '',
+                    'Процессор': item.processor || '',
+                    'Материнская плата': motherboard,
+                    'Память': memory,
+                    'Хранилище': storage,
+                    'Сетевые карты': networkCards,
+                    'Видеокарты': videoCards,
+                    'Использование диска': diskUsage,
+                    'Сотрудник': item.employee ? `${item.employee.firstName} ${item.employee.lastName}` : '',
+                    'Отдел': item.department?.name || '',
+                    'Дата создания': new Date(item.createdAt).toLocaleString(),
+                    'Дата обновления': new Date(item.updatedAt).toLocaleString()
+                }
+            }) || []
+
+            // Создаем рабочую книгу Excel
+            const worksheet = XLSX.utils.json_to_sheet(inventoryItems)
+            const workbook = XLSX.utils.book_new()
+
+            // Добавляем лист с данными
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Инвентаризация')
+            
+            // Формируем имя файла
+            const defaultFileName = `Инвентаризация_${new Date(inventory.startDate).toLocaleDateString()}.xlsx`
+            
+            // Сохраняем файл
+            XLSX.writeFile(workbook, fileName || defaultFileName)
+
+        } catch (error) {
+            console.error('Ошибка при экспорте в Excel:', error)
+            throw error
+        }
+    }
+
     return {
+        exportToExcel,
+
         inventories: (inventoriesResponse?.success && inventoriesResponse.data) || [],
         isLoadingInventories,
         inventoriesError,
@@ -222,6 +333,11 @@ export function useInventory(userId?: string): UseInventoryReturn {
         addInventoryItemAsync,
         removeInventoryItem: removeItemMutation.mutate,
         getInventoryDetails,
+
+        deleteInventory: deleteMutation.mutate,
+        deleteInventoryAsync,
+        isDeleting: deleteMutation.isPending,
+        deleteError: deleteMutation.error,
 
         isCreating: createMutation.isPending,
         isAddingItem: addItemMutation.isPending,

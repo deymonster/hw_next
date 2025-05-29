@@ -36,7 +36,13 @@ export interface IInventoryFindManyArgs {
         startDate?: 'asc' | 'desc'
     }
     include?: {
-        items?: boolean
+        items?: boolean | {
+            include?: {
+                device?: boolean
+                employee?: boolean
+                department?: boolean
+            }
+        }
         user?: boolean
         departments?: boolean
     }
@@ -49,4 +55,5 @@ export interface IInventoryRepository extends IBaseRepository<Inventory, IInvent
     removeItem(inventoryId: string, itemId: string): Promise<void>
     getLatestInventory(userId: string): Promise<Inventory | null>
     findAllWithItems(args?: IInventoryFindManyArgs): Promise<(Inventory & { items: InventoryItem[] })[]>
+    delete(id: string): Promise<Inventory>
 }

@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/ui/elements/DataTable"
 import { createInventoryColumns } from "./InventoryColumns"
 import { Heading } from "@/components/ui/elements/Heading"
-import { useInventory } from "@/hooks/useInventory"
+import { InventoryWithRelations, useInventory } from "@/hooks/useInventory"
 import { DatePicker } from "@/components/ui/elements/DatePicker"
 import { AddInventory } from "../add/AddInventory"
 import { useSession } from "next-auth/react"
+import { InventoryDetail } from "../detail/InventoryDetail"
+import { ArrowLeft } from "lucide-react"
 
 
 interface DateRange {
@@ -22,7 +24,7 @@ export function InventoryTable() {
     
     const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined })
     const { data: session } = useSession() 
-
+    const [selectedInventory, setSelectedInventory] = useState<InventoryWithRelations | null>(null)
     const userId = session?.user?.id 
 
     const { 
@@ -48,12 +50,7 @@ export function InventoryTable() {
                 return isAfterFrom && isBeforeTo
             })
         }
-        console.log('Raw inventories:', inventories);
-        console.log('Formatted inventories:', filtered.map(inv => ({
-            id: inv.id,
-            itemsCount: inv.items.length,
-            items: inv.items
-        })))
+        
         return filtered
     }, [inventories, dateRange])
 
@@ -76,6 +73,22 @@ export function InventoryTable() {
             />
         </div>
     )
+
+    const handleRowClick = (inventory: InventoryWithRelations) => {
+        setSelectedInventory(inventory);
+    }
+
+
+    if (inventoriesError) {
+        return (
+            <div className="flex flex-col items-center justify-center p-4 text-red-500">
+                <p>{t('table.error')}</p>
+                <Button onClick={() => refetch()} className="mt-2">
+                    {t('table.refetch')}
+                </Button>
+            </div>
+        )
+    }
     
     if (isLoadingInventories) {
         return (
@@ -95,7 +108,7 @@ export function InventoryTable() {
             </div>
         )
     }
-
+    
 
     return (
         <div className='lg:px-10'>
@@ -105,21 +118,44 @@ export function InventoryTable() {
                     description={t('header.description')}
                     size='lg'
                 />
-                <AddInventory />
+                {!selectedInventory && <AddInventory />}
             </div>
-            <div className='mt-5'>
-            <DateRangeFilter />
-            <DataTable 
-                    columns={columns}
-                    data={formattedInventories}
-                    pagination={{
-                        enabled: true,
-                        pageSize: 10,
-                        showPageSize: true,
-                        showPageNumber: true
-                    }}
-                />
-            </div>
+
+            {selectedInventory ? (
+                <>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                        <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => setSelectedInventory(null)}
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-1" />
+                        </Button>
+                        Назад
+                    </div>
+                    <InventoryDetail
+                        inventory={selectedInventory}
+                        onBack={() => setSelectedInventory(null)}
+                    />
+                </>
+            ) : (
+                <>
+                    <div className='mt-5'>
+                        <DateRangeFilter />
+                        <DataTable 
+                                columns={columns}
+                                data={formattedInventories}
+                                pagination={{
+                                    enabled: true,
+                                    pageSize: 10,
+                                    showPageSize: true,
+                                    showPageNumber: true
+                                }}
+                                onRowClick={handleRowClick}
+                        />
+                    </div>
+                </>
+            )}
         </div>
     )
 }

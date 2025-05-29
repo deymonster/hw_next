@@ -2,14 +2,18 @@
 
 import { services } from "@/services"
 import { IInventoryItemCreateInput } from "@/services/inventory/inventory.interface"
-import { Department, Inventory as PrismaInventory, InventoryItem as PrismaInventoryItem, User } from "@prisma/client"
+import { Department, Device, Employee, Inventory as PrismaInventory, InventoryItem as PrismaInventoryItem, User } from "@prisma/client"
 
 
 /**
  * Интерфейс инвентаризации с расширенными данными
  */
 interface Inventory extends PrismaInventory {
-    items: PrismaInventoryItem[]
+    items: (PrismaInventoryItem & {
+        device?: Device
+        employee?: Employee
+        department?: Department
+    })[]
     user: User
     departments: Department[]
 }
@@ -128,7 +132,13 @@ export async function getInventories(userId?: string): Promise<ActionResponse<In
             where: userId ? { userId } : undefined,
             orderBy: { startDate: 'desc' },
             include: {
-                items: true,
+                items: {
+                    include: {
+                        device: true,
+                        employee: true,
+                        department: true
+                    }
+                },
                 user: true,
                 departments: true
             }
@@ -136,6 +146,21 @@ export async function getInventories(userId?: string): Promise<ActionResponse<In
         
         return { success: true, data: inventories as Inventory[] }
     } catch (error) {
+        return { success: false, error: (error as Error).message }
+    }
+}
+
+/**
+ * Удаляет объект инвентаризации со всеми связанными items 
+ * @param inventoryId - Идентификатор инвентаризации
+ * @returns {Promise<ActionResponse<void>>} Объект с результатом операции
+ */
+export async function deleteInventory(inventoryId: string): Promise<ActionResponse<void>> {
+    try {
+        await services.data.inventory.delete(inventoryId)
+        return { success: true }
+    } catch (error) {
+        console.error('Error deleting inventory:', error);
         return { success: false, error: (error as Error).message }
     }
 }

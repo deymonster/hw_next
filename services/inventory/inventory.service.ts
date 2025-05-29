@@ -14,7 +14,13 @@ export class InventoryService
         const inventory = await this.model.findUnique({
             where: { id },
             include: {
-                items: true,
+                items: {
+                    include: {
+                        device: true,
+                        employee: true,
+                        department: true
+                    }
+                },
                 departments: true
             }
         })
@@ -31,7 +37,13 @@ export class InventoryService
             where: args?.where,
             orderBy: args?.orderBy,
             include: {
-                items: true,
+                items: {
+                    include: {
+                        device: true,
+                        employee: true,
+                        department: true
+                    }
+                },
                 user: args?.include?.user || false,
                 departments: true
             }
@@ -74,6 +86,25 @@ export class InventoryService
                 items: true,
                 departments: true
             }
+        })
+    }
+
+    async delete(id: string): Promise<Inventory>  {
+        const inventory = await this.model.findUnique({
+            where: { id },
+            include:  { items: true}
+        })
+
+        if (!inventory) {
+            throw new Error('Инвентаризация не найдена')
+        }
+
+        await this.prisma.inventoryItem.deleteMany({
+            where: { inventoryId: id }
+        })
+
+        return await this.model.delete({
+            where: { id }
         })
     }
 }

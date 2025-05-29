@@ -5,6 +5,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
 import { format } from "date-fns"
 import { ru } from "date-fns/locale"
+import { InventoryWithRelations } from "@/hooks/useInventory"
 
 
 interface InventoryData {
@@ -19,7 +20,7 @@ interface InventoryData {
     }[]
 }
 
-export function createInventoryColumns(t: (key: string) => string): ColumnDef<InventoryData>[] {
+export function createInventoryColumns(t: (key: string) => string): ColumnDef<InventoryWithRelations>[] {
     return [
         {
             accessorKey: 'createdAt',
@@ -66,12 +67,12 @@ export function createInventoryColumns(t: (key: string) => string): ColumnDef<In
                     </Button>
                 )
             },
-            cell: ({ row }) => row.original.items.length
+            cell: ({ row }) => row.original.items?.length
         },
         {
             accessorKey: 'departments',
             header: t('table.columns.departments'),
-            cell: ({ row }) => row.original.departments.map(dept => dept.name).join(', ')
+            cell: ({ row }) => row.original.departments?.map(dept => dept.name).join(', ')
         }
     ]
 }

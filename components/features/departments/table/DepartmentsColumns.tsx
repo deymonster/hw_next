@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
