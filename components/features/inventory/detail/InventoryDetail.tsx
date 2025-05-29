@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { ConfirmModal } from "@/components/ui/elements/ConfirmModal"
+import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { InventoryWithRelations, useInventory } from "@/hooks/useInventory"
 import { Inventory } from "@prisma/client"
 import { useQueryClient } from "@tanstack/react-query"
-import { Building2, Download, FileText, Monitor, Package2, Pencil, Trash } from "lucide-react"
+import { Building2, Download, FileText, Monitor, Package2, Trash, Mail, Phone, Briefcase } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -21,7 +22,7 @@ export function InventoryDetail({ inventory, onBack}:  InventoryDetailProps) {
     const [isDeleting, setIsDeleting] = useState(false)
     const queryClient = useQueryClient()
 
-
+    
     const handleDelete = async () => {
         try {
             setIsDeleting(true)
@@ -116,34 +117,70 @@ export function InventoryDetail({ inventory, onBack}:  InventoryDetailProps) {
                 </TabsContent>
 
                 <TabsContent value="devices">
-                    <Card>
-                        <CardContent className="pt-6">
-                        {inventory.items && inventory.items.length > 0 ? (
-                                <div className="space-y-4">
-                                    {inventory.items.map(item => (
-                                        <div key={item.id} className="bg-secondary/20 rounded-lg p-4">
-                                            <div className="flex items-center space-x-2 mb-2">
-                                                <Monitor className="h-4 w-4 text-muted-foreground" />
-                                                <h3 className="font-medium">{item.device?.name || 'Неизвестное устройство'}</h3>
-                                            </div>
-                                            {item.employee && (
-                                                <p className="text-sm text-muted-foreground pl-6">
-                                                    Сотрудник: {item.employee.firstName} {item.employee.lastName}
-                                                </p>
-                                            )}
+                <Card>
+                    <CardContent className="pt-6">
+                    {inventory.items && inventory.items.length > 0 ? (
+                            <div className="space-y-4">
+                                {inventory.items.map((item, index) => (
+                                    <div key={item.id} className="bg-secondary/20 rounded-lg p-4">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                            <Monitor className="h-4 w-4 text-muted-foreground" />
+                                            <h3 className="font-medium">{item.device?.name || 'Неизвестное устройство'}</h3>
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center text-muted-foreground py-8">
-                                    <Monitor className="h-8 w-8 mx-auto mb-2" />
-                                    <p>{t('detail.noDevices')}</p>
-                                </div>
-                            )}
-                        </CardContent>
-                        
-                    </Card>
-                </TabsContent>
+                                        <div className="space-y-2">
+                                            {/* Информация об устройстве */}
+                                            <h4 className="text-sm font-medium">Информация об устройстве:</h4>
+                                            <p className="text-xs text-muted-foreground">
+                                                IP-адрес: {item.device?.ipAddress || 'Н/Д'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Тип: {item.device?.type || 'Н/Д'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Статус: {item.device?.status || 'Н/Д'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Серийный номер: {item.device?.serialNumber || 'Н/Д'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                Последнее обновление: {item.device?.lastUpdate ? new Date(item.device.lastUpdate).toLocaleString() : 'Н/Д'}
+                                            </p>
+                                        </div>
+                                        {item.employee && (
+                                            <div className="space-y-2">
+                                                <h4 className="text-sm font-medium">Информация о сотруднике:</h4>
+                                                <p className="text-xs text-muted-foreground">
+                                                    ФИО: {item.employee.firstName} {item.employee.lastName}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <Mail className="h-3 w-3 text-muted-foreground" />
+                                                    Email: {item.employee.email || 'Н/Д'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <Phone className="h-3 w-3 text-muted-foreground" />
+                                                    Телефон: {item.employee.phone || 'Н/Д'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <Briefcase className="h-3 w-3 text-muted-foreground" />
+                                                    Должность: {item.employee.position || 'Н/Д'}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {inventory.items && index < inventory.items.length - 1 && (
+                                            <Separator className="my-4" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center text-muted-foreground py-8">
+                                <Monitor className="h-8 w-8 mx-auto mb-2" />
+                                <p>{t('detail.noDevices')}</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
                 <TabsContent value="departments">
                     <Card>

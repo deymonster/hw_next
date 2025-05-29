@@ -21,6 +21,8 @@ export interface IInventoryItemCreateInput {
     networkCards?: any
     videoCards?: any
     diskUsage?: any
+    employeeId?: string  
+    departmentId?: string  
 }
 
 

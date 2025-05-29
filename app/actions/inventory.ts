@@ -143,6 +143,8 @@ export async function getInventories(userId?: string): Promise<ActionResponse<In
                 departments: true
             }
         })
+
+        
         
         return { success: true, data: inventories as Inventory[] }
     } catch (error) {

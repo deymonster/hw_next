@@ -94,7 +94,15 @@ export function useInventory(userId?: string): UseInventoryReturn {
                             id: inventory.userId,
                             name: inventory.user?.name || 'Unknown'
                         },
-                        items: inventory.items || [],
+                        items: inventory.items?.map((item: any) => {
+                            
+                            return {
+                                ...item,
+                                device: item.device || undefined,
+                                employee: item.employee || undefined,
+                                department: item.department || undefined
+                            };
+                        }) || [],
                         departments: inventory.departments || []
                     })) as InventoryWithRelations[]
                 }

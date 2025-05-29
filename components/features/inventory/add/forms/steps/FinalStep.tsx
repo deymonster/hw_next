@@ -29,7 +29,7 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
     const progress = totalItems > 0 ? Math.round((currentItemIndex / totalItems) * 100) : 0
 
     useEffect(() => {
-        console.log('Устройства для добавления:', state.inventoryItems);
+        
         const addItems = async () => {
             if (!inventoryId || currentItemIndex >= totalItems) {
                 if (currentItemIndex >= totalItems && inventoryId) {
@@ -49,10 +49,10 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 
             try {
                 const item = state.inventoryItems[currentItemIndex]
-                console.log(`[FinalStep] Добавление элемента ${currentItemIndex + 1}/${totalItems}:`, item);
+                
                 
                 if (processedDeviceIds.has(item.deviceId)) {
-                    console.log(`[FinalStep] Устройство ${item.deviceId} уже было добавлено, пропускаем`);
+                    
                     setCurrentItemIndex(prev => prev + 1);
                     return;
                 }
@@ -68,15 +68,17 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
                         networkCards: item.networkCards,
                         videoCards: item.videoCards,
                         diskUsage: item.diskUsage,
-                        // serialNumber: item.serialNumber || undefined
+                        employeeId: item.employeeId || undefined,
+                        departmentId: item.departmentId || undefined,
+
                     }
                 })
 
                 setProcessedDeviceIds(prev => new Set(prev).add(item.deviceId))
-                console.log(`[FinalStep] Элемент ${currentItemIndex + 1} добавлен успешно:`, result);
+                
                 setCurrentItemIndex(prev => prev + 1)
             } catch (error) {
-                console.error('[FinalStep] Ошибка при добавлении элемента инвентаризации:', error)
+                
                 toast.error(t('errorAddingItem'))
             }
 
@@ -100,7 +102,7 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
             setInventoryId(newInventoryId)
 
         } catch (error) {
-            console.error('[FinalStep] Ошибка при создании инвентаризации:', error)
+            
             toast.error(t('errorMessage'))
             setIsSubmitting(false)
         }

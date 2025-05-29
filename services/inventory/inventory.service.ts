@@ -53,10 +53,18 @@ export class InventoryService
     }
 
     async addItem(inventoryId: string, item: IInventoryItemCreateInput): Promise<InventoryItem> {
+        // Получаем информацию об устройстве, чтобы взять данные о сотруднике и отделе
+        const device = await this.prisma.device.findUnique({
+            where: { id: item.deviceId },
+            select: { employeeId: true, departmentId: true }
+        });
+
         return await this.prisma.inventoryItem.create({
             data: {
                 ...item,
-                inventoryId
+                inventoryId,
+                employeeId: item.employeeId || device?.employeeId,
+                departmentId: item.departmentId || device?.departmentId
             }
         })
     }
