@@ -25,6 +25,7 @@ model User {
   smtpSettings         SmtpSettings?
   telegramSettings     TelegramSettings?
   inventories          Inventory[]
+  alertRules           AlertRule[]
 }
 
 model Event {
@@ -233,5 +234,56 @@ enum DeviceType {
   WINDOWS
   LINUX
 }
+
+
+// Добавить в конец файла после существующих enum'ов
+
+enum AlertCategory {
+  HARDWARE_CHANGE
+  PERFORMANCE
+  HEALTH
+  CUSTOM
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum ComparisonOperator {
+  GREATER_THAN
+  LESS_THAN
+  GREATER_EQUAL
+  LESS_EQUAL
+  EQUAL
+  NOT_EQUAL
+}
+
+model AlertRule {
+  id          String            @id @default(uuid())
+  name        String
+  category    AlertCategory
+  metric      String
+  expression  String
+  threshold   Float?
+  operator    ComparisonOperator?
+  duration    String            // например: '5m', '30s'
+  severity    AlertSeverity
+  description String
+  labels      Json?             // дополнительные лейблы как JSON
+  enabled     Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  userId      String            // связь с пользователем, который создал правило
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+  @@index([severity])
+  @@index([enabled])
+  @@index([userId])
+  @@index([metric])
+}
+
 
 

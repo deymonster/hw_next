@@ -13,7 +13,9 @@ import { ILoggerService } from './logger/logger.interface'
 import { DepartmentService } from './department/department.service'
 import { EmployeeService } from './employee/employee.service'
 import { InventoryService } from './inventory/inventory.service'
-
+import { AlertRulesService } from './prometheus/alerting/alert-rules.service'
+import { AlertRulesConfigService } from './prometheus/alerting/alert-rules.config.service'
+import { AlertRulesManagerService } from './prometheus/alerting/alert-rules.manager.service'
 
 
 // Сервисы для работы с данными
@@ -27,6 +29,7 @@ export interface IDataServices {
     department: DepartmentService
     employee: EmployeeService
     inventory: InventoryService
+    alert_rules: AlertRulesService 
 }
 
 // Инфраструктурные сервисы
@@ -36,10 +39,12 @@ export interface IInfrastructureServices {
     network_scanner: NetworkScannerService
     prometheus: PrometheusService
     logger: ILoggerService
+    alert_rules_config: AlertRulesConfigService
 }
 
 // Общий интерфейс всех сервисов
 export interface IServices {
     data: IDataServices
     infrastructure: IInfrastructureServices
+    alertRulesManager: AlertRulesManagerService
 }
