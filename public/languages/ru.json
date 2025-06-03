@@ -33,7 +33,7 @@
 			"dashboardNav": {
 				"settings": "Настройки",
 				"devices": "Устройства",
-				"events": "События",
+				"events": "Мониторинг",
 				"departments": "Отделы",
 				"inventory": "Инвентаризация",
 				"users": "Сотрудники"
@@ -713,6 +713,121 @@
 				"deleteError": "Ошибка при удалении инвентаризации",
 				"exportSuccess": "Экспорт успешно завершен",
 				"exportError": "Ошибка при экспорте"
+			}
+		},
+		"monitoring": {
+			"header": {
+				"heading": "Мониторинг",
+				"description": "Настройка мониторинга и просмотр событий"
+			},
+			
+			"categories": {
+				"hardware_change": "Изменение оборудования",
+				"performance": "Производительность",
+				"health": "Состояние системы",
+				"custom": "Пользовательское"
+			},
+			"severities": {
+				"low": "Низкий",
+				"medium": "Средний",
+				"high": "Высокий",
+				"info": "Информация",
+				"warning": "Предупреждение",
+				"critical": "Критическое"
+			},
+			"eventTypes": {
+				"system": "Система",
+				"user": "Пользователь",
+				"device": "Устройство",
+				"alert": "Оповещение",
+				"info": "Информация"
+			},
+			"operators": {
+				"greater_than": ">",
+				"less_than": "<",
+				"greater_equal": ">=",
+				"less_equal": "<=",
+				"equal": "=",
+				"not_equal": "!="
+			},
+			"actions": {
+				"view": "Просмотр",
+				"edit": "Редактировать",
+				"enable": "Включить",
+				"disable": "Выключить",
+				"duplicate": "Дублировать",
+				"delete": "Удалить"
+			},
+			"tabs": {
+				"rules": "Правила",
+				"events": "События"
+			},
+			
+			"alertRules": {
+				"addRule": "Добавить правило",
+				"syncWithPrometheus": "Синхронизировать с Prometheus",
+				"searchPlaceholder": "Поиск по названию...",
+					"table": {
+						"columns": {
+							"name": "Название",
+							"category": "Категория",
+							"severity": "Приоритет",
+							"status": "Статус",
+							"metric": "Метрика",
+							"threshold": "Порог",
+							"duration": "Продолжительность",
+							"createdAt": "Дата создания",
+							"actions": "Действия"
+						}
+					}
+			},
+			"events": {
+				"markAllAsRead": "Отметить все как прочитанные",
+				"clearAll": "Очистить все",
+				"searchPlaceholder": "Поиск по названию...",
+				"table": {
+					"columns": {
+						"title": "Название",
+						"type": "Тип",
+						"severity": "Приоритет",
+						"status": "Статус",
+						"createdAt": "Дата создания",
+						"actions": "Действия"
+
+					}
+				},
+				"categories": {
+						"hardware_change": "Изменение оборудования",
+						"performance": "Производительность",
+						"health": "Состояние системы",
+						"custom": "Пользовательское"
+					},
+				"severities": {
+					"low": "Низкий",
+					"medium": "Средний",
+					"high": "Высокий",
+					"critical": "Критический",
+					"info": "Информационный",
+					"warning": "Предупреждение"
+				},
+				"eventTypes": {
+					"system": "Система",
+					"user": "Пользователь",
+					"device": "Устройство",
+					"alert": "Оповещение",
+					"info": "Информация"
+				},
+				"status": {
+					"active": "Активно",
+					"inactive": "Неактивно",
+					"read": "Прочитано",
+					"unread": "Не прочитано"
+				},
+				"actions": {
+					"markAsRead": "Отметить как прочитанное",
+					"delete": "Удалить"
+				}
+
 			}
 		}
 	},

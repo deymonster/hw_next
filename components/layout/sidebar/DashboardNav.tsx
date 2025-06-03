@@ -19,7 +19,7 @@ export function DashboardNav() {
         },
         {
             label: t('events'),
-            href: '/dashboard/events',
+            href: '/dashboard/alert-rules',
             icon: Bell
         },
         {
