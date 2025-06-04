@@ -20,11 +20,12 @@ const headingSize = cva('', {
 interface HeadingProps extends VariantProps<typeof headingSize> {
     title: string,
     description?: string
+    className?: string
 }
 
-export function Heading({ size, title, description }: HeadingProps) {
+export function Heading({ size, title, description, className }: HeadingProps) {
     return (
-        <div className='space-y-2'>
+        <div className={cn('space-y-2', className)}>
             <h1 className={cn(
                     'font-semibold text-foreground', 
                     headingSize({ size })

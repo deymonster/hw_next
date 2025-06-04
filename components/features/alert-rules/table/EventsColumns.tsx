@@ -21,17 +21,19 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center"
+                        className="w-full justify-center text-xs h-8 px-1"
                     >
                         {t('table.columns.title')}
-                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                        <ArrowUpDown className='ml-1 h-3 w-3' />
                     </Button>
                 )
             },
             cell: ({row}) => {
                 return (
-                    <div className="text-center w-full font-medium">
-                        {row.original.title}
+                    <div className="text-center w-full font-medium text-xs sm:text-sm px-1">
+                        <div className="truncate max-w-[150px] sm:max-w-[200px]" title={row.original.title}>
+                            {row.original.title}
+                        </div>
                     </div>
                 )
             }
@@ -43,18 +45,18 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center"
+                        className="w-full justify-center text-xs h-8 hidden sm:flex"
                     >
                         {t('table.columns.type')}
-                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                        <ArrowUpDown className='ml-1 h-3 w-3' />
                     </Button>
                 )
             },
             cell: ({row}) => {
                 const type = row.original.type
                 return (
-                    <div className="text-center w-full">
-                        <Badge variant="outline">
+                    <div className="text-center w-full hidden sm:block">
+                        <Badge variant="outline" className="text-xs px-1 py-0">
                         {t(`eventTypes.${type.toLowerCase()}`)}
                         </Badge>
                     </div>
@@ -68,10 +70,10 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center"
+                        className="w-full justify-center text-xs h-8 px-1"
                     >
-                        {t('table.columns.severity')}
-                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                        <span className="sm:hidden">{t('table.columns.severity')}</span>
+                        <ArrowUpDown className='ml-1 h-3 w-3' />
                     </Button>
                 )
             },
@@ -85,8 +87,14 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                 }
                 return (
                     <div className="text-center w-full">
-                        <Badge className={severityColors[severity as keyof typeof severityColors]}>
-                        {t(`severities.${severity.toLowerCase()}`)}
+                        <Badge className={`text-xs px-1 py-0 ${severityColors[severity as keyof typeof severityColors]}`}>
+                        <span className="hidden sm:inline">{t(`severities.${severity.toLowerCase()}`)}</span>
+                        <span className="sm:hidden">
+                            {severity === 'HIGH' ? 'Высок' : 
+                             severity === 'MEDIUM' ? 'Сред' : 
+                             severity === 'LOW' ? 'Низк' : 
+                             severity === 'CRITICAL' ? 'Крит' : severity}
+                        </span>
                         </Badge>
                     </div>
                 )
@@ -99,10 +107,11 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center"
+                        className="w-full justify-center text-xs h-8 px-1"
                     >
-                        {t('table.columns.status')}
-                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                        <span className="hidden sm:inline">{t('table.columns.status')}</span>
+                        <span className="sm:hidden">{t('table.columns.status')}</span>
+                        <ArrowUpDown className='ml-1 h-3 w-3' />
                     </Button>
                 )
             },
@@ -110,8 +119,9 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                 const isRead = row.original.isRead
                 return (
                     <div className="text-center w-full">
-                        <Badge variant={isRead ? "secondary" : "default"}>
-                        {isRead ? t('status.read') : t('status.unread')}
+                        <Badge variant={isRead ? "secondary" : "default"} className="text-xs px-1 py-0">
+                        <span className="hidden sm:inline">{isRead ? t('status.read') : t('status.unread')}</span>
+                        <span className="sm:hidden">{isRead ? '✓' : '●'}</span>
                         </Badge>
                     </div>
                 )
@@ -124,32 +134,44 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center"
+                        className="w-full justify-center text-xs h-8 px-1 hidden md:flex"
                     >
                         {t('table.columns.createdAt')}
-                        <ArrowUpDown className='ml-2 h-4 w-4' />
+                        <ArrowUpDown className='ml-1 h-3 w-3' />
                     </Button>
                 )
             },
             cell: ({row}) => {
+                const date = new Date(row.original.createdAt)
                 return (
-                    <div className="text-center w-full text-sm">
-                        {new Date(row.original.createdAt).toLocaleString()}
+                    <div className="text-center w-full text-xs hidden md:block">
+                        <div>
+                            {date.toLocaleDateString('ru-RU', { 
+                                day: '2-digit', 
+                                month: '2-digit'
+                            })}
+                        </div>
+                        <div className="text-gray-500">
+                            {date.toLocaleTimeString('ru-RU', { 
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            })}
+                        </div>
                     </div>
                 )
             }
         },
         {
             id: 'actions',
-            header: () => <div className="text-center">{t('table.columns.actions')}</div>,
+            header: () => <div className="text-center text-xs">{t('table.columns.actions')}</div>,
             cell: ({row}) => {
                 return (
                     <div className="text-center">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                <Button variant="ghost" className="h-6 w-6 p-0">
                                     <span className="sr-only">Открыть меню</span>
-                                    <MoreHorizontal className="h-4 w-4" />
+                                    <MoreHorizontal className="h-3 w-3" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">

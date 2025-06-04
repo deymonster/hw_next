@@ -23,7 +23,7 @@ export function AlertRulesTable() {
     }, [selectedRuleId, alertRules])
 
     if (isLoading) {
-        return <div className="flex items-center justify-center p-4">Загрузка правил...</div>
+        return <div className="flex items-center justify-center p-4 text-sm">Загрузка правил...</div>
     }
 
     const handleRowClick = (rule: AlertRule) => {
@@ -38,8 +38,8 @@ export function AlertRulesTable() {
     if (error) {
         return (
             <div className="flex flex-col items-center justify-center p-4 text-red-500">
-                <p>Ошибка загрузки правил</p>
-                <Button onClick={() => refetch()} className="mt-2">
+                <p className="text-sm">Ошибка загрузки правил</p>
+                <Button onClick={() => refetch()} className="mt-2 text-xs">
                     Повторить
                 </Button>
             </div>
@@ -53,44 +53,49 @@ export function AlertRulesTable() {
                     <Button
                         variant="ghost"
                         onClick={() => setSelectedRuleId(null)}
-                        className="mb-4"
+                        className="mb-4 h-8 text-xs"
                     >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        <ArrowLeft className="mr-1 h-4 w-3" />
                         {t('backToList')}
                     </Button>
                     {/* <AlertRuleDetail rule={selectedRule} onUpdate={refetch} /> */}
                 </div>
             ) : (
                 <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex gap-2">
-                            <Button onClick={() => setShowAddModal(true)}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                {t('addRule')}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                            <Button onClick={() => setShowAddModal(true)} className="h-8 text-xs w-full sm:w-auto">
+                            <Plus className="mr-1 h-3 w-3" />
+                                <span className="hidden sm:inline">{t('addRule')}</span>
+                                <span className="sm:hidden">Добавить</span>
                             </Button>
-                            <Button variant="outline" onClick={handleSyncWithPrometheus}>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                {t('syncWithPrometheus')}
+                            <Button variant="outline" onClick={handleSyncWithPrometheus} className="h-8 text-xs w-full sm:w-auto">
+                                <RefreshCw className="mr-1 h-3 w-3" />
+                                <span className="hidden sm:inline">{t('syncWithPrometheus')}</span>
+                                <span className="sm:hidden">Синхронизация</span>
                             </Button>
                         </div>
                     </div>
                     
-                    <DataTable
-                        columns={columns}
-                        data={alertRules || []}
-                        onRowClick={handleRowClick}
-                        filtering={{
-                            enabled: true,
-                            column: 'name',
-                            placeholder: t('searchPlaceholder')
-                        }}
-                        pagination={{
-                            enabled: true,
-                            pageSize: 10,
-                            showPageSize: true,
-                            showPageNumber: true
-                        }}
-                    />
+                    <div className="overflow-x-auto">
+                        <DataTable
+                            columns={columns}
+                            data={alertRules || []}
+                            onRowClick={handleRowClick}
+                            filtering={{
+                                enabled: true,
+                                column: 'name',
+                                placeholder: t('searchPlaceholder')
+                            }}
+                            pagination={{
+                                enabled: true,
+                                pageSize: 10,
+                                showPageSize: true,
+                                showPageNumber: true
+                            }}
+                        />
+                    </div>
+                    
                 </div>
             )}
             

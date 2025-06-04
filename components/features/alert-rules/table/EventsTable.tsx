@@ -47,7 +47,7 @@ export function EventsTable() {
     }, [selectedEventId, events])
 
     if (isLoading) {
-        return <div className="flex items-center justify-center p-4">Загрузка событий...</div>
+        return <div className="flex items-center justify-center p-4 text-sm">Загрузка событий...</div>
     }
 
     const handleRowClick = (event: Event) => {
@@ -73,17 +73,17 @@ export function EventsTable() {
                     <Button
                         variant="ghost"
                         onClick={() => setSelectedEventId(null)}
-                        className="mb-4"
+                        className="mb-4 h-8 text-xs"
                     >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        <ArrowLeft className="mr-1 h-3 w-3" />
                         {t('backToList')}
                     </Button>
-                    <div className="bg-white p-6 rounded-lg border">
-                        <h3 className="text-lg font-semibold mb-2">{selectedEvent.title}</h3>
-                        <p className="text-gray-600 mb-4">{selectedEvent.message}</p>
-                        <div className="text-sm text-gray-500">
+                    <div className="bg-white p-4 sm:p-6 rounded-lg border">
+                        <h3 className="text-base sm:text-lg font-semibold mb-2">{selectedEvent.title}</h3>
+                        <p className="text-gray-600 mb-4 text-sm">{selectedEvent.message}</p>
+                        <div className="text-xs sm:text-sm text-gray-500 space-y-1">
                             <p>Тип: {selectedEvent.type}</p>
-                            <p>Серьезность: {selectedEvent.severity}</p>
+                            <p>Приоритет: {selectedEvent.severity}</p>
                             <p>Создано: {selectedEvent.createdAt.toLocaleString()}</p>
                             <p>Статус: {selectedEvent.isRead ? 'Прочитано' : 'Не прочитано'}</p>
                         </div>
@@ -91,35 +91,40 @@ export function EventsTable() {
                 </div>
             ) : (
                 <div>
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex gap-2">
-                            <Button variant="outline" onClick={handleMarkAllAsRead}>
-                                <CheckCheck className="mr-2 h-4 w-4" />
-                                {t('markAllAsRead')}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                            <Button variant="outline" onClick={handleMarkAllAsRead} className="h-8 text-xs w-full sm:w-auto">
+                                <CheckCheck className="mr-1 h-3 w-3" />
+                                <span className="hidden sm:inline">{t('markAllAsRead')}</span>
+                                <span className="sm:hidden">Отметить все как прочитанные</span>
                             </Button>
-                            <Button variant="destructive" onClick={handleClearAllEvents}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {t('clearAll')}
+                            <Button variant="destructive" onClick={handleClearAllEvents} className="h-8 text-xs w-full sm:w-auto">
+                                <Trash2 className="mr-1 h-3 w-3" />
+                                <span className="hidden sm:inline">{t('clearAll')}</span>
+                                <span className="sm:hidden">Очистить все</span>
                             </Button>
                         </div>
                     </div>
                     
-                    <DataTable
-                        columns={columns}
-                        data={events || []}
-                        onRowClick={handleRowClick}
-                        filtering={{
-                            enabled: true,
-                            column: 'title',
-                            placeholder: t('searchPlaceholder')
-                        }}
-                        pagination={{
-                            enabled: true,
-                            pageSize: 10,
-                            showPageSize: true,
-                            showPageNumber: true
-                        }}
-                    />
+                    <div className="overflow-x-auto">
+                        <DataTable
+                            columns={columns}
+                            data={events || []}
+                            onRowClick={handleRowClick}
+                            filtering={{
+                                enabled: true,
+                                column: 'title',
+                                placeholder: t('searchPlaceholder')
+                            }}
+                            pagination={{
+                                enabled: true,
+                                pageSize: 10,
+                                showPageSize: true,
+                                showPageNumber: true
+                            }}
+                        />
+                    </div>
+                    
                 </div>
             )}
         </>
