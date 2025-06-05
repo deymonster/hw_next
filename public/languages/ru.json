@@ -767,19 +767,25 @@
 				"addRule": "Добавить правило",
 				"syncWithPrometheus": "Синхронизировать с Prometheus",
 				"searchPlaceholder": "Поиск по названию...",
-					"table": {
-						"columns": {
-							"name": "Название",
-							"category": "Категория",
-							"severity": "Приоритет",
-							"status": "Статус",
-							"metric": "Метрика",
-							"threshold": "Порог",
-							"duration": "Продолжительность",
-							"createdAt": "Дата создания",
-							"actions": "Действия"
-						}
+				"table": {
+					"columns": {
+						"name": "Название",
+						"category": "Категория",
+						"severity": "Приоритет",
+						"status": "Статус",
+						"metric": "Метрика",
+						"threshold": "Порог",
+						"duration": "Продолжительность",
+						"createdAt": "Дата создания",
+						"actions": "Действия"
 					}
+				},
+				"categories": {
+						"hardware_change": "Изменение оборудования",
+						"performance": "Производительность",
+						"health": "Состояние системы",
+						"custom": "Пользовательское"
+				}
 			},
 			"events": {
 				"markAllAsRead": "Отметить все как прочитанные",

@@ -9,12 +9,12 @@ import { useAlertRules } from "@/hooks/useAlertRules"
 import { AlertRule } from "@prisma/client"
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react"
 import { createAlertRulesColumns } from "./AlertRulesColumns"
+import { AddAlertRule } from "../add/AddAlertRule"
 
 export function AlertRulesTable() {
     const t = useTranslations('dashboard.monitoring.alertRules')
     const { alertRules, isLoading, error, refetch } = useAlertRules()
     const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null)
-    const [showAddModal, setShowAddModal] = useState(false)
     const columns = useMemo(() => createAlertRulesColumns((key: string) => t(key)), [t])
 
     const selectedRule = useMemo(() => {
@@ -64,11 +64,7 @@ export function AlertRulesTable() {
                 <div>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
                         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                            <Button onClick={() => setShowAddModal(true)} className="h-8 text-xs w-full sm:w-auto">
-                            <Plus className="mr-1 h-3 w-3" />
-                                <span className="hidden sm:inline">{t('addRule')}</span>
-                                <span className="sm:hidden">Добавить</span>
-                            </Button>
+                            <AddAlertRule />
                             <Button variant="outline" onClick={handleSyncWithPrometheus} className="h-8 text-xs w-full sm:w-auto">
                                 <RefreshCw className="mr-1 h-3 w-3" />
                                 <span className="hidden sm:inline">{t('syncWithPrometheus')}</span>
