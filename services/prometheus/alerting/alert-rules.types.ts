@@ -25,6 +25,13 @@ export enum ComparisonOperator {
   NOT_EQUAL = 'NOT_EQUAL'
 }
 
+
+export enum ChangeType {
+  LABEL_CHANGE = 'LABEL_CHANGE',
+  VALUE_CHANGE = 'VALUE_CHANGE', 
+  THRESHOLD = 'THRESHOLD'
+}
+
 /**
  * Интерфейс для создания AlertRule в базе данных
  */

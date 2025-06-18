@@ -17,11 +17,27 @@ services:
     env_file:
       - .env
 
+  # nextjs:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: nextjs_app
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - hw-network
+  #   restart: unless-stopped
+
   prometheus:
     image: prom/prometheus:v2.36.0
     container_name: prometheus_container
-    # ports:
-    #   - "${PROMETHEUS_PORT}:9090"
+    ports:
+      - "${PROMETHEUS_PORT}:9090"
     expose:
       - 9090
     networks:
@@ -49,6 +65,10 @@ services:
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
+    networks:
+      - hw-network
+    depends_on:
+      - nextjs
 
   nginx-proxy:
     build:

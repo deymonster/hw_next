@@ -5,7 +5,8 @@ import {
   IAlertRuleCreateInput, 
   AlertCategory, 
   AlertSeverity, 
-  ComparisonOperator 
+  ComparisonOperator, 
+  ChangeType
 } from './alert-rules.types';
 import { 
   AlertRuleConfig, 
@@ -26,7 +27,7 @@ export class AlertRulesManagerService {
   /**
    * Создать правило с валидацией и синхронизацией с Prometheus
    */
-  async createRule(request: CreateAlertRuleRequest, userId: string): Promise<AlertRule> {
+  async createRule(request: CreateAlertRuleRequest, userId: string): Promise<AlertRule | AlertRule[]> {
     // 1. Валидация через конфигурационный сервис
     const validation = await this.configService.validateRule(request);
     if (!validation.isValid) {
@@ -34,39 +35,107 @@ export class AlertRulesManagerService {
     }
 
     // 2. Генерация PromQL выражения если нужно
-    const expression = request.metric.includes('{')
-      ? request.metric  // Уже готовое выражение
-      : this.configService.generateExpression(
-          request.metric, 
-          request.threshold, 
-          request.operator
-        );
+    const expressions = request.expression || this.configService.generateExpression(
+      request.metric,
+      request.category,
+      request.changeType,
+      request.threshold,
+      request.operator
+    );
+    // Для категории HARDWARE_CHANGE всегда используем метрику Hardware_Change_Detected
+    if (request.category === AlertCategory.HARDWARE_CHANGE) {
+      // 3. Подготовка данных для БД
+      const dbData: IAlertRuleCreateInput = {
+        name: request.name,
+        category: request.category,
+        metric: 'Hardware_Change_Detected',
+        expression: expressions as string, // Для HARDWARE_CHANGE всегда возвращается строка
+        threshold: request.threshold,
+        operator: request.operator,
+        duration: request.duration,
+        severity: request.severity,
+        description: request.description,
+        labels: request.labels,
+        enabled: request.enabled ?? true,
+        user: {
+          connect: { id: userId }
+        }
+      };
 
-    // 3. Подготовка данных для БД
-    const dbData: IAlertRuleCreateInput = {
-      name: request.name,
-      category: request.category,
-      metric: request.metric,
-      expression,
-      threshold: request.threshold,
-      operator: request.operator,
-      duration: request.duration,
-      severity: request.severity,
-      description: request.description,
-      labels: request.labels,
-      enabled: request.enabled ?? true,
-      user: {
-        connect: { id: userId }
+      // 4. Сохранение в БД
+      const rule = await this.alertRulesService.createRule(dbData);
+      
+      // 5. Синхронизация с Prometheus
+      await this.syncWithPrometheus();
+
+      return rule;
+    }
+    // Если выражение - массив (для других категорий с несколькими метриками)
+    else if (Array.isArray(expressions)) {
+      const rules: AlertRule[] = [];
+      const hardwareMetrics = this.configService.getHardwareMetrics();
+
+      // Создаем отдельное правило для каждого выражения
+      for (let i = 0; i < expressions.length; i++) {
+        const expression = expressions[i];
+        const metricName = hardwareMetrics[i];
+        
+        // 3. Подготовка данных для БД
+        const dbData: IAlertRuleCreateInput = {
+          name: `${request.name} (${metricName})`,
+          category: request.category,
+          metric: metricName,
+          expression,
+          threshold: request.threshold,
+          operator: request.operator,
+          duration: request.duration,
+          severity: request.severity,
+          description: request.description,
+          labels: request.labels,
+          enabled: request.enabled ?? true,
+          user: {
+            connect: { id: userId }
+          }
+        };
+
+        // 4. Сохранение в БД
+        const rule = await this.alertRulesService.createRule(dbData);
+        rules.push(rule);
       }
-    };
 
-    // 4. Сохранение в БД
-    const rule = await this.alertRulesService.createRule(dbData);
+      // 5. Синхронизация с Prometheus
+      await this.syncWithPrometheus();
 
-    // 5. Синхронизация с Prometheus
-    await this.syncWithPrometheus();
+      return rules;
+    } else {
+      // Стандартная логика для одного правила
+      // 3. Подготовка данных для БД
+      const dbData: IAlertRuleCreateInput = {
+        name: request.name,
+        category: request.category,
+        metric: request.metric,
+        expression: expressions,
+        threshold: request.threshold,
+        operator: request.operator,
+        duration: request.duration,
+        severity: request.severity,
+        description: request.description,
+        labels: request.labels,
+        enabled: request.enabled ?? true,
+        user: {
+          connect: { id: userId }
+        }
+      };
 
-    return rule;
+      // 4. Сохранение в БД
+      const rule = await this.alertRulesService.createRule(dbData);
+
+      // 5. Синхронизация с Prometheus
+      await this.syncWithPrometheus();
+
+      return rule;
+    }
+
   }
 
   /**
@@ -86,11 +155,14 @@ export class AlertRulesManagerService {
     if (request.threshold !== undefined || request.operator !== undefined) {
       const currentRule = await this.alertRulesService.findById(id);
       if (currentRule) {
-        updateData.expression = this.configService.generateExpression(
+        const expression = this.configService.generateExpression(
           currentRule.metric,
+          currentRule.category as AlertCategory,
+          currentRule.changeType as ChangeType,
           request.threshold ?? (currentRule.threshold ?? undefined),
-          request.operator ?? (currentRule.operator || undefined)
+          request.operator ?? (currentRule.operator as ComparisonOperator)
         );
+        updateData.expression = Array.isArray(expression) ? expression[0] : expression;
       }
     }
 
@@ -139,7 +211,11 @@ export class AlertRulesManagerService {
       try {
         const request = this.convertConfigToCreateRequest(config);
         const rule = await this.createRule(request, userId);
-        results.push(rule);
+        if (Array.isArray(rule)) {
+          results.push(...rule);
+        } else {
+          results.push(rule);
+        }
       } catch (error) {
         console.error(`Ошибка импорта правила ${config.name}:`, error);
       }
@@ -160,7 +236,7 @@ export class AlertRulesManagerService {
       const configs = rules.map(rule => this.convertDbRuleToConfig(rule));
       
       // 3. Сохранить в файл
-      await this.configService.saveRulesToFile(configs, 'generated_rules.yml');
+      await this.configService.saveRulesToFile(configs, 'generated.rules.yml');
       
       // 4. Перезагрузить Prometheus
       return await this.configService.reloadPrometheus();

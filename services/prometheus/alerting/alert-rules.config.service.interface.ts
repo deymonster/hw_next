@@ -4,6 +4,7 @@ import {
     UpdateAlertRuleRequest, 
     AlertRuleValidationResult 
   } from './alert-rules.config.types';
+import { AlertCategory, ChangeType, ComparisonOperator } from './alert-rules.types';
   
   /**
    * Интерфейс для сервиса работы с конфигурационными файлами Prometheus
@@ -31,12 +32,29 @@ import {
     importFromYaml(yamlContent: string): Promise<AlertRuleConfig[]>;
     
     /**
+     * Возвращает список всех метрик оборудования
+     */
+    getHardwareMetrics(): string[];
+    
+    /**
      * Сгенерировать PromQL выражение
      */
-    generateExpression(template: string, threshold?: number, operator?: string): string;
+    generateExpression(
+      metric: string,
+      category: AlertCategory,
+      changeType?: ChangeType,
+      threshold?: number,
+      operator?: ComparisonOperator
+    ): string | string[];
     
     /**
      * Валидировать PromQL выражение
      */
     validateExpression(expression: string): boolean;
+
+
+    /**
+     * Конвертировать оператор в PromQL
+     */
+    convertOperatorToPromQL(operator: ComparisonOperator): string;
   }

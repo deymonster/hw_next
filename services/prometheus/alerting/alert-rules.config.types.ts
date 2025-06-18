@@ -1,4 +1,4 @@
-import { AlertCategory, AlertSeverity, ComparisonOperator } from './alert-rules.types';
+import { AlertCategory, AlertSeverity, ChangeType, ComparisonOperator } from './alert-rules.types';
 
 /**
  * Конфигурация правила для Prometheus (отличается от базы данных)
@@ -18,6 +18,8 @@ export interface AlertRuleConfig {
   enabled: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  changeType?: ChangeType;
+  includeInstance?: boolean;
 }
 
 /**
@@ -35,6 +37,8 @@ export interface CreateAlertRuleRequest {
   description: string;
   labels?: Record<string, string>;
   enabled?: boolean;
+  changeType?: ChangeType;
+  includeInstance?: boolean;
 }
 
 /**
@@ -42,6 +46,7 @@ export interface CreateAlertRuleRequest {
  */
 export interface UpdateAlertRuleRequest {
   name?: string;
+  category: AlertCategory;
   metric?: string;
   expression?: string; 
   threshold?: number;
@@ -51,6 +56,7 @@ export interface UpdateAlertRuleRequest {
   description?: string;
   labels?: Record<string, string>;
   enabled?: boolean;
+  changeType?: ChangeType;
 }
 
 /**

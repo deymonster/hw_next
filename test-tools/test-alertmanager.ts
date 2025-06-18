@@ -4,39 +4,19 @@ const testAlertManagerPayload = {
         {
             "status": "firing",
             "labels": {
-                "alertname": "HighCPUUsage",
-                "severity": "warning",
-                "instance": "192.168.1.100:9182",
-                "job": "windows-exporter",
-                "device": "CPU"
+                "alertname": "Замена оборудования",
+                "severity": "critical",
+                "instance": "192.168.1.107:9182",
+                "job": "windows-exporter"
             },
             "annotations": {
-                "description": "CPU usage is above 80% for more than 5 minutes",
-                "summary": "High CPU usage detected",
-                "value": "85.5"
+                "description": "Test alert about hardware change",
+                "summary": "Test alert about hardware change"
+                
             },
             "startsAt": "2024-01-15T10:30:00Z",
             "endsAt": "0001-01-01T00:00:00Z",
-            "generatorURL": "http://prometheus:9090/graph?g0.expr=cpu_usage%3E80"
-        },
-        {
-            "status": "firing",
-            "labels": {
-                "alertname": "DiskSpaceLow",
-                "severity": "critical",
-                "instance": "192.168.1.101:9182",
-                "job": "windows-exporter",
-                "device": "C:",
-                "mountpoint": "C:"
-            },
-            "annotations": {
-                "description": "Disk space is below 10%",
-                "summary": "Critical disk space",
-                "value": "5.2"
-            },
-            "startsAt": "2024-01-15T10:25:00Z",
-            "endsAt": "0001-01-01T00:00:00Z",
-            "generatorURL": "http://prometheus:9090/graph?g0.expr=disk_free%3C10"
+            "generatorURL": "http://prometheus:9090"
         }
     ]
 };

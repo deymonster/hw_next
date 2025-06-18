@@ -6,27 +6,9 @@ import {
   AlertRulesStats, 
   AlertCategory
 } from './alert-rules.types';
+import { IAlertRulesService } from './alert-rules.interfaces';
 
 
-/**
- * Интерфейс для базового CRUD сервиса AlertRules
- */
-export interface IAlertRulesService {
-  // Базовые CRUD операции
-  findMany(args?: IAlertRuleFindManyArgs): Promise<AlertRule[]>;
-  findById(id: string): Promise<AlertRule | null>;
-  create(data: IAlertRuleCreateInput): Promise<AlertRule>;
-  update(id: string, data: Partial<IAlertRuleCreateInput>): Promise<AlertRule>;
-  delete(id: string): Promise<AlertRule>;
-  
-  // Специфичные методы для работы с данными
-  getUserRules(userId: string): Promise<AlertRule[]>;
-  getActiveRules(): Promise<AlertRule[]>;
-  getRulesByCategory(category: AlertCategory): Promise<AlertRule[]>;
-  toggleRule(id: string): Promise<AlertRule>;
-  createRule(data: IAlertRuleCreateInput): Promise<AlertRule>;
-  getRulesStats(userId?: string): Promise<AlertRulesStats>;
-}
 
 /**
  * Простой CRUD сервис для работы с AlertRule

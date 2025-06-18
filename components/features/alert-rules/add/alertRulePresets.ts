@@ -1,4 +1,4 @@
-import { AlertCategory, AlertSeverity, ComparisonOperator } from '@/services/prometheus/alerting/alert-rules.types'
+import { AlertCategory, AlertSeverity, ChangeType, ComparisonOperator } from '@/services/prometheus/alerting/alert-rules.types'
 import { PROMETHEUS_METRICS } from '@/services/prometheus/metrics/constants'
 import { MetricType } from '@/services/prometheus/metrics/types'
 
@@ -22,23 +22,57 @@ export interface AlertRulePreset {
 
 // Пресеты правил алертов на основе реальных метрик
 export const ALERT_RULE_PRESETS: AlertRulePreset[] = [
-    {
-      id: 'cpu_high_usage',
-      name: 'Высокая нагрузка процессора',
-      category: AlertCategory.PERFORMANCE,
-      description: 'Превышение нагрузки процессора выше 80%',
+  {
+    id: 'cpu_high_usage',
+    name: 'Высокая нагрузка процессора',
+    category: AlertCategory.PERFORMANCE,
+    description: 'Превышение нагрузки процессора выше 80% на конкретном агенте',
+    metric: 'cpu_usage_percent',
+    operator: ComparisonOperator.GREATER_THAN,
+    threshold: 80,
+    duration: '5m',
+    severity: AlertSeverity.WARNING,
+    autoFillData: {
       metric: 'cpu_usage_percent',
       operator: ComparisonOperator.GREATER_THAN,
       threshold: 80,
-      duration: '5m',
-      severity: AlertSeverity.WARNING,
-      autoFillData: {
-        metric: 'cpu_usage_percent',
-        operator: ComparisonOperator.GREATER_THAN,
-        threshold: 80,
-        duration: '5m'
-      }
+      duration: '5m'
     }
+  },
+  {
+    id: 'hardware_cpu_change',
+    name: 'Смена процессора',
+    category: AlertCategory.HARDWARE_CHANGE,
+    description: 'Отслеживание изменений в конфигурации процессора на конкретном агенте',
+    metric: 'cpu_usage_percent',
+    operator: ComparisonOperator.GREATER_THAN,
+    threshold: 0,
+    duration: '1m',
+    severity: AlertSeverity.CRITICAL,
+    autoFillData: {
+      metric: 'cpu_usage_percent',
+      operator: ComparisonOperator.GREATER_THAN,
+      threshold: 0,
+      duration: '1m'
+    }
+  },
+  {
+    id: 'hardware_motherboard_change',
+    name: 'Смена материнской платы',
+    category: AlertCategory.HARDWARE_CHANGE,
+    description: 'Отслеживание изменений в конфигурации материнской платы на конкретном агенте',
+    metric: 'motherboard_info',
+    operator: ComparisonOperator.GREATER_THAN,
+    threshold: 0,
+    duration: '1m',
+    severity: AlertSeverity.CRITICAL,
+    autoFillData: {
+      metric: 'motherboard_info',
+      operator: ComparisonOperator.GREATER_THAN,
+      threshold: 0,
+      duration: '1m'
+    }
+  }
   ]
 
 // Группировка метрик по типам (для удобства выбора в UI)

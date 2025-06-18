@@ -16,7 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Info, Loader2 } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
-import { AlertCategory, AlertSeverity, ComparisonOperator } from "@/services/prometheus/alerting/alert-rules.types"
+import { AlertCategory, AlertSeverity, ChangeType, ComparisonOperator } from "@/services/prometheus/alerting/alert-rules.types"
 import { CreateAlertRuleRequest } from "@/services/prometheus/alerting/alert-rules.config.types"
 import { METRIC_CATEGORIES, type AlertRulePreset, ALL_METRICS } from "../alertRulePresets"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -64,7 +64,8 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
             duration: '5m',
             severity: AlertSeverity.WARNING,
             description: '',
-            enabled: true
+            enabled: true,
+            changeType: undefined
         }
     })
     
@@ -73,6 +74,23 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
     const watchedThreshold = form.watch('threshold')
     const watchedCategory = form.watch('category')
     const watchedMetric = form.watch('metric')
+
+
+    // Функция для автоматического определения ChangeType по категории
+    const getChangeTypeByCategory = (category: AlertCategory): ChangeType | undefined => {
+        switch (category) {
+            case AlertCategory.HARDWARE_CHANGE:
+                return ChangeType.LABEL_CHANGE
+            case AlertCategory.PERFORMANCE:
+                return ChangeType.VALUE_CHANGE
+            case AlertCategory.HEALTH:
+                return ChangeType.LABEL_CHANGE
+            case AlertCategory.CUSTOM:
+                return undefined // Пользователь выбирает сам
+            default:
+                return undefined
+        }
+    }
 
     // Автозаполнение формы при выборе пресета
     useEffect(() => {
@@ -130,7 +148,10 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
     const onSubmit = async (data: AddAlertRuleForm) => {
         try {
             setIsSubmitting(true)
-            
+            // Автоматически определяем changeType для не-CUSTOM категорий
+            const changeType = data.category === AlertCategory.CUSTOM 
+                ? data.changeType 
+                : getChangeTypeByCategory(data.category)
             const createRequest: CreateAlertRuleRequest = {
                 name: data.name,
                 category: data.category,
@@ -140,7 +161,9 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
                 duration: isDurationCustom ? customDuration : data.duration,
                 severity: data.severity,
                 description: data.description || '',
-                enabled: data.enabled
+                enabled: data.enabled,
+                changeType: changeType,
+                includeInstance: true
             }
             
             await createRule(createRequest)
@@ -271,6 +294,35 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
                                 )}
                             />
                         </div>
+
+                        {/* Тип изменения - только для CUSTOM категории */}
+                        {watchedCategory === AlertCategory.CUSTOM && (
+                            <FormField
+                                control={form.control}
+                                name="changeType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Тип изменения</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                                            <FormControl>
+                                                <SelectTrigger className="text-sm">
+                                                    <SelectValue placeholder="Выберите тип изменения" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value={ChangeType.VALUE_CHANGE}>
+                                                    Изменение значения
+                                                </SelectItem>
+                                                <SelectItem value={ChangeType.LABEL_CHANGE}>
+                                                    Изменение метки
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
                         
                         {/* Метрики - множественный выбор через чекбоксы */}
                         <FormField
@@ -392,8 +444,11 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
                                                     type="number" 
                                                     placeholder="Например: 80" 
                                                     {...field}
-                                                    value={field.value || ''}
-                                                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                                    value={field.value ?? ''}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        field.onChange(value === '' ? undefined : Number(value));
+                                                    }}
                                                     disabled={isSubmitting}
                                                 />
                                             </FormControl>

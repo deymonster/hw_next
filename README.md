@@ -201,6 +201,19 @@ This system allows you to monitor multiple workstations in your local network, c
    - Verify Redis is running: `docker ps | grep redis`
    - Check Redis logs: `docker logs redis_container`
 
+### Development Tools
+
+1. **Running TypeScript Files Directly**:
+   ```bash
+   # Install tsx globally (if not already installed)
+   yarn global add tsx
+   
+   # Run TypeScript files directly
+   tsx path/to/file.ts
+   
+   # For test-alertmanager.ts specifically
+   tsx test-tools/test-alertmanager.ts
+
 ### Production Deployment
 
 For production deployment, additional steps are required:
@@ -235,3 +248,4 @@ yarn prisma migrate dev
 # Start development server
 yarn dev
 ```
+

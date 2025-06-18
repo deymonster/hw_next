@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AlertCategory, AlertSeverity, ComparisonOperator } from "@/services/prometheus/alerting/alert-rules.types";
+import { AlertCategory, AlertSeverity, ChangeType, ComparisonOperator } from "@/services/prometheus/alerting/alert-rules.types";
 
 export const addAlertRuleSchema = z.object({
     name: z.string().min(1, 'Название правила обязательно'),
@@ -12,7 +12,9 @@ export const addAlertRuleSchema = z.object({
     duration: z.string().min(1, 'Продолжительность обязательна'),
     severity: z.nativeEnum(AlertSeverity),
     description: z.string().optional(),
-    enabled: z.boolean().default(true)
+    enabled: z.boolean().default(true),
+    changeType: z.nativeEnum(ChangeType).optional()
+    
 })
 
 export type AddAlertRuleForm = z.infer<typeof addAlertRuleSchema>

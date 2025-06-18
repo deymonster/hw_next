@@ -34,6 +34,41 @@ export class AlertProcessorService {
         }
     }
 
+    // Получение русской темы письма в зависимости от типа алерта
+    private getAlertSubjectInRussian(alert: Alert): string {
+        // Проверяем категорию алерта
+        if (alert.labels.alertname === 'Hardware_Change_Detected' || alert.labels.category === 'hardware_change') {
+            return 'Обнаружено изменение конфигурации оборудования';
+        }
+        
+        // Проверяем другие категории по alertname или category
+        const alertName = alert.labels.alertname?.toLowerCase() || '';
+        const category = alert.labels.category?.toUpperCase() || '';
+        
+        if (category === 'PERFORMANCE' || alertName.includes('performance') || 
+            alertName.includes('cpu') || alertName.includes('memory') || alertName.includes('disk')) {
+            return 'Предупреждение о производительности системы';
+        }
+        
+        if (category === 'HEALTH' || alertName.includes('health') || 
+            alertName.includes('service') || alertName.includes('system')) {
+            return 'Предупреждение о состоянии системы';
+        }
+        
+        // Проверяем серьезность алерта
+        const severity = alert.labels.severity?.toLowerCase() || '';
+        if (severity === 'critical') {
+            return `Критическое предупреждение: ${alert.labels.alertname}`;
+        } else if (severity === 'warning') {
+            return `Важное предупреждение: ${alert.labels.alertname}`;
+        } else if (severity === 'info') {
+            return `Информационное сообщение: ${alert.labels.alertname}`;
+        }
+        
+        // Для всех остальных алертов используем общую тему с названием алерта
+        return `Уведомление системы мониторинга: ${alert.labels.alertname}`;
+    }
+
     // Проверка соответствия правила алерту
     checkRuleMatches(rule: any, alert: Alert): boolean {
         // Проверяем severity
@@ -109,19 +144,23 @@ export class AlertProcessorService {
         const notificationSettings = await services.data.notification_settings.findByUserId(userId);
         
         if (!notificationSettings) {
-            console.log(`No notification settings found for user ${userId}`);
+            
             return;
         }
-
+        
         // Email уведомление
         if (notificationSettings.siteNotification) {
             const user = await services.data.user.findById(userId);
             if (user?.email) {
                 const emailHtml = generateAlertEmailHtml(alert);
                 const emailText = alert.annotations?.description || alert.annotations?.summary || 'Alert notification';
+                
+                // Получаем русскую тему письма в зависимости от типа алерта
+                const emailSubject = this.getAlertSubjectInRussian(alert);
+                
                 await services.infrastructure.notifications.email.send({
                     to: user.email,
-                    subject: `Alert: ${alert.labels.alertname}`,
+                    subject: emailSubject,
                     text: emailText,
                     html: emailHtml
                 });
@@ -148,7 +187,7 @@ export class AlertProcessorService {
         if (!users.length) {
             throw new Error('No users found');
         }
-
+        
         for (const alert of payload.alerts) {
             // Создаем события для всех пользователей
             for (const user of users) {
@@ -161,8 +200,10 @@ export class AlertProcessorService {
                 
                 for (const rule of userRules) {
                     if (!rule.enabled) continue;
-                    
+                    console.log(`[DEBUG] Checking rule:`, rule);
+                    console.log(`[DEBUG] Alert:`, alert);
                     if (this.checkRuleMatches(rule, alert)) {
+                        console.log(`[DEBUG] Rule matches alert:`, rule);
                         await this.sendNotifications(user.id, alert, rule);
                     }
                 }

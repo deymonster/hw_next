@@ -1,0 +1,60 @@
+# Исключаем файлы и директории, не нужные в Docker образе
+
+# Зависимости
+node_modules
+.pnp
+.pnp.js
+
+# Тестовые файлы
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Production
+/build
+
+# Разное
+.DS_Store
+*.pem
+
+# Отладка
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Локальные env файлы
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Git и GitHub
+.git
+.github
+
+# Docker файлы
+Dockerfile*
+docker-compose*
+
+# Другие файлы, не нужные в образе
+README.md
+LICENSE
+.gitignore
+.prettierrc
+.prettierignore
+.eslintrc*
+
+# Тестовые директории
+/test
+/tests
+/mocks
+
+# Временные файлы
+/tmp
+/temp

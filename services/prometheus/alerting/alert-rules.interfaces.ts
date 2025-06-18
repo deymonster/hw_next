@@ -1,5 +1,5 @@
 import { AlertRule } from '@prisma/client';
-import { IAlertRuleCreateInput, IAlertRuleFindManyArgs, AlertRulesStats } from './alert-rules.types';
+import { IAlertRuleCreateInput, IAlertRuleFindManyArgs, AlertRulesStats, AlertCategory } from './alert-rules.types';
 
 /**
  * Интерфейс для базового CRUD сервиса AlertRules
@@ -16,7 +16,7 @@ export interface IAlertRulesService {
   // Специфичные методы для работы с данными
   getUserRules(userId: string): Promise<AlertRule[]>;
   getActiveRules(): Promise<AlertRule[]>;
-  getRulesByCategory(category: string): Promise<AlertRule[]>;
+  getRulesByCategory(category: AlertCategory): Promise<AlertRule[]>;
   toggleRule(id: string): Promise<AlertRule>;
   createRule(data: IAlertRuleCreateInput): Promise<AlertRule>;
   getRulesStats(userId?: string): Promise<AlertRulesStats>;

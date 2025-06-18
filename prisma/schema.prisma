@@ -273,6 +273,8 @@ model AlertRule {
   description String
   labels      Json?             // дополнительные лейблы как JSON
   enabled     Boolean           @default(true)
+  changeType  ChangeType? 
+  includeInstance Boolean       @default(false)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   userId      String            // связь с пользователем, который создал правило
@@ -285,5 +287,10 @@ model AlertRule {
   @@index([metric])
 }
 
+enum ChangeType {
+  LABEL_CHANGE    
+  VALUE_CHANGE    
+  THRESHOLD       
+}
 
 

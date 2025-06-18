@@ -1,12 +1,14 @@
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { FlatCompat } from "@eslint/eslintrc";
+import pluginJs from "@eslint/js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
+  recommendedConfig: pluginJs.configs.recommended
 });
 
 const eslintConfig = [
@@ -17,7 +19,7 @@ const eslintConfig = [
     "next/core-web-vitals"
   ),
   {
-    plugins: ["@typescript-eslint", "prettier"],
+    // В flat config формате plugins не используются напрямую, они импортируются
     rules: {
       "prettier/prettier": "error",
       "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],

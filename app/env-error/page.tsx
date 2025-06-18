@@ -2,8 +2,9 @@
 
 import '@/styles/globals.css';
 
-export default function EnvErrorPage({ searchParams }: { searchParams: { message?: string } }) {
-  const errorMessage = searchParams.message || 'Unknown configuration error';
+export default async function EnvErrorPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
+  const params = await searchParams;
+  const errorMessage = params.message || 'Unknown configuration error';
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
