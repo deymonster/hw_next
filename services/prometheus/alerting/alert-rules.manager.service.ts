@@ -219,7 +219,18 @@ export class AlertRulesManagerService {
   }
 
   /**
-   * Экспортировать все активные правила в YAML
+   * Экспортирует все активные правила в YAML формат
+   * 
+   * @returns Promise со строкой в формате YAML, содержащей все активные правила
+   * 
+   * @remarks
+   * Метод получает все активные правила из базы данных, конвертирует их
+   * в формат конфигурации и экспортирует в YAML с помощью configService.
+   * 
+   * @example
+   * const yamlContent = await alertRulesManager.exportActiveRules();
+   * console.log(yamlContent);
+   * // Выводит YAML строку со всеми активными правилами
    */
   async exportActiveRules(): Promise<string> {
     const rules = await this.alertRulesService.getActiveRules();
@@ -228,7 +239,32 @@ export class AlertRulesManagerService {
   }
 
   /**
-   * Импортировать правила из YAML
+   * Импортирует правила из YAML формата
+   * 
+   * @param yamlContent - Строка в формате YAML с правилами для импорта
+   * @param userId - ID пользователя, который будет привязан к импортированным правилам
+   * @returns Promise с массивом импортированных правил
+   * 
+   * @remarks
+   * Метод парсит YAML, конвертирует правила в формат запроса на создание,
+   * и создает каждое правило с полной валидацией. Ошибки при импорте отдельных
+   * правил логируются, но не прерывают общий процесс импорта.
+   * 
+   * @example
+   * const yamlContent = `
+   * groups:
+   *   - name: cpu_alerts
+   *     rules:
+   *       - alert: HighCpuUsage
+   *         expr: cpu_usage_percent > 90
+   *         for: 5m
+   *         labels:
+   *           severity: critical
+   *         annotations:
+   *           summary: Высокая загрузка CPU
+   * `;
+   * const importedRules = await alertRulesManager.importRules(yamlContent, userId);
+   * console.log(`Импортировано ${importedRules.length} правил`);
    */
   async importRules(yamlContent: string, userId: string): Promise<AlertRule[]> {
     const configs = await this.configService.importFromYaml(yamlContent);
@@ -259,8 +295,26 @@ export class AlertRulesManagerService {
    
   
   /**
-   * Синхронизировать все правила с Prometheus
-   * @throws {SyncError} если синхронизация не удалась
+   * Синхронизирует все активные правила с Prometheus
+   * 
+   * @param errorMessage - Сообщение об ошибке, которое будет использовано при выбросе исключения
+   * @returns Promise, который разрешается после успешной синхронизации
+   * @throws {SyncError} Если произошла ошибка при синхронизации
+   * 
+   * @remarks
+   * Метод выполняет следующие шаги:
+   * 1. Получает все активные правила из базы данных
+   * 2. Конвертирует их в формат конфигурации Prometheus
+   * 3. Сохраняет в файл конфигурации
+   * 4. Перезагружает Prometheus через API
+   * 
+   * @example
+   * try {
+   *   await alertRulesManager.syncWithPrometheus('Ошибка при синхронизации после создания правила');
+   *   console.log('Синхронизация успешна');
+   * } catch (error) {
+   *   console.error('Ошибка синхронизации:', error.message);
+   * }
    */
   async syncWithPrometheus(errorMessage: string): Promise<void> {
     try {
@@ -289,7 +343,20 @@ export class AlertRulesManagerService {
 
   // ==================== Приватные методы конвертации ====================
 
-  
+  /**
+   * Конвертирует правило из формата базы данных в формат конфигурации
+   * 
+   * @param rule - Правило из базы данных (модель AlertRule)
+   * @returns Объект конфигурации правила (AlertRuleConfig)
+   * 
+   * @remarks
+   * Метод преобразует данные из модели базы данных в формат конфигурации,
+   * выполняя необходимые приведения типов и обработку null/undefined значений.
+   * 
+   * @example
+   * const dbRule = await alertRulesService.findById('rule-id-123');
+   * const configRule = this.convertDbRuleToConfig(dbRule);
+   */
   private convertDbRuleToConfig(rule: AlertRule): AlertRuleConfig {
     return {
       id: rule.id,
@@ -309,6 +376,22 @@ export class AlertRulesManagerService {
     };
   }
 
+  /**
+   * Конвертирует правило из формата конфигурации в формат запроса на создание
+   * 
+   * @param config - Объект конфигурации правила (AlertRuleConfig)
+   * @returns Объект запроса на создание правила (CreateAlertRuleRequest)
+   * 
+   * @remarks
+   * Метод извлекает из конфигурации только те поля, которые необходимы
+   * для создания нового правила, игнорируя служебные поля, такие как id,
+   * createdAt и updatedAt.
+   * 
+   * @example
+   * const config = await configService.importFromYaml(yamlContent)[0];
+   * const createRequest = this.convertConfigToCreateRequest(config);
+   * const newRule = await this.createRule(createRequest, userId);
+   */
   private convertConfigToCreateRequest(config: AlertRuleConfig): CreateAlertRuleRequest {
     return {
       name: config.name,
