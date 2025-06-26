@@ -1,15 +1,32 @@
 groups:
   - name: hardware_change_alerts
     rules:
-      - alert: Hardware_Change_Detected
-        expr: UNIQUE_ID_CHANGED == 1
-        for: 0m
+      - alert: Смена оборудования
+        expr: Hardware_Change_Detected == 1
+        for: 0s
         labels:
           severity: critical
           category: hardware_change
         annotations:
-          summary: "Конфигурация оборудования была изменена на  {{ $labels.instance }}"
-          description: |
+          summary: Конфигурация оборудования была изменена на {{ $labels.instance }}
+          description: >-
             Рабочее место: {{ $labels.instance }}
-            Конфигурация оборудования была изменена с момента последнего запуска.
 
+            Конфигурация оборудования была изменена с момента последнего
+            запуска.
+  - name: cpu_monitoring_alerts
+    rules:
+      - alert: температура процессора
+        expr: cpu_temperature > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: cpu_monitoring
+        annotations:
+          summary: ''
+          description: |-
+            Рабочее место: {{ $labels.instance }}
+            Текущее значение: {{ $value }}
+            Пороговое значение: 80
+            Текущее значение: {{ $value }}
+            Пороговое значение: 80

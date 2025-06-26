@@ -240,9 +240,9 @@ enum DeviceType {
 
 enum AlertCategory {
   HARDWARE_CHANGE
-  PERFORMANCE
-  HEALTH
-  CUSTOM
+  CPU_MONITORING
+  DISK_MONITORING
+  NETWORK_MONITORING
 }
 
 enum AlertSeverity {

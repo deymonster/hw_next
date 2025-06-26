@@ -77,13 +77,7 @@ export async function getAlertRuleById(id: string): Promise<{
 }> {
     try {
         console.log('[GET_ALERT_RULE] Fetching alert rule:', id)
-        const existingRule = await getAlertRuleById(id.toString())
-        if (!existingRule.success) {
-            return {
-                success: false,
-                error: existingRule.error || 'Правило не найдено'
-            }
-        }
+        
         const alertRule = await services.alertRulesManager['alertRulesService'].findById(id)
 
         if (!alertRule) {

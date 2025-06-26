@@ -3,50 +3,88 @@ import {
   AlertRuleConfig, 
   CreateAlertRuleRequest, 
   UpdateAlertRuleRequest, 
-  AlertRuleValidationResult 
+  AlertRuleValidationResult, 
+  FileSystemAdapter,
+  HttpClient
 } from './alert-rules.config.types';
-import { AlertCategory, AlertSeverity, ChangeType, ComparisonOperator } from './alert-rules.types';
+import { AlertCategory, AlertSeverity, ComparisonOperator } from './alert-rules.types';
 import * as yaml from 'js-yaml';
-import * as fs from 'fs/promises';
 import * as path from 'path';
+import { fetchAdapter, fsAdapter } from './alert-rules.adapters';
+
+
+
 
 /**
- * Сервис для работы с конфигурационными файлами Prometheus
- * Отвечает за валидацию, экспорт/импорт YAML, генерацию PromQL
+ * Сервис для управления правилами алертов Prometheus
+ * 
+ * @remarks
+ * Реализует следующие функции:
+ * - Валидацию правил алертов перед сохранением
+ * - Конвертацию между внутренним форматом и форматом Prometheus
+ * - Экспорт/импорт правил в YAML формате
+ * - Взаимодействие с API Prometheus (перезагрузка конфигурации)
+ * - Работу с файловой системой (сохранение/загрузка правил)
+ * 
+ * Сервис использует адаптеры для файловой системы и HTTP-клиента,
+ * что позволяет легко подменять реализации для тестирования.
  */
 export class AlertRulesConfigService implements IAlertRulesConfigService {
   /**
-   * URL для доступа к Prometheus API
-   * @private
+   * Создает экземпляр сервиса конфигурации правил
+   * @param config - Конфигурация подключения
+   * @param config.prometheusUrl - URL API Prometheus
+   * @param config.rulesPath - Путь к директории с файлами правил
+   * @param fileSystem - Адаптер файловой системы (по умолчанию fs/promises)
+   * @param httpClient - HTTP клиент (по умолчанию fetch API)
    */
-  private readonly prometheusUrl: string;
-  
-  /**
-   * Путь к директории с файлами правил Prometheus
-   * @private
-   */
-  private readonly rulesPath: string;
+  constructor(
+    private readonly config: { 
+      prometheusUrl: string; 
+      rulesPath: string 
+    },
+    private readonly fileSystem: FileSystemAdapter = fsAdapter,
+    private readonly httpClient: HttpClient = fetchAdapter
+  ) {}
+
+
+
+  // ==================== Валидация правил ====================
 
   /**
-   * Создает экземпляр сервиса конфигурации правил оповещений
-   * @param config Объект конфигурации с URL Prometheus и путем к файлам правил
-   */
-  constructor(config: { prometheusUrl: string; rulesPath: string }) {
-    this.prometheusUrl = config.prometheusUrl;
-    this.rulesPath = config.rulesPath;
-  }
-
-  /**
-   * Валидирует правило перед созданием или обновлением
-   * Проверяет корректность всех полей и их соответствие требованиям
-   * @param config Объект с параметрами создания или обновления правила
-   * @returns Результат валидации с флагом успешности и списками ошибок и предупреждений
+   * Валидирует правило алерта перед сохранением
+   * 
+   * @param config - Конфигурация правила для валидации
+   * @returns Promise с результатом валидации, содержащим:
+   *          - isValid: общий результат валидации
+   *          - errors: массив критических ошибок
+   *          - warnings: массив предупреждений
+   * 
+   * @example
+   * const result = await service.validateRule(ruleConfig);
+   * if (!result.isValid) {
+   *   console.error('Ошибки валидации:', result.errors);
+   * }
    */
   async validateRule(config: CreateAlertRuleRequest | UpdateAlertRuleRequest): Promise<AlertRuleValidationResult> {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Валидация обязательных полей для создания
+    this.validateRequiredFields(config, errors);
+    this.validateMetricFields(config, errors);
+    this.validateCategory(config, errors);
+    this.validateThreshold(config, errors, warnings);
+    this.validateDuration(config, errors);
+    return { isValid: errors.length === 0, errors, warnings };
+  }
+
+  /**
+   * Проверяет обязательные поля правила
+   * @param config - Конфигурация правила
+   * @param errors - Массив для накопления ошибок
+   * @private
+   */
+  private validateRequiredFields(config: CreateAlertRuleRequest | UpdateAlertRuleRequest, errors: string[]) {
     if ('name' in config) {
       if (!config.name?.trim()) {
         errors.push('Название правила обязательно');
@@ -54,7 +92,15 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
         errors.push('Название правила не должно превышать 100 символов');
       }
     }
+  }
 
+  /**
+   * Проверяет корректность метрики
+   * @param config - Конфигурация правила
+   * @param errors - Массив для накопления ошибок
+   * @private
+   */
+  private validateMetricFields(config: CreateAlertRuleRequest | UpdateAlertRuleRequest, errors: string[]): void {
     if ('metric' in config) {
       if (!config.metric?.trim()) {
         errors.push('Метрика обязательна');
@@ -62,86 +108,132 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
         errors.push('Некорректное название метрики');
       }
     }
+  }
 
-    // Валидация категории
-    if ('category' in config) {
-      if (!Object.values(AlertCategory).includes(config.category)) {
-        errors.push('Некорректная категория правила');
-      }
+
+  /**
+   * Проверяет корректность категории
+   * @param config - Конфигурация правила
+   * @param errors - Массив для накопления ошибок
+   * @private
+   */
+  private validateCategory(config: CreateAlertRuleRequest | UpdateAlertRuleRequest, errors: string[]): void {
+    if ('category' in config && !Object.values(AlertCategory).includes(config.category)) {
+      errors.push('Некорректная категория правила');
     }
-
-    // Валидация threshold и operator
-    if (config.threshold !== undefined) {
-      if (typeof config.threshold !== 'number' || config.threshold < 0) {
-        errors.push('Пороговое значение должно быть положительным числом');
-      }
-    }
-
-    // Валидация duration
-    if (config.duration && !this.validateDuration(config.duration)) {
-      errors.push('Некорректный формат длительности (например: 5m, 1h, 30s)');
-    }
-
-    // Валидация для правил изменения оборудования
-    if (this.isHardwareChange(config)) {
-      if (!config.changeType) {
-        errors.push('Тип изменения обязателен для правил HARDWARE_CHANGE');
-      } else {
-        // Валидация типа изменения
-        if (!Object.values(ChangeType).includes(config.changeType)) {
-          errors.push('Некорректный тип изменения');
-        }
-        
-        if (config.changeType === ChangeType.THRESHOLD) {
-          if (config.threshold === undefined) {
-            errors.push('Пороговое значение обязательно для типа THRESHOLD');
-          }
-          if (!config.operator) {
-            errors.push('Оператор сравнения обязателен для типа THRESHOLD');
-          }
-        }
-      }
-    }
-
-    // Предупреждения
-    if (config.threshold && config.threshold > 100) {
-      warnings.push('Высокое пороговое значение может привести к частым срабатываниям');
-    }
-
-    // Предупреждение для правил без выражения
-    if ('category' in config && !config.expression) {
-      warnings.push('Рекомендуется указать PromQL выражение для более точного контроля');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings
-    };
   }
 
   /**
+   * Проверяет корректность порогового значения
+   * @param config - Конфигурация правила
+   * @param errors - Массив для накопления ошибок
+   * @param warnings - Массив для накопления предупреждений
+   * @private
+   */
+  private validateThreshold(
+    config: CreateAlertRuleRequest | UpdateAlertRuleRequest, 
+    errors: string[], 
+    warnings: string[]
+  ): void {
+    if (config.threshold !== undefined) {
+      if (typeof config.threshold !== 'number' || config.threshold < 0) {
+        errors.push('Пороговое значение должно быть положительным числом');
+      } else if (config.threshold > 100) {
+        warnings.push('Высокое пороговое значение может привести к частым срабатываниям');
+      }
+    }
+  }
+
+
+  /**
+   * Проверяет корректность формата длительности
+   * @param config - Конфигурация правила
+   * @param errors - Массив для накопления ошибок
+   * @private
+   */
+  private validateDuration(config: CreateAlertRuleRequest | UpdateAlertRuleRequest, errors: string[]): void {
+    if (config.duration && !this.validateDurationFormat(config.duration)) {
+      errors.push('Некорректный формат длительности (например: 5m, 1h, 30s)');
+    }
+  }
+
+
+  // ==================== Работа с Prometheus API ====================
+
+  /**
    * Перезагружает конфигурацию Prometheus через API
-   * Отправляет POST-запрос на эндпоинт /-/reload
-   * @returns Promise с результатом операции (true - успешно, false - ошибка)
+   * 
+   * @remarks
+   * Отправляет POST-запрос на эндпоинт /-/reload Prometheus API
+   * 
+   * @returns Promise с результатом операции:
+   *          - true: перезагрузка успешна
+   *          - false: произошла ошибка
+   * 
+   * @throws {Error} Если Prometheus URL не настроен
    */
   async reloadPrometheus(): Promise<boolean> {
+    if (!this.config.prometheusUrl) {
+      throw new Error('Prometheus URL не настроен');
+    }
+
+    const reloadUrl = `${this.config.prometheusUrl}/prometheus/-/reload`;
+    console.log(`Отправка запроса на перезагрузку Prometheus: ${reloadUrl}`);
+    
+    const username = process.env.PROMETHEUS_AUTH_USERNAME || 'admin';
+    const password = process.env.PROMETHEUS_AUTH_PASSWORD || 'admin';
+    const authHeader = 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
     try {
-      const response = await fetch(`${this.prometheusUrl}/-/reload`, {
-        method: 'POST'
+      const response = await this.httpClient.post(reloadUrl, {
+        headers: {
+          'Authorization': authHeader
+        }
       });
-      return response.ok;
+      
+      if (!response.ok) {
+        const statusText = response.statusText || 'Нет текста статуса';
+        let responseBody = 'Не удалось получить тело ответа';
+        
+        try {
+          // Пытаемся прочитать тело ответа для дополнительной информации
+          responseBody = await response.text();
+        } catch (bodyError) {
+          console.error('Не удалось прочитать тело ответа:', bodyError);
+        }
+        
+        console.error(
+          `Ошибка перезагрузки Prometheus: URL=${reloadUrl}, ` +
+          `Статус=${response.status}, Текст=${statusText}, ` +
+          `Тело ответа=${responseBody}`
+        );
+        return false;
+      }
+      
+      console.log('Prometheus успешно перезагружен');
+      return true;
     } catch (error) {
-      console.error('Ошибка перезагрузки Prometheus:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(
+        `Исключение при перезагрузке Prometheus: URL=${reloadUrl}, ` +
+        `Ошибка=${errorMessage}, ` +
+        `Стек=${error instanceof Error ? error.stack : 'Стек недоступен'}`
+      );
       return false;
     }
   }
 
+
+  // ==================== Экспорт/импорт YAML ====================
+
   /**
-   * Экспортирует правила в YAML формат для Prometheus
-   * Группирует правила по категориям и конвертирует их в формат Prometheus
-   * @param rules Массив правил для экспорта
-   * @returns Promise со строкой в формате YAML
+   * Экспортирует правила в YAML формат, совместимый с Prometheus
+   * 
+   * @param rules - Массив правил для экспорта
+   * @returns Promise с YAML строкой, содержащей конфигурацию правил
+   * 
+   * @example
+   * const yaml = await service.exportToYaml(rules);
+   * console.log(yaml);
    */
   async exportToYaml(rules: AlertRuleConfig[]): Promise<string> {
     const groups = this.groupRulesByCategory(rules);
@@ -158,10 +250,18 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 
   /**
    * Импортирует правила из YAML формата Prometheus
-   * Парсит YAML и конвертирует правила в формат приложения
-   * @param yamlContent Строка с содержимым YAML файла
-   * @returns Promise с массивом импортированных правил
-   * @throws Error при ошибке парсинга YAML
+   * 
+   * @param yamlContent - YAML строка с конфигурацией
+   * @returns Promise с массивом правил в внутреннем формате
+   * 
+   * @throws {Error} Если произошла ошибка парсинга YAML или валидации данных
+   * 
+   * @example
+   * try {
+   *   const rules = await service.importFromYaml(yamlContent);
+   * } catch (error) {
+   *   console.error('Ошибка импорта:', error.message);
+   * }
    */
   async importFromYaml(yamlContent: string): Promise<AlertRuleConfig[]> {
     try {
@@ -180,232 +280,66 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 
       return rules;
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Ошибка парсинга YAML: ${errorMessage}`);
     }
   }
 
-  /**
-   * Генерирует PromQL выражение на основе параметров правила
-   * Для разных категорий правил используются разные шаблоны выражений
-   * @param metric Название метрики
-   * @param category Категория правила
-   * @param changeType Тип изменения (для правил HARDWARE_CHANGE)
-   * @param threshold Пороговое значение
-   * @param operator Оператор сравнения
-   * @returns Строка с PromQL выражением
-   */
-  generateExpression(
-    metric: string,
-    category: AlertCategory,
-    changeType?: ChangeType,
-    threshold?: number,
-    operator?: ComparisonOperator,
-  ): string | string[] {
-    // Для правил изменения оборудования используем специальный метод
-    if (this.isHardwareChangeCategory(category)) {
-      return this.generateHardwareChangeRule(metric);
-    }
-    // Для других категорий - стандартная логика
-    let expression = metric;
- 
-    if (threshold !== undefined && operator) {
-      const promOperator = this.convertOperatorToPromQL(operator);
-      expression = `${metric} ${promOperator} ${threshold}`;
-    }
-  
-    // Добавление группировки по instance если требуется
-    if (!expression.includes('by (instance)') && 
-        !expression.startsWith('changes(') && 
-        !expression.startsWith('delta(')) {
-      if (expression.includes('(')) {
-        
-        expression = expression.replace(/\)(?!.*\))/, ') by (instance)'); 
-      } else {
-        expression = `(${expression}) by (instance)`;
-      }
-    }
-  
-    return expression;
-  }
+
+  // ==================== Работа с файловой системой ====================
 
   /**
-   * Генерирует PromQL выражение для правил категории HARDWARE_CHANGE
-   * Создает сложное выражение для обнаружения изменений в метриках оборудования
-   * @param metric Название метрики оборудования
-   * @param changeType Тип изменения
-   * @param threshold Пороговое значение (для типа THRESHOLD)
-   * @param operator Оператор сравнения (для типа THRESHOLD)
-   * @returns Строка с PromQL выражением
-   * @private
-   */
-  private generateHardwareChangeRule(
-    metric: string
-  ): string | string[] {
-    // Для категории HARDWARE_CHANGE всегда используем специальную метрику UNIQUE_ID_CHANGED
-    return "UNIQUE_ID_CHANGED == 1";
-  }
-
-  /**
-   * Возвращает список всех метрик оборудования
-   * @returns Массив названий метрик
-   * @public
-   */
-  public getHardwareMetrics(): string[] {
-    return [
-      'cpu_info',
-      'motherboard_info',
-      'memory_info',
-      'disk_info',
-      'gpu_info',
-      'network_info',
-      'bios_info',
-      'memory_module_info',
-      'gpu_memory_bytes',
-      'disk_health_status',
-      'network_status'
-    ];
-  }
-
-  /**
-   * Генерирует PromQL выражение для конкретной метрики оборудования
-   * @param metric Название метрики оборудования
-   * @returns Строка с PromQL выражением
-   * @private
-   */
-  private generateSingleHardwareChangeRule(metric: string): string {
-    const config = this.getHardwareMetricConfig(metric);
-    
-    // Основное PromQL выражение для обнаружения изменений
-    const expression = `count by (instance) (
-      count by (instance, ${config.labelName}) (
-        count by(${config.labelName}) (${metric}[24h])
-      )
-    ) > 1
-    and on(instance)
-    label_replace(
-      ${metric} != ignoring(${config.labelName}) group_left()
-      last_over_time(${metric}[24h]),
-      "old_${config.labelName}", "$1", "${config.labelName}", "(.+)"
-    )`;
-    
-    return expression;
-  }
-
-  /**
-   * Возвращает конфигурацию метрики оборудования
-   * Содержит информацию о названии метки, компоненте и описании
-   * @param metric Название метрики оборудования
-   * @returns Объект с конфигурацией метрики
-   * @private
-   */
-  private getHardwareMetricConfig(metric: string): {
-    labelName: string;
-    component: string;
-    description: string;
-  } {
-    const hardwareMetrics: Record<string, { labelName: string; component: string; description: string }> = {
-      'cpu_info': {
-        labelName: 'model_name',
-        component: 'процессор',
-        description: 'Информация о процессоре'
-      },
-      'motherboard_info': {
-        labelName: 'product',
-        component: 'материнская плата',
-        description: 'Информация о материнской плате'
-      },
-      'memory_info': {
-        labelName: 'manufacturer',
-        component: 'оперативная память',
-        description: 'Информация об оперативной памяти'
-      },
-      'disk_info': {
-        labelName: 'model',
-        component: 'жесткий диск',
-        description: 'Информация о жестком диске'
-      },
-      'gpu_info': {
-        labelName: 'name',
-        component: 'видеокарта',
-        description: 'Информация о видеокарте'
-      },
-      'network_info': {
-        labelName: 'description',
-        component: 'сетевая карта',
-        description: 'Информация о сетевой карте'
-      }
-    };
-    
-    return hardwareMetrics[metric] || {
-      labelName: 'value',
-      component: 'компонент',
-      description: 'Информация о компоненте'
-    };
-  }
-
-  /**
-   * Валидирует PromQL выражение на базовом уровне
-   * Проверяет соответствие выражения базовому паттерну PromQL
-   * @param expression Строка с PromQL выражением
-   * @returns true, если выражение валидно, иначе false
-   */
-  validateExpression(expression: string): boolean {
-    // Базовая валидация PromQL
-    const promqlPattern = /^[a-zA-Z_:][a-zA-Z0-9_:]*.*$/;
-    return promqlPattern.test(expression.trim());
-  }
-
-  /**
-   * Проверяет, относится ли правило к категории изменения оборудования
-   * @param config Конфигурация правила
-   * @returns true, если правило относится к категории HARDWARE_CHANGE
-   * @private
-   */
-  private isHardwareChange(config: CreateAlertRuleRequest | UpdateAlertRuleRequest): boolean {
-    return 'category' in config && config.category === AlertCategory.HARDWARE_CHANGE; 
-  }
-
-  /**
-   * Проверяет, является ли категория категорией изменения оборудования
-   * @param category Категория правила
-   * @returns true, если категория равна HARDWARE_CHANGE
-   * @private
-   */
-  private isHardwareChangeCategory(category: AlertCategory): boolean {
-    return category === AlertCategory.HARDWARE_CHANGE;
-  }
-
-  /**
-   * Сохраняет правила в YAML файл
-   * Экспортирует правила в YAML и записывает в файл по указанному пути
-   * @param rules Массив правил для сохранения
-   * @param filename Имя файла (без пути)
-   * @returns Promise с результатом операции
+   * Сохраняет правила в файл в формате YAML
+   * 
+   * @param rules - Массив правил для сохранения
+   * @param filename - Имя файла (без пути)
+   * @returns Promise, который разрешается после успешного сохранения
+   * 
+   * @throws {Error} Если произошла ошибка записи файла
    */
   async saveRulesToFile(rules: AlertRuleConfig[], filename: string): Promise<void> {
     const yamlContent = await this.exportToYaml(rules);
-    const filePath = path.join(this.rulesPath, filename);
-    await fs.writeFile(filePath, yamlContent, 'utf8');
+    const filePath = path.join(this.config.rulesPath, filename);
+
+    try {
+      await this.fileSystem.writeFile(filePath, yamlContent);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Ошибка сохранения файла ${filename}: ${errorMessage}`);
+    }
   }
 
   /**
-   * Загружает правила из YAML файла
-   * Читает файл и импортирует правила из YAML
-   * @param filename Имя файла (без пути)
+   * Загружает правила из файла YAML
+   * 
+   * @param filename - Имя файла (без пути)
    * @returns Promise с массивом загруженных правил
+   * 
+   * @throws {Error} Если файл не существует или произошла ошибка чтения/парсинга
    */
   async loadRulesFromFile(filename: string): Promise<AlertRuleConfig[]> {
-    const filePath = path.join(this.rulesPath, filename);
-    const yamlContent = await fs.readFile(filePath, 'utf8');
-    return this.importFromYaml(yamlContent);
+    const filePath = path.join(this.config.rulesPath, filename);
+    
+    try {
+      const yamlContent = await this.fileSystem.readFile(filePath);
+      return this.importFromYaml(yamlContent);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Ошибка загрузки файла ${filename}: ${errorMessage}`);
+    }
   }
 
+  // ==================== Вспомогательные методы ====================
+
+
+
+
   /**
-   * Валидирует название метрики
-   * Проверяет соответствие названия метрики паттерну Prometheus
-   * @param metric Название метрики
+   * Валидирует название метрики согласно правилам Prometheus
+   * 
+   * @param metric - Название метрики для проверки
    * @returns true, если название валидно, иначе false
+   * 
    * @private
    */
   private validateMetricName(metric: string): boolean {
@@ -420,16 +354,50 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
    * @returns true, если строка валидна, иначе false
    * @private
    */
-  private validateDuration(duration: string): boolean {
+  private validateDurationFormat(duration: string): boolean {
     const durationPattern = /^\d+[smhd]$/;
     return durationPattern.test(duration);
   }
 
   /**
-   * Группирует правила по категориям
-   * Создает объект, где ключи - категории, а значения - массивы правил
-   * @param rules Массив правил для группировки
-   * @returns Объект с правилами, сгруппированными по категориям
+   * Валидирует PromQL выражение на базовом уровне
+   * 
+   * @param expression - PromQL выражение для проверки
+   * @returns true, если выражение валидно, иначе false
+   */
+  validateExpression(expression: string): boolean {
+    const promqlPattern = /^[a-zA-Z_:][a-zA-Z0-9_:]*.*$/;
+    return promqlPattern.test(expression.trim());
+  }
+
+  /**
+   * Конвертирует оператор сравнения в PromQL формат
+   * Преобразует enum ComparisonOperator в строковый оператор PromQL
+   * @param operator Оператор сравнения из enum
+   * @returns Строковое представление оператора для PromQL
+   */
+  convertOperatorToPromQL(operator: ComparisonOperator): string {
+    const operatorMap = {
+      [ComparisonOperator.GREATER_THAN]: '>',
+      [ComparisonOperator.LESS_THAN]: '<',
+      [ComparisonOperator.GREATER_EQUAL]: '>=',
+      [ComparisonOperator.LESS_EQUAL]: '<=',
+      [ComparisonOperator.EQUAL]: '==',
+      [ComparisonOperator.NOT_EQUAL]: '!='
+    };
+    return operatorMap[operator] || '>';
+  }
+
+  // ==================== Приватные методы преобразования форматов ====================
+
+
+
+  /**
+   * Группирует правила по категориям для экспорта в Prometheus
+   * 
+   * @param rules - Массив правил для группировки
+   * @returns Объект, где ключи - категории, значения - массивы правил
+   * 
    * @private
    */
   private groupRulesByCategory(rules: AlertRuleConfig[]): Record<string, AlertRuleConfig[]> {
@@ -444,40 +412,42 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
   }
 
   /**
-   * Конвертирует правило в формат Prometheus
-   * Создает объект с полями alert, expr, for, labels и annotations
-   * @param rule Правило в формате приложения
+   * Конвертирует правило из внутреннего формата в формат Prometheus
+   * 
+   * @param rule - Правило в внутреннем формате
    * @returns Объект правила в формате Prometheus
+   * 
    * @private
    */
   private convertToPrometheusRule(rule: AlertRuleConfig): any {
+    // Базовые аннотации для всех типов правил
     const annotations: Record<string, string> = {
       summary: rule.description,
-      description: `Alert rule: ${rule.name}`
+      description: `Рабочее место: {{ $labels.instance }}`
     };
 
-    if (this.isHardwareChangeCategory(rule.category)) {
-      // Получаем конфигурацию метрики, если она доступна
-      const metricConfig = this.getHardwareMetricConfig(rule.metric);
-      const labelName = metricConfig.labelName;
-      
-      annotations.description = `
-        • IP: {{ $labels.ip | default($labels.instance | reReplace ":\\d+" "") }}
-        • Было: {{ $labels.old_${labelName} }}
-        • Стало: {{ $labels.${labelName} }}
-        {{- if not (eq $labels.${labelName} $labels.old_${labelName}) }}
-        ⚠ Изменение обнаружено в {{ $labels.instance }}
-        {{- end }}
-      `;
+    // Добавляем информацию о текущем значении и пороге, если они есть
+    if (rule.threshold !== undefined) {
+      annotations.description += `\nТекущее значение: {{ $value }}\nПороговое значение: ${rule.threshold}`;
     }
+
+    // Специальное форматирование для правил категории HARDWARE_CHANGE
+    if (rule.category === AlertCategory.HARDWARE_CHANGE) {
+      annotations.summary = "Конфигурация оборудования была изменена на {{ $labels.instance }}";
+      annotations.description = "Рабочее место: {{ $labels.instance }}\nКонфигурация оборудования была изменена с момента последнего запуска.";
+    } else if (rule.threshold !== undefined) {
+      annotations.description += `\nТекущее значение: {{ $value }}\nПороговое значение: ${rule.threshold}`;
+    }
+
+    // Формируем объект правила для Prometheus
     return {
       alert: rule.name,
       expr: rule.expression,
-      for: rule.duration,
+      for: rule.duration || '0m',
       labels: {
         severity: rule.severity.toLowerCase(),
         category: rule.category.toLowerCase(),
-        ...rule.labels
+        ...(rule.labels || {})
       },
       annotations
     };
@@ -515,10 +485,12 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
    */
   private extractCategoryFromGroup(groupName: string): AlertCategory {
     if (groupName.includes('hardware')) return AlertCategory.HARDWARE_CHANGE;
-    if (groupName.includes('performance')) return AlertCategory.PERFORMANCE;
-    if (groupName.includes('health')) return AlertCategory.HEALTH;
-    return AlertCategory.CUSTOM;
+    if (groupName.includes('cpu')) return AlertCategory.CPU_MONITORING;
+    if (groupName.includes('disk')) return AlertCategory.DISK_MONITORING;
+    if (groupName.includes('network')) return AlertCategory.NETWORK_MONITORING;
+    return AlertCategory.HARDWARE_CHANGE
   }
+
 
   /**
    * Извлекает название метрики из PromQL выражения
@@ -532,21 +504,6 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
     return match ? match[1] : 'unknown_metric';
   }
 
-  /**
-   * Конвертирует оператор сравнения в PromQL формат
-   * Преобразует enum ComparisonOperator в строковый оператор PromQL
-   * @param operator Оператор сравнения из enum
-   * @returns Строковое представление оператора для PromQL
-   */
-  convertOperatorToPromQL(operator: ComparisonOperator): string {
-    const operatorMap = {
-      [ComparisonOperator.GREATER_THAN]: '>',
-      [ComparisonOperator.LESS_THAN]: '<',
-      [ComparisonOperator.GREATER_EQUAL]: '>=',
-      [ComparisonOperator.LESS_EQUAL]: '<=',
-      [ComparisonOperator.EQUAL]: '==',
-      [ComparisonOperator.NOT_EQUAL]: '!='
-    };
-    return operatorMap[operator] || '>';
-  }
+  
+
 }

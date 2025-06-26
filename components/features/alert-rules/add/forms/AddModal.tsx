@@ -16,16 +16,34 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Info, Loader2 } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
-import { AlertCategory, AlertSeverity, ChangeType, ComparisonOperator } from "@/services/prometheus/alerting/alert-rules.types"
+import { AlertCategory, AlertSeverity, ComparisonOperator } from "@/services/prometheus/alerting/alert-rules.types"
 import { CreateAlertRuleRequest } from "@/services/prometheus/alerting/alert-rules.config.types"
-import { METRIC_CATEGORIES, type AlertRulePreset, ALL_METRICS } from "../alertRulePresets"
+import { METRIC_CATEGORIES, type AlertRulePreset } from "../alertRulePresets"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Checkbox } from "@/components/ui/checkbox"
 
 interface AddAlertRuleModalProps {
     isOpen: boolean
     onClose: () => void
-    preset?: AlertRulePreset | null
+    selectedCategory?: AlertCategory | null
+}
+
+// Типы для подкатегорий
+type SubcategoryData = {
+    id: string
+    name: string
+    description: string
+    metrics: Array<{
+        name: string
+        label: string
+        defaultThreshold: number | null
+        operator: string
+    }>
+    requiresThreshold: boolean
+    icon: string
+}
+
+type CategoryWithSubcategories = {
+    subcategories: Record<string, SubcategoryData>
 }
 
 // Предустановленные варианты продолжительности
@@ -44,7 +62,7 @@ const DURATION_PRESETS = [
     { value: '24h', label: '24 часа' }
 ]
 
-export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModalProps) {
+export function AddAlertRuleModal({ isOpen, onClose, selectedCategory }: AddAlertRuleModalProps) {
     const t = useTranslations('dashboard.monitoring.alertRules')
     const tEvents = useTranslations('dashboard.monitoring.events')
     const queryClient = useQueryClient()
@@ -52,20 +70,19 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [customDuration, setCustomDuration] = useState('')
     const [isDurationCustom, setIsDurationCustom] = useState(false)
-    
+    const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null)
+
     const form = useForm<AddAlertRuleForm>({
         resolver: zodResolver(addAlertRuleSchema),
         defaultValues: {
             name: '',
-            category: AlertCategory.CUSTOM,
-            metric: [],
+            category: AlertCategory.CPU_MONITORING,
             threshold: undefined,
             operator: ComparisonOperator.GREATER_THAN,
             duration: '5m',
             severity: AlertSeverity.WARNING,
             description: '',
-            enabled: true,
-            changeType: undefined
+            enabled: true
         }
     })
     
@@ -73,102 +90,175 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
     const watchedOperator = form.watch('operator')
     const watchedThreshold = form.watch('threshold')
     const watchedCategory = form.watch('category')
-    const watchedMetric = form.watch('metric')
 
+    // Получаем данные выбранной категории
+    const selectedCategoryData = useMemo(() => {
+        return METRIC_CATEGORIES[watchedCategory]
+    }, [watchedCategory])
 
-    // Функция для автоматического определения ChangeType по категории
-    const getChangeTypeByCategory = (category: AlertCategory): ChangeType | undefined => {
-        switch (category) {
-            case AlertCategory.HARDWARE_CHANGE:
-                return ChangeType.LABEL_CHANGE
-            case AlertCategory.PERFORMANCE:
-                return ChangeType.VALUE_CHANGE
-            case AlertCategory.HEALTH:
-                return ChangeType.LABEL_CHANGE
-            case AlertCategory.CUSTOM:
-                return undefined // Пользователь выбирает сам
-            default:
-                return undefined
+    // Получаем подкатегории для выбранной категории (только если они есть)
+    const availableSubcategories = useMemo(() => {
+        if (!selectedCategoryData || !('subcategories' in selectedCategoryData) || !selectedCategoryData.subcategories) {
+            return []
         }
-    }
-
-    // Автозаполнение формы при выборе пресета
-    useEffect(() => {
-        if (preset) {
-            form.setValue('name', preset.name)
-            form.setValue('category', preset.category as AlertCategory)
-            form.setValue('metric', [preset.metric])
-            form.setValue('operator', preset.operator)
-            form.setValue('threshold', typeof preset.threshold === 'string' ? parseFloat(preset.threshold) : preset.threshold)
-            form.setValue('duration', preset.duration)
-            form.setValue('severity', preset.severity)
-            form.setValue('description', preset.description)
-        }
-    }, [preset, form])
-
-    const getCategoryMetrics = useCallback((category: AlertCategory) => {
-        switch (category) {
-          case AlertCategory.PERFORMANCE:
-            return [...METRIC_CATEGORIES.CPU.metrics, ...METRIC_CATEGORIES.DISK.metrics]
-          case AlertCategory.HARDWARE_CHANGE:
-            return [...METRIC_CATEGORIES.HARDWARE.metrics] // Создаем копию
-          case AlertCategory.HEALTH:
-            return [...METRIC_CATEGORIES.SYSTEM.metrics, ...METRIC_CATEGORIES.NETWORK.metrics]
-          default:
-            return [...ALL_METRICS] // Создаем копию
-        }
-    }, [])
+        return Object.values(selectedCategoryData.subcategories)
+    }, [selectedCategoryData])
     
-    // Автоматическое обновление списка метрик при смене категории
-    useEffect(() => {
-        if (watchedCategory && !preset) {
-            // Автоматически выбираем все метрики для выбранной категории
-            const categoryMetrics = getCategoryMetrics(watchedCategory)
-            form.setValue('metric', [...categoryMetrics])
+    // Получаем данные выбранной подкатегории с правильной типизацией
+    const selectedSubcategoryData = useMemo((): SubcategoryData | null => {
+        if (!selectedCategoryData || !('subcategories' in selectedCategoryData) || !selectedCategoryData.subcategories || !selectedSubcategory) {
+            return null
         }
-    }, [watchedCategory, form, preset, getCategoryMetrics])
+        const subcategories = selectedCategoryData.subcategories as Record<string, SubcategoryData>
+        return subcategories[selectedSubcategory] || null
+    }, [selectedCategoryData, selectedSubcategory])
 
+    // Автозаполнение формы при выборе категории
+    useEffect(() => {
+        if (selectedCategory) {
+            form.setValue('category', selectedCategory)
+            
+            const categoryData = METRIC_CATEGORIES[selectedCategory]
+            
+            if (categoryData) {
+                // Для HARDWARE_CHANGE - особая логика
+                if (selectedCategory === AlertCategory.HARDWARE_CHANGE) {
+                    form.setValue('name', 'Контроль изменения оборудования')
+                    form.setValue('description', categoryData.description)
+                    form.setValue('threshold', undefined)
+                    form.setValue('operator', undefined)
+                    form.setValue('severity', AlertSeverity.CRITICAL)
+                } else {
+                    // Для категорий с подкатегориями
+                    if ('subcategories' in categoryData && categoryData.subcategories) {
+                        const subcategories = categoryData.subcategories as Record<string, SubcategoryData>
+                        const firstSubcategory = Object.keys(subcategories)[0]
+                        setSelectedSubcategory(firstSubcategory)
+                        
+                        const firstSubcategoryData = subcategories[firstSubcategory]
+                        const firstMetric = firstSubcategoryData.metrics[0]
+                        
+                        form.setValue('name', firstSubcategoryData.name)
+                        form.setValue('description', firstSubcategoryData.description)
+                        
+                        if (firstMetric) {
+                            form.setValue('threshold', firstMetric.defaultThreshold ?? undefined)
+                            form.setValue('operator', firstMetric.operator as ComparisonOperator)
+                        }
+                    }
+                }
+            }
+        }
+    }, [selectedCategory, form])
 
-    // Функция для выбора всех метрик
-    const handleSelectAllMetrics = useCallback(() => {
-        form.setValue('metric', [...ALL_METRICS]) // Выбираем все метрики, а не только категории
-    }, [form])
+    // Автоматическое обновление при смене категории
+    useEffect(() => {
+        if (watchedCategory && !selectedCategory) {
+            const categoryData = METRIC_CATEGORIES[watchedCategory]
+            
+            if (categoryData) {
+                // Сброс подкатегории при смене категории
+                setSelectedSubcategory(null)
+                
+                if (watchedCategory === AlertCategory.HARDWARE_CHANGE) {
+                    form.setValue('threshold', undefined)
+                    form.setValue('operator', undefined)
+                } else if ('subcategories' in categoryData && categoryData.subcategories) {
+                    // Автоматически выбираем первую подкатегорию
+                    const subcategories = categoryData.subcategories as Record<string, SubcategoryData>
+                    const firstSubcategory = Object.keys(subcategories)[0]
+                    setSelectedSubcategory(firstSubcategory)
+                    
+                    const firstSubcategoryData = subcategories[firstSubcategory]
+                    const firstMetric = firstSubcategoryData.metrics[0]
+                    
+                    if (firstMetric) {
+                        form.setValue('threshold', firstMetric.defaultThreshold ?? undefined)
+                        form.setValue('operator', firstMetric.operator as ComparisonOperator)
+                    }
+                }
+            }
+        }
+    }, [watchedCategory, form, selectedCategory])
 
-    // Функция для снятия выбора всех метрик
-    const handleDeselectAllMetrics = useCallback(() => {
-        form.setValue('metric', [])
-    }, [form])
+    // Автоматическое обновление при смене подкатегории
+    useEffect(() => {
+        if (selectedSubcategory && selectedSubcategoryData) {
+            const firstMetric = selectedSubcategoryData.metrics[0]
+            
+            if (firstMetric) {
+                form.setValue('threshold', firstMetric.defaultThreshold ?? undefined)
+                form.setValue('operator', firstMetric.operator as ComparisonOperator)
+            }
+        }
+    }, [selectedSubcategory, selectedSubcategoryData, form])
 
     const handleModalClose = useCallback(() => {
         form.reset()
         setCustomDuration('')
+        setSelectedSubcategory(null)
         onClose()
     }, [form, onClose])
+
+    const extractMetricData = (categoryData: any, subcategoryData: SubcategoryData | null, isHardwareChange: boolean) => {
+        if (isHardwareChange) {
+            return {
+                metric: categoryData.metrics[0] as string,
+                defaultOperator: undefined,
+                defaultThreshold: null
+            }
+        }
+        
+        // Если есть подкатегория, используем её метрики
+        if (subcategoryData) {
+            const firstMetric = subcategoryData.metrics[0]
+            
+            return {
+                metric: firstMetric.name,
+                defaultOperator: firstMetric.operator,
+                defaultThreshold: firstMetric.defaultThreshold
+            }
+        }
+        
+        return {
+            metric: '',
+            defaultOperator: undefined,
+            defaultThreshold: null
+        }
+    }
 
     const onSubmit = async (data: AddAlertRuleForm) => {
         try {
             setIsSubmitting(true)
-            // Автоматически определяем changeType для не-CUSTOM категорий
-            const changeType = data.category === AlertCategory.CUSTOM 
-                ? data.changeType 
-                : getChangeTypeByCategory(data.category)
+            const categoryData = METRIC_CATEGORIES[data.category as keyof typeof METRIC_CATEGORIES]
+            const isHardwareChange = data.category === 'HARDWARE_CHANGE'
+
+            // Извлекаем метрику и параметры по умолчанию
+            const { metric, defaultOperator, defaultThreshold } = extractMetricData(
+                categoryData, 
+                selectedSubcategoryData, 
+                isHardwareChange
+            )
+
+            // Создаем базовый запрос
             const createRequest: CreateAlertRuleRequest = {
                 name: data.name,
-                category: data.category,
-                metric: data.metric.join(','),
-                threshold: data.threshold,
-                operator: data.operator,
-                duration: isDurationCustom ? customDuration : data.duration,
-                severity: data.severity,
                 description: data.description || '',
+                category: data.category,
+                metric,
+                severity: data.severity,
                 enabled: data.enabled,
-                changeType: changeType,
-                includeInstance: true
+                duration: isHardwareChange ? '0s' : (data.duration || '5m')
+            }
+            
+            // Добавляем специфичные для мониторинга поля
+            if (!isHardwareChange) {
+                createRequest.threshold = data.threshold ?? defaultThreshold ?? 0
+                createRequest.operator = data.operator || defaultOperator as ComparisonOperator
             }
             
             await createRule(createRequest)
-            queryClient.invalidateQueries({ queryKey: ['alert-rules'] })
-            toast.success('Правило успешно создано')
+            toast.success('Правило алерта успешно создано')
             handleModalClose()
         } catch (error) {
             toast.error('Ошибка при создании правила')
@@ -210,36 +300,28 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
     }
 
     const getCategoryLabel = (category: AlertCategory) => {
-        switch (category) {
-            case AlertCategory.HARDWARE_CHANGE:
-                return 'Изменение оборудования'
-            case AlertCategory.PERFORMANCE:
-                return 'Производительность'
-            case AlertCategory.HEALTH:
-                return 'Состояние системы'
-            case AlertCategory.CUSTOM:
-                return 'Пользовательские'
-            default:
-                return category
-        }
+        const categoryData = METRIC_CATEGORIES[category]
+        return categoryData ? categoryData.name : category
     }
-    const availableMetrics = useMemo(() => ALL_METRICS, [])
 
-    const currentCategoryMetrics = useMemo(() => getCategoryMetrics(watchedCategory), [getCategoryMetrics, watchedCategory])
+    // Проверяем, нужно ли показывать поля threshold и operator
+    const shouldShowThresholdFields = watchedCategory !== AlertCategory.HARDWARE_CHANGE
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleModalClose() }}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>{preset ? `Создать правило: ${preset.name}` : 'Создать правило алерта'}</DialogTitle>
+                    <DialogTitle>
+                        {selectedCategory ? `Создать правило: ${getCategoryLabel(selectedCategory)}` : 'Создание правила алерта'}
+                    </DialogTitle>
                 </DialogHeader>
                 
-                {/* Информация о выбранном пресете */}
-                {preset && (
+                {/* Информация о выбранной категории */}
+                {selectedCategory && (
                     <Alert className="mb-4">
                         <Info className="h-4 w-4" />
                         <AlertDescription>
-                            Используется шаблон: <strong>{preset.name}</strong>. 
+                            Используется категория: <strong>{getCategoryLabel(selectedCategory)}</strong>. 
                             Вы можете изменить любые параметры перед созданием правила.
                         </AlertDescription>
                     </Alert>
@@ -295,238 +377,162 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
                             />
                         </div>
 
-                        {/* Тип изменения - только для CUSTOM категории */}
-                        {watchedCategory === AlertCategory.CUSTOM && (
-                            <FormField
-                                control={form.control}
-                                name="changeType"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Тип изменения</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                                            <FormControl>
-                                                <SelectTrigger className="text-sm">
-                                                    <SelectValue placeholder="Выберите тип изменения" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value={ChangeType.VALUE_CHANGE}>
-                                                    Изменение значения
-                                                </SelectItem>
-                                                <SelectItem value={ChangeType.LABEL_CHANGE}>
-                                                    Изменение метки
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        {/* Подкатегория (тип мониторинга) - показываем только если есть подкатегории */}
+                        {availableSubcategories.length > 0 && (
+                            <FormItem>
+                                <FormLabel>Тип мониторинга</FormLabel>
+                                <Select 
+                                    onValueChange={setSelectedSubcategory} 
+                                    value={selectedSubcategory || ''} 
+                                    disabled={isSubmitting}
+                                >
+                                    <FormControl>
+                                        <SelectTrigger className="text-sm">
+                                            <SelectValue placeholder="Выберите тип мониторинга" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {availableSubcategories.map((subcategory) => (
+                                            <SelectItem key={subcategory.id} value={subcategory.id}>
+                                                {subcategory.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </FormItem>
                         )}
                         
-                        {/* Метрики - множественный выбор через чекбоксы */}
-                        <FormField
-                            control={form.control}
-                            name="metric"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <div className="flex items-center justify-between">
-                                        <FormLabel>{t('table.columns.metric')}</FormLabel>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="default"
-                                                onClick={handleSelectAllMetrics}
-                                                disabled={isSubmitting || availableMetrics.length === 0}
-                                                className="text-xs"
-                                            >
-                                                Выбрать все
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="default"
-                                                onClick={handleDeselectAllMetrics}
-                                                disabled={isSubmitting || (field.value?.length || 0) === 0}
-                                                className="text-xs"
-                                            >
-                                                Снять все
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <FormControl>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
-                                            {availableMetrics.length > 0 ? (
-                                                <>
-                                                    <div className="text-xs text-muted-foreground mb-2">
-                                                        Выбрано: {field.value?.length || 0} из {availableMetrics.length}
-                                                    </div>
-                                                    {availableMetrics.map((metric) => {
-                                                        const isInCurrentCategory = currentCategoryMetrics.includes(metric)
-                                                        return (
-                                                            <div key={metric} className="flex items-center space-x-2">
-                                                                <Checkbox
-                                                                    id={metric}
-                                                                    checked={field.value?.includes(metric) || false}
-                                                                    onCheckedChange={(checked) => {
-                                                                        const currentValue = field.value || []
-                                                                        if (checked) {
-                                                                            field.onChange([...currentValue, metric])
-                                                                        } else {
-                                                                            field.onChange(currentValue.filter(m => m !== metric))
-                                                                        }
-                                                                    }}
-                                                                    disabled={isSubmitting}
-                                                                />
-                                                                <label 
-                                                                    htmlFor={metric} 
-                                                                    className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
-                                                                        isInCurrentCategory ? 'text-foreground' : 'text-muted-foreground'
-                                                                    }`}
-                                                                >
-                                                                    {metric}
-                                                                    {isInCurrentCategory && <span className="ml-1 text-xs text-blue-500">●</span>}
-                                                                </label>
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </>
-                                            ) : (
-                                                <div className="text-sm text-muted-foreground">
-                                                    Нет доступных метрик для выбранной категории
-                                                </div>
-                                            )}
-                                        </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        
-                        {/* Оператор сравнения */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="operator"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Оператор сравнения</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
-                                            <FormControl>
-                                                <SelectTrigger className="text-sm">
-                                                    <SelectValue placeholder="Выберите оператор" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {Object.values(ComparisonOperator).map((operator) => (
-                                                    <SelectItem key={operator} value={operator}>
-                                                        {getOperatorLabel(operator)}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            
-                            {/* Пороговое значение */}
-                            <div className="grid grid-cols-2 gap-4">
+                        {/* Поля threshold и operator - показываем только если не HARDWARE_CHANGE */}
+                        {shouldShowThresholdFields && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Оператор сравнения */}
                                 <FormField
                                     control={form.control}
-                                    name="threshold"
+                                    name="operator"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>{t('table.columns.threshold')}</FormLabel>
-                                            <FormControl>
-                                                <Input 
-                                                    type="number" 
-                                                    placeholder="Например: 80" 
-                                                    {...field}
-                                                    value={field.value ?? ''}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value;
-                                                        field.onChange(value === '' ? undefined : Number(value));
-                                                    }}
+                                            <FormLabel>Оператор сравнения</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={isSubmitting}>
+                                                <FormControl>
+                                                    <SelectTrigger className="text-sm">
+                                                        <SelectValue placeholder="Выберите оператор" />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {Object.values(ComparisonOperator).map((operator) => (
+                                                        <SelectItem key={operator} value={operator}>
+                                                            {getOperatorLabel(operator)}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                
+                                {/* Пороговое значение */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="threshold"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t('table.columns.threshold')}</FormLabel>
+                                                <FormControl>
+                                                    <Input 
+                                                        type="number" 
+                                                        placeholder="Например: 80" 
+                                                        {...field}
+                                                        value={field.value ?? ''}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            field.onChange(value === '' ? undefined : Number(value));
+                                                        }}
+                                                        disabled={isSubmitting}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                
+                                {/* Продолжительность */}
+                                <FormField
+                                    control={form.control}
+                                    name="duration"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t('table.columns.duration')}</FormLabel>
+                                            <div className="space-y-2">
+                                                <Select 
+                                                    onValueChange={(value) => {
+                                                        if (value === 'custom') {
+                                                            setIsDurationCustom(true)
+                                                        } else {
+                                                            setIsDurationCustom(false)
+                                                            field.onChange(value)
+                                                        }
+                                                    }} 
+                                                    defaultValue={field.value} 
                                                     disabled={isSubmitting}
-                                                />
-                                            </FormControl>
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="text-sm">
+                                                            <SelectValue placeholder="Выберите продолжительность" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {DURATION_PRESETS.map((preset) => (
+                                                            <SelectItem key={preset.value} value={preset.value}>
+                                                                {preset.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                        <SelectItem value="custom">Пользовательское значение</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {isDurationCustom && (
+                                                    <Input
+                                                        value={customDuration}
+                                                        onChange={(e) => setCustomDuration(e.target.value)}
+                                                        onBlur={() => {
+                                                            if (customDuration) {
+                                                                field.onChange(customDuration)
+                                                            }
+                                                        }}
+                                                        placeholder="Например: 10m, 1h, 30s"
+                                                        className="text-sm"
+                                                        disabled={isSubmitting}
+                                                    />
+                                                )}
+                                            </div>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
                             </div>
-                            
-                            {/* Продолжительность */}
-                            <FormField
-                                control={form.control}
-                                name="duration"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t('table.columns.duration')}</FormLabel>
-                                        <div className="space-y-2">
-                                        <Select 
-                                                onValueChange={(value) => {
-                                                    if (value === 'custom') {
-                                                        setIsDurationCustom(true)
-                                                    } else {
-                                                        setIsDurationCustom(false)
-                                                        field.onChange(value)
-                                                    }
-                                                }} 
-                                                defaultValue={field.value} 
-                                                disabled={isSubmitting}
-                                            >
-                                                <FormControl>
-                                                    <SelectTrigger className="text-sm">
-                                                        <SelectValue placeholder="Выберите продолжительность" />
-                                                    </SelectTrigger>
-                                                </FormControl>
-                                                <SelectContent>
-                                                    {DURATION_PRESETS.map((preset) => (
-                                                        <SelectItem key={preset.value} value={preset.value}>
-                                                            {preset.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                    <SelectItem value="custom">Пользовательское значение</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            {isDurationCustom && (
-                                                <Input
-                                                    value={customDuration}
-                                                    onChange={(e) => setCustomDuration(e.target.value)}
-                                                    placeholder="Например: 30s, 5m, 1h"
-                                                    className="text-sm"
-                                                    disabled={isSubmitting}
-                                                />
-                                            )}
-                                        </div>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
-                        
+                        )}
+
                         {/* Приоритет */}
                         <FormField
                             control={form.control}
                             name="severity"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>{t('table.columns.severity')}</FormLabel>
+                                    <FormLabel>Приоритет</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isSubmitting}>
                                         <FormControl>
                                             <SelectTrigger className="text-sm">
-                                                <SelectValue placeholder="Выберите приоритет" />
+                                                <SelectValue placeholder="Выберите серьезность" />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                                {Object.values(AlertSeverity).map((severity) => (
-                                                    <SelectItem key={severity} value={severity}>
-                                                        {getSeverityLabel(severity)}
-                                                    </SelectItem>
-                                                ))}
+                                            {Object.values(AlertSeverity).map((severity) => (
+                                                <SelectItem key={severity} value={severity}>
+                                                    {getSeverityLabel(severity)}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -545,7 +551,7 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
                                         <Textarea 
                                             {...field}
                                             disabled={isSubmitting}
-                                            placeholder="Описание правила алерта"
+                                            placeholder="Введите описание правила (необязательно)"
                                             className="text-sm min-h-[80px]"
                                         />
                                     </FormControl>
@@ -554,17 +560,15 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
                             )}
                         />
 
-                        {/* Активное правило */}
+                        {/* Включено */}
                         <FormField
                             control={form.control}
                             name="enabled"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                                     <div className="space-y-0.5">
-                                        <FormLabel className="text-sm font-medium">
-                                            Активировать правило
-                                        </FormLabel>
-                                        <div className="text-xs text-muted-foreground">
+                                        <FormLabel className="text-base">Включить правило</FormLabel>
+                                        <div className="text-sm text-muted-foreground">
                                             Правило будет активно сразу после создания
                                         </div>
                                     </div>
@@ -578,31 +582,30 @@ export function AddAlertRuleModal({ isOpen, onClose, preset }: AddAlertRuleModal
                                 </FormItem>
                             )}
                         />
-                        
-                        {/* Информация о правиле */}
-                        {(watchedOperator && watchedThreshold !== undefined && watchedMetric?.length > 0) && (
-                            <Alert>
-                                <Info className="h-4 w-4" />
-                                <AlertDescription>
-                                    Правило сработает, когда метрики <strong>{watchedMetric.join(', ')}</strong> будут <strong>{getOperatorLabel(watchedOperator).toLowerCase()}</strong> <strong>{watchedThreshold}</strong>
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                        <DialogFooter className="gap-2">
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                onClick={handleModalClose}
-                                disabled={isSubmitting}
-                                className="text-xs h-8"
-                            >
+
+                        {/* Сводка правила */}
+                        <div className="rounded-lg border p-4 bg-muted/50">
+                            <h4 className="font-medium mb-2">Сводка правила:</h4>
+                            <div className="text-sm space-y-1">
+                                <p><strong>Категория:</strong> {getCategoryLabel(watchedCategory)}</p>
+                                {selectedSubcategoryData && (
+                                    <p><strong>Тип мониторинга:</strong> {selectedSubcategoryData.name}</p>
+                                )}
+                                {shouldShowThresholdFields && (
+                                    <>
+                                        <p><strong>Условие:</strong> {watchedOperator ? getOperatorLabel(watchedOperator) : 'Не выбрано'} {watchedThreshold}</p>
+                                        <p><strong>Продолжительность:</strong> {form.watch('duration')}</p>
+                                    </>
+                                )}
+                                <p><strong>Серьезность:</strong> {getSeverityLabel(form.watch('severity'))}</p>
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={handleModalClose} disabled={isSubmitting}>
                                 Отмена
                             </Button>
-                            <Button 
-                                type="submit" 
-                                disabled={!isValid || isSubmitting}
-                                className="text-xs h-8"
-                            >
+                            <Button type="submit" disabled={!isValid || isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Создать правило
                             </Button>

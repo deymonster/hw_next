@@ -5,9 +5,9 @@ import { Prisma } from '@prisma/client';
  */
 export enum AlertCategory {
   HARDWARE_CHANGE = 'HARDWARE_CHANGE',
-  PERFORMANCE = 'PERFORMANCE', 
-  HEALTH = 'HEALTH',
-  CUSTOM = 'CUSTOM'
+  CPU_MONITORING = 'CPU_MONITORING', 
+  DISK_MONITORING = 'DISK_MONITORING',
+  NETWORK_MONITORING = 'NETWORK_MONITORING'
 }
 
 export enum AlertSeverity {
@@ -25,12 +25,6 @@ export enum ComparisonOperator {
   NOT_EQUAL = 'NOT_EQUAL'
 }
 
-
-export enum ChangeType {
-  LABEL_CHANGE = 'LABEL_CHANGE',
-  VALUE_CHANGE = 'VALUE_CHANGE', 
-  THRESHOLD = 'THRESHOLD'
-}
 
 /**
  * Интерфейс для создания AlertRule в базе данных

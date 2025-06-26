@@ -5,14 +5,28 @@ import {
   IAlertRuleCreateInput, 
   AlertCategory, 
   AlertSeverity, 
-  ComparisonOperator, 
-  ChangeType
+  ComparisonOperator
 } from './alert-rules.types';
 import { 
   AlertRuleConfig, 
   CreateAlertRuleRequest, 
   UpdateAlertRuleRequest 
 } from './alert-rules.config.types';
+
+// Кастомные ошибки
+class ValidationError extends Error {
+  constructor(public errors: string[]) {
+    super(`Ошибки валидации: ${errors.join(', ')}`);
+    this.name = 'ValidationError';
+  }
+}
+
+class SyncError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SyncError';
+  }
+}
 
 /**
  * Менеджер правил оповещений - объединяет работу с БД и конфигурацией Prometheus
@@ -25,170 +39,183 @@ export class AlertRulesManagerService {
   ) {}
 
   /**
-   * Создать правило с валидацией и синхронизацией с Prometheus
+   * Создает новое правило алерта с полной валидацией и синхронизацией
+   * 
+   * @param request - Данные для создания правила
+   * @param userId - ID пользователя, создающего правило
+   * @returns Созданное правило 
+   * @throws {ValidationError} Если валидация не пройдена
+   * @throws {SyncError} Если не удалось синхронизировать с Prometheus
    */
-  async createRule(request: CreateAlertRuleRequest, userId: string): Promise<AlertRule | AlertRule[]> {
-    // 1. Валидация через конфигурационный сервис
+  async createRule(request: CreateAlertRuleRequest, userId: string): Promise<AlertRule> {
+    
+    // Валидация данных
     const validation = await this.configService.validateRule(request);
     if (!validation.isValid) {
-      throw new Error(`Ошибки валидации: ${validation.errors.join(', ')}`);
+      throw new ValidationError(validation.errors);
     }
-
-    // 2. Генерация PromQL выражения если нужно
-    const expressions = request.expression || this.configService.generateExpression(
-      request.metric,
-      request.category,
-      request.changeType,
-      request.threshold,
-      request.operator
-    );
-    // Для категории HARDWARE_CHANGE всегда используем метрику Hardware_Change_Detected
-    if (request.category === AlertCategory.HARDWARE_CHANGE) {
-      // 3. Подготовка данных для БД
-      const dbData: IAlertRuleCreateInput = {
-        name: request.name,
-        category: request.category,
-        metric: 'Hardware_Change_Detected',
-        expression: expressions as string, // Для HARDWARE_CHANGE всегда возвращается строка
-        threshold: request.threshold,
-        operator: request.operator,
-        duration: request.duration,
-        severity: request.severity,
-        description: request.description,
-        labels: request.labels,
-        enabled: request.enabled ?? true,
-        user: {
-          connect: { id: userId }
-        }
-      };
-
-      // 4. Сохранение в БД
-      const rule = await this.alertRulesService.createRule(dbData);
-      
-      // 5. Синхронизация с Prometheus
-      await this.syncWithPrometheus();
-
-      return rule;
-    }
-    // Если выражение - массив (для других категорий с несколькими метриками)
-    else if (Array.isArray(expressions)) {
-      const rules: AlertRule[] = [];
-      const hardwareMetrics = this.configService.getHardwareMetrics();
-
-      // Создаем отдельное правило для каждого выражения
-      for (let i = 0; i < expressions.length; i++) {
-        const expression = expressions[i];
-        const metricName = hardwareMetrics[i];
-        
-        // 3. Подготовка данных для БД
-        const dbData: IAlertRuleCreateInput = {
-          name: `${request.name} (${metricName})`,
-          category: request.category,
-          metric: metricName,
-          expression,
-          threshold: request.threshold,
-          operator: request.operator,
-          duration: request.duration,
-          severity: request.severity,
-          description: request.description,
-          labels: request.labels,
-          enabled: request.enabled ?? true,
-          user: {
-            connect: { id: userId }
-          }
-        };
-
-        // 4. Сохранение в БД
-        const rule = await this.alertRulesService.createRule(dbData);
-        rules.push(rule);
-      }
-
-      // 5. Синхронизация с Prometheus
-      await this.syncWithPrometheus();
-
-      return rules;
-    } else {
-      // Стандартная логика для одного правила
-      // 3. Подготовка данных для БД
-      const dbData: IAlertRuleCreateInput = {
-        name: request.name,
-        category: request.category,
-        metric: request.metric,
-        expression: expressions,
-        threshold: request.threshold,
-        operator: request.operator,
-        duration: request.duration,
-        severity: request.severity,
-        description: request.description,
-        labels: request.labels,
-        enabled: request.enabled ?? true,
-        user: {
-          connect: { id: userId }
-        }
-      };
-
-      // 4. Сохранение в БД
-      const rule = await this.alertRulesService.createRule(dbData);
-
-      // 5. Синхронизация с Prometheus
-      await this.syncWithPrometheus();
-
-      return rule;
-    }
-
+    
+    const rule = request.category === AlertCategory.HARDWARE_CHANGE
+      ? await this.createHardwareChangeRule(request, userId)
+      : await this.createMonitoringRule(request, userId);
+    
+    await this.syncWithPrometheus('Failed to sync after rule creation');
+    
+    return rule;
+    
   }
 
   /**
-   * Обновить правило
+   * Обновляет существующее правило алерта
+   * 
+   * @param id - ID правила для обновления
+   * @param request - Данные для обновления
+   * @returns Обновленное правило
+   * @throws {ValidationError} Если валидация не пройдена
+   * @throws {SyncError} Если не удалось синхронизировать с Prometheus
    */
   async updateRule(id: string, request: UpdateAlertRuleRequest): Promise<AlertRule> {
-    // 1. Валидация
     const validation = await this.configService.validateRule(request);
     if (!validation.isValid) {
-      throw new Error(`Ошибки валидации: ${validation.errors.join(', ')}`);
+      throw new ValidationError(validation.errors);
     }
-
-    // 2. Обновление в БД
-    const updateData: Partial<IAlertRuleCreateInput> = { ...request };
     
-    // Генерация нового выражения если изменились параметры
-    if (request.threshold !== undefined || request.operator !== undefined) {
-      const currentRule = await this.alertRulesService.findById(id);
-      if (currentRule) {
-        const expression = this.configService.generateExpression(
-          currentRule.metric,
-          currentRule.category as AlertCategory,
-          currentRule.changeType as ChangeType,
-          request.threshold ?? (currentRule.threshold ?? undefined),
-          request.operator ?? (currentRule.operator as ComparisonOperator)
-        );
-        updateData.expression = Array.isArray(expression) ? expression[0] : expression;
-      }
-    }
-
-    const rule = await this.alertRulesService.update(id, updateData);
-
-    // 3. Синхронизация с Prometheus
-    await this.syncWithPrometheus();
-
+    const rule = await this.updateRuleInDatabase(id, request);
+    await this.syncWithPrometheus('Failed to sync after rule update');
+    
     return rule;
   }
 
   /**
-   * Удалить правило
+   * Удаляет правило алерта
+   * 
+   * @param id - ID правила для удаления
+   * @throws {SyncError} Если не удалось синхронизировать с Prometheus
    */
   async deleteRule(id: string): Promise<void> {
     await this.alertRulesService.delete(id);
-    await this.syncWithPrometheus();
+    await this.syncWithPrometheus('Failed to sync after rule deletion');
   }
 
   /**
-   * Переключить статус правила
+   * Переключает статус правила (включено/выключено)
+   * @param id - ID правила для переключения
+   * @returns - Обновленное правило
+   * @throws {SyncError} Если не удалось синхронизировать с Prometheus
    */
   async toggleRule(id: string): Promise<AlertRule> {
     const rule = await this.alertRulesService.toggleRule(id);
-    await this.syncWithPrometheus();
+    await this.syncWithPrometheus('Failed to sync after rule toggle');
     return rule;
+  }
+
+
+
+
+  // ==================== Приватные методы Приватные методы для создания правил ====================
+  
+
+  
+
+  /**
+   * Создает правило для изменения оборудования
+   */
+  private async createHardwareChangeRule(
+    request: CreateAlertRuleRequest,
+    userId: string
+  ): Promise<AlertRule> {
+    const dbData = {
+      name: request.name,
+      category: AlertCategory.HARDWARE_CHANGE,
+      metric: 'Hardware_Change_Detected',
+      expression: 'Hardware_Change_Detected == 1',
+      duration: request.duration || '0s',
+      severity: request.severity,
+      description: request.description,
+      labels: request.labels,
+      enabled: request.enabled ?? true,
+      user: { connect: { id: userId } },
+    };
+    
+    return this.alertRulesService.createRule(dbData);
+  }
+
+  /**
+   * Создает обычное правило мониторинга
+   */
+  private async createMonitoringRule(
+    request: CreateAlertRuleRequest,
+    userId: string
+  ): Promise<AlertRule> {
+    if (request.threshold === undefined || !request.operator || !request.metric) {
+      throw new ValidationError(['Для правил мониторинга обязательны threshold, operator и metric']);
+    }
+
+    const expression = this.generateExpression(
+      request.metric,
+      request.operator,
+      request.threshold
+    );
+
+    const dbData: IAlertRuleCreateInput = {
+      name: request.name,
+      category: request.category,
+      metric: request.metric,
+      expression,
+      threshold: request.threshold,
+      operator: request.operator,
+      duration: request.duration,
+      severity: request.severity,
+      description: request.description,
+      labels: request.labels,
+      enabled: request.enabled ?? true,
+      user: { connect: { id: userId } },
+    };
+
+    return this.alertRulesService.createRule(dbData);
+  }
+
+  // ==================== Приватные методы для обновления правил ====================
+  private async updateRuleInDatabase(
+    id: string,
+    request: UpdateAlertRuleRequest
+  ): Promise<AlertRule> {
+    const updateData: Partial<UpdateAlertRuleRequest> = { ...request };
+
+    if (request.threshold !== undefined || request.operator !== undefined || request.metric !== undefined) {
+      const currentRule = await this.alertRulesService.findById(id);
+      if (!currentRule) {
+        throw new Error(`Rule with ID ${id} not found`);
+      }
+
+      const metric = request.metric ?? currentRule.metric;
+      const operator = request.operator ?? currentRule.operator;
+      const threshold = request.threshold ?? currentRule.threshold;
+
+      if (threshold !== null && operator !== null) {
+          updateData.expression = this.generateExpression(
+          metric, 
+          operator as ComparisonOperator, 
+          threshold
+        );
+      }
+    }
+
+    return this.alertRulesService.update(id, updateData);
+  }
+
+  // ==================== Генерация и конвертация ====================
+
+  /**
+   * Генерирует выражение для сравнения
+   */
+  private generateExpression(
+    metric: string,
+    operator: ComparisonOperator,
+    threshold: number
+  ): string {
+    const operatorSymbol = this.configService.convertOperatorToPromQL(operator);
+    return `${metric} ${operatorSymbol} ${threshold}`;
   }
 
   /**
@@ -206,6 +233,7 @@ export class AlertRulesManagerService {
   async importRules(yamlContent: string, userId: string): Promise<AlertRule[]> {
     const configs = await this.configService.importFromYaml(yamlContent);
     const results: AlertRule[] = [];
+    const errors: {name: string, error: string}[] = [];
 
     for (const config of configs) {
       try {
@@ -217,17 +245,24 @@ export class AlertRulesManagerService {
           results.push(rule);
         }
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        errors.push({name: config.name, error: errorMessage});
         console.error(`Ошибка импорта правила ${config.name}:`, error);
       }
+    }
+    if (errors.length > 0) {
+      console.warn(`Импортировано ${results.length} правил, ${errors.length} с ошибками`);
     }
 
     return results;
   }
-
+   
+  
   /**
    * Синхронизировать все правила с Prometheus
+   * @throws {SyncError} если синхронизация не удалась
    */
-  async syncWithPrometheus(): Promise<boolean> {
+  async syncWithPrometheus(errorMessage: string): Promise<void> {
     try {
       // 1. Получить все активные правила
       const rules = await this.alertRulesService.getActiveRules();
@@ -239,27 +274,22 @@ export class AlertRulesManagerService {
       await this.configService.saveRulesToFile(configs, 'generated.rules.yml');
       
       // 4. Перезагрузить Prometheus
-      return await this.configService.reloadPrometheus();
+      const success = await this.configService.reloadPrometheus();
+      if (!success) {
+        throw new SyncError('Перезагрузка Prometheus API вернула ошибку');
+      }
     } catch (error) {
-      console.error('Ошибка синхронизации с Prometheus:', error);
-      return false;
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('Ошибка синхронизации с Prometheus:', message);
+      throw new SyncError(errorMessage);
     }
   }
 
-  /**
-   * Получить статистику с дополнительной информацией
-   */
-  async getExtendedStats(userId?: string) {
-    const stats = await this.alertRulesService.getRulesStats(userId);
-    
-    return {
-      ...stats,
-      lastSync: new Date(), // В реальности нужно хранить время последней синхронизации
-      prometheusStatus: await this.checkPrometheusStatus()
-    };
-  }
+  
 
-  // Приватные методы
+  // ==================== Приватные методы конвертации ====================
+
+  
   private convertDbRuleToConfig(rule: AlertRule): AlertRuleConfig {
     return {
       id: rule.id,
@@ -292,14 +322,5 @@ export class AlertRulesManagerService {
       labels: config.labels,
       enabled: config.enabled
     };
-  }
-
-  private async checkPrometheusStatus(): Promise<boolean> {
-    try {
-      // Простая проверка доступности Prometheus
-      return true; // В реальности нужно делать запрос к Prometheus API
-    } catch {
-      return false;
-    }
   }
 }
