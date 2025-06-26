@@ -36,27 +36,36 @@ export function createAlertRulesColumns(t: (key: string) => string): ColumnDef<A
                 )
             }
         },
+        
         {
-            accessorKey: 'category',
+            accessorKey: 'metric',
             header: ({column}) => {
                 return (
                     <Button
                         variant='ghost'
                         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center text-xs hidden sm:flex"
+                        className="w-full justify-center text-xs hidden md:flex"
                     >
-                        {t('table.columns.category')}
+                        {t('table.columns.metric')}
                         <ArrowUpDown className='ml-1 h-3 w-3' />
                     </Button>
                 )
             },
             cell: ({row}) => {
-                const category = row.original.category
+                const threshold = row.original.threshold
+                const operator = row.original.operator
+                const metric = row.original.metric
+                const duration = row.original.duration
                 return (
-                    <div className="text-center w-full hidden sm:block">
-                        <Badge variant="outline">
-                        {t(`categories.${category.toLowerCase()}`)}
-                        </Badge>
+                    <div className="text-center w-full font-mono text-xs hidden md:block">
+                        <div className="truncate max-w-[120px]" title={metric}>
+                            {metric}
+                        </div>
+                        {threshold !== null && threshold !== undefined && (
+                            <div className="text-gray-500 text-xs">
+                                {operator && t(`operators.${operator.toLowerCase()}`)} {threshold} {t('for')} {duration}
+                            </div>
+                        )}
                     </div>
                 )
             }
@@ -116,117 +125,7 @@ export function createAlertRulesColumns(t: (key: string) => string): ColumnDef<A
                 )
             }
         },
-        {
-            accessorKey: 'metric',
-            header: ({column}) => {
-                return (
-                    <Button
-                        variant='ghost'
-                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center text-xs hidden md:flex"
-                    >
-                        {t('table.columns.metric')}
-                        <ArrowUpDown className='ml-1 h-3 w-3' />
-                    </Button>
-                )
-            },
-            cell: ({row}) => {
-                const threshold = row.original.threshold
-                const operator = row.original.operator
-                const metric = row.original.metric
-                return (
-                    <div className="text-center w-full font-mono text-xs hidden md:block">
-                        <div className="truncate max-w-[120px]" title={metric}>
-                            {metric}
-                        </div>
-                        {threshold !== null && threshold !== undefined && (
-                            <div className="text-gray-500 text-xs">
-                                {operator && t(`operators.${operator.toLowerCase()}`)} {threshold}
-                            </div>
-                        )}
-                    </div>
-                )
-            }
-        },
-        // {
-        //     accessorKey: 'threshold',
-        //     header: ({column}) => {
-        //         return (
-        //             <Button
-        //                 variant='ghost'
-        //                 onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        //                 className="w-full justify-center"
-        //             >
-        //                 {t('table.columns.threshold')}
-        //                 <ArrowUpDown className='ml-2 h-4 w-4' />
-        //             </Button>
-        //         )
-        //     },
-        //     cell: ({row}) => {
-        //         const threshold = row.original.threshold
-        //         const operator = row.original.operator
-        //         return (
-        //             <div className="text-center w-full">
-        //                 {threshold !== null && threshold !== undefined ? (
-        //                     <span className="font-mono text-sm">
-        //                         {operator && t(`operators.${operator.toLowerCase()}`)} {threshold}
-        //                     </span>
-        //                 ) : (
-        //                     <span className="text-gray-400">-</span>
-        //                 )}
-        //             </div>
-        //         )
-        //     }
-        // },
-        {
-            accessorKey: 'duration',
-            header: ({column}) => {
-                return (
-                    <Button
-                        variant='ghost'
-                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center text-xs hidden lg:flex"
-                    >
-                        {t('table.columns.duration')}
-                        <ArrowUpDown className='ml-1 h-3 w-3' />
-                    </Button>
-                )
-            },
-            cell: ({row}) => {
-                return (
-                    <div className="text-center w-full font-mono text-xs hidden lg:block">
-                        {row.original.duration}
-                    </div>
-                )
-            }
-        },
-        {
-            accessorKey: 'createdAt',
-            header: ({column}) => {
-                return (
-                    <Button
-                        variant='ghost'
-                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="w-full justify-center text-xs hidden xl:flex"
-                    >
-                        {t('table.columns.createdAt')}
-                        <ArrowUpDown className='ml-1 h-3 w-3' />
-                    </Button>
-                )
-            },
-            cell: ({row}) => {
-                const date = new Date(row.original.createdAt)
-                return (
-                    <div className="text-center w-full text-xs text-gray-600 hidden xl:block">
-                        {date.toLocaleDateString('ru-RU', { 
-                            day: '2-digit', 
-                            month: '2-digit',
-                            year: '2-digit'
-                        })}
-                    </div>
-                )
-            }
-        },
+        
         {
             id: "actions",
             header: () => <div className="text-center text-xs">{t('table.columns.actions')}</div>,
