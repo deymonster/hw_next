@@ -5,14 +5,9 @@ import { ArrowUpDown, MoreHorizontal } from "lucide-react"
 import { AlertRule } from "@prisma/client"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdowmmenu"
 
-export function createAlertRulesColumns(t: (key: string) => string): ColumnDef<AlertRule>[] {
+
+export function createAlertRulesColumns(t: (key: string, options?: { fallback?: string }) => string): ColumnDef<AlertRule>[] {
     return [
         {
             accessorKey: 'name',
@@ -56,10 +51,12 @@ export function createAlertRulesColumns(t: (key: string) => string): ColumnDef<A
                 const operator = row.original.operator
                 const metric = row.original.metric
                 const duration = row.original.duration
+
+                const friendlyMetricName = t(`metrics.${metric}`, { fallback: metric })
                 return (
                     <div className="text-center w-full font-mono text-xs hidden md:block">
-                        <div className="truncate max-w-[120px]" title={metric}>
-                            {metric}
+                        <div className="truncate max-w-[200px]" title={metric}>
+                            {friendlyMetricName}
                         </div>
                         {threshold !== null && threshold !== undefined && (
                             <div className="text-gray-500 text-xs">
