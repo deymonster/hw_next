@@ -770,12 +770,48 @@
 				"totalRules": "Всего правил",
 				"severities": {
 					"warning": "Предупреждение",
-					"critical": "Критическое"
+					"critical": "Критический",
+					"info": "Информационный"
 				},
+				"backToList": "Назад",
+				"metrics": {
+					"cpu_temperature": "Температура процессора",
+					"cpu_usage": "Загрузка процессора",
+					"Hardware_Change_Detected": "Контроль оборудования"
+					
+				},
+				"operators": {
+					"greater_than": "больше",
+					"less_than": "меньше",
+					"equal": "равно",
+					"greater_equal": "больше или равно",
+					"less_equal": "меньше или равно",
+					"not_equal": "не равно"
+				},
+				"for": "в течении",
 				"status": {
 					"inactive": "Неактивно",
 					"active": "Активно"
+		
 				},
+				"detail": {
+					"status": "Статус",
+					"enabled": "Активно",
+					"disabled": "Неактивно",
+					"category": "Категория",
+					"subcategory": "Подкатегория",
+					"triggerCondition": "Условие срабатывания",
+					"duration": "Продолжительность",
+					"severity": "Приоритет"
+				},
+				"duplicate": "Дублировать",
+				"edit": "Редактировать",
+				"delete": "Удалить",
+				"deleteSuccess": "Правило успешно удалено",
+				"deleteError": "Ошибка при удалении правила",
+				"enableSuccess": "Правило активвировано",
+				"disableSuccess": "Правило деактивировано",
+				"toggleError": "Ошибка при смене статуса правила",
 				"table": {
 					"columns": {
 						"name": "Название",

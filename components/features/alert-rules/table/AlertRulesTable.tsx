@@ -10,6 +10,7 @@ import { AlertRule } from "@prisma/client"
 import { ArrowLeft, Plus, RefreshCw } from "lucide-react"
 import { createAlertRulesColumns } from "./AlertRulesColumns"
 import { AddAlertRule } from "../add/AddAlertRule"
+import { AlertRuleDetail } from "../detail/AlertRuleDetail"
 
 export function AlertRulesTable() {
     const t = useTranslations('dashboard.monitoring.alertRules')
@@ -59,6 +60,10 @@ export function AlertRulesTable() {
                         {t('backToList')}
                     </Button>
                     {/* <AlertRuleDetail rule={selectedRule} onUpdate={refetch} /> */}
+                    <AlertRuleDetail 
+                        rule={selectedRule} 
+                        onBack={() => setSelectedRuleId(null)} 
+                    />
                 </div>
             ) : (
                 <div>

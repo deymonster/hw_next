@@ -20,11 +20,15 @@ import { AlertCategory, AlertSeverity, ComparisonOperator } from "@/services/pro
 import { CreateAlertRuleRequest } from "@/services/prometheus/alerting/alert-rules.config.types"
 import { METRIC_CATEGORIES, type AlertRulePreset } from "../alertRulePresets"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertRule } from "@prisma/client"
 
 interface AddAlertRuleModalProps {
     isOpen: boolean
     onClose: () => void
     selectedCategory?: AlertCategory | null
+    editMode?: boolean
+    duplicateMode?: boolean
+    ruleToEdit?: AlertRule
 }
 
 // Типы для подкатегорий
@@ -42,9 +46,7 @@ type SubcategoryData = {
     icon: string
 }
 
-type CategoryWithSubcategories = {
-    subcategories: Record<string, SubcategoryData>
-}
+
 
 // Предустановленные варианты продолжительности
 const DURATION_PRESETS = [
