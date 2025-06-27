@@ -17,7 +17,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { Info, Loader2 } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { AlertCategory, AlertSeverity, ComparisonOperator } from "@/services/prometheus/alerting/alert-rules.types"
-import { CreateAlertRuleRequest } from "@/services/prometheus/alerting/alert-rules.config.types"
+import { CreateAlertRuleRequest, UpdateAlertRuleRequest } from "@/services/prometheus/alerting/alert-rules.config.types"
 import { METRIC_CATEGORIES, type AlertRulePreset } from "../alertRulePresets"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertRule } from "@prisma/client"
@@ -64,15 +64,27 @@ const DURATION_PRESETS = [
     { value: '24h', label: '24 часа' }
 ]
 
-export function AddAlertRuleModal({ isOpen, onClose, selectedCategory }: AddAlertRuleModalProps) {
+export function AddAlertRuleModal({ isOpen, onClose, selectedCategory,editMode = false, duplicateMode = false, ruleToEdit }: AddAlertRuleModalProps) {
     const t = useTranslations('dashboard.monitoring.alertRules')
     const tEvents = useTranslations('dashboard.monitoring.events')
     const queryClient = useQueryClient()
-    const { createRule } = useAlertRules()
+    const { createRule, updateRule } = useAlertRules()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [customDuration, setCustomDuration] = useState('')
     const [isDurationCustom, setIsDurationCustom] = useState(false)
     const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null)
+
+    const modalTitle = useMemo(() => {
+        if (editMode) return 'Редактирование правила'
+        if (duplicateMode) return 'Копирование правила'
+        return selectedCategory ? `Создать правило: ${getCategoryLabel(selectedCategory)}` : 'Создание правила алерта'
+    }, [editMode, duplicateMode, selectedCategory])
+
+    const buttonText = useMemo(() => {
+        if (editMode) return 'Сохранить изменения'
+        if (duplicateMode) return 'Создать копию'
+        return 'Создать правило'
+    }, [editMode, duplicateMode])
 
     const form = useForm<AddAlertRuleForm>({
         resolver: zodResolver(addAlertRuleSchema),
@@ -195,6 +207,46 @@ export function AddAlertRuleModal({ isOpen, onClose, selectedCategory }: AddAler
         }
     }, [selectedSubcategory, selectedSubcategoryData, form])
 
+    // Заполнение формы при редактировании или дублировании
+    useEffect(() => {
+        if ((editMode || duplicateMode) && ruleToEdit) {
+            // Если режим дублирования, добавляем префикс "Копия: " к названию
+            const name = duplicateMode ? `Копия: ${ruleToEdit.name}` : ruleToEdit.name
+
+            // Заполняем форму данными из существующего правила
+            form.setValue('name', name)
+            form.setValue('category', ruleToEdit.category as AlertCategory)
+            form.setValue('description', ruleToEdit.description || '')
+            form.setValue('severity', ruleToEdit.severity as AlertSeverity)
+            form.setValue('enabled', ruleToEdit.enabled)
+            form.setValue('duration', ruleToEdit.duration || '5m')
+
+            // Заполняем поля threshold и operator, если они есть
+            if (ruleToEdit.threshold !== null && ruleToEdit.threshold !== undefined) {
+                form.setValue('threshold', ruleToEdit.threshold)
+            }
+            
+            if (ruleToEdit.operator) {
+                form.setValue('operator', ruleToEdit.operator as ComparisonOperator)
+            }
+
+            // Если есть подкатегории, пытаемся найти соответствующую
+            const categoryData = METRIC_CATEGORIES[ruleToEdit.category as AlertCategory]
+            if (categoryData && 'subcategories' in categoryData && categoryData.subcategories) {
+                const subcategories = categoryData.subcategories as Record<string, SubcategoryData>
+                
+                // Ищем подкатегорию по метрике
+                for (const [subcategoryId, subcategoryData] of Object.entries(subcategories)) {
+                    const metricFound = subcategoryData.metrics.some(m => m.name === ruleToEdit.metric)
+                    if (metricFound) {
+                        setSelectedSubcategory(subcategoryId)
+                        break
+                    }
+                }
+            }
+        }
+    }, [editMode, duplicateMode, ruleToEdit, form])
+
     const handleModalClose = useCallback(() => {
         form.reset()
         setCustomDuration('')
@@ -258,9 +310,16 @@ export function AddAlertRuleModal({ isOpen, onClose, selectedCategory }: AddAler
                 createRequest.threshold = data.threshold ?? defaultThreshold ?? 0
                 createRequest.operator = data.operator || defaultOperator as ComparisonOperator
             }
-            
-            await createRule(createRequest)
-            toast.success('Правило алерта успешно создано')
+
+            if (editMode && ruleToEdit) {
+                // Обновляем существующее правило
+                await updateRule(ruleToEdit.id, createRequest as UpdateAlertRuleRequest)
+                toast.success('Правило алерта успешно обновлено')
+            } else {
+                // Создаем новое правило или дублируем существующее
+                await createRule(createRequest as CreateAlertRuleRequest)
+                toast.success(duplicateMode ? 'Правило алерта успешно скопировано' : 'Правило алерта успешно создано')
+            }
             handleModalClose()
         } catch (error) {
             console.error('Error creating alert rule:', error)
@@ -319,12 +378,12 @@ export function AddAlertRuleModal({ isOpen, onClose, selectedCategory }: AddAler
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>
-                        {selectedCategory ? `Создать правило: ${getCategoryLabel(selectedCategory)}` : 'Создание правила алерта'}
+                        {modalTitle}
                     </DialogTitle>
                 </DialogHeader>
                 
-                {/* Информация о выбранной категории */}
-                {selectedCategory && (
+                {/* Информация о выбранной категории показываем только при создании нового правила */}
+                {selectedCategory && !editMode && !duplicateMode && (
                     <Alert className="mb-4">
                         <Info className="h-4 w-4" />
                         <AlertDescription>
@@ -614,7 +673,7 @@ export function AddAlertRuleModal({ isOpen, onClose, selectedCategory }: AddAler
                             </Button>
                             <Button type="submit" disabled={!isValid || isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Создать правило
+                                {buttonText}
                             </Button>
                         </DialogFooter>
                     </form>

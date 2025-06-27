@@ -777,6 +777,7 @@
 				"metrics": {
 					"cpu_temperature": "Температура процессора",
 					"cpu_usage": "Загрузка процессора",
+					"disk_usage_percent": "Занятое место на диске %",
 					"Hardware_Change_Detected": "Контроль оборудования"
 					
 				},
@@ -827,9 +828,24 @@
 				},
 				"categories": {
 						"hardware_change": "Изменение оборудования",
-						"performance": "Производительность",
-						"health": "Состояние системы",
-						"custom": "Пользовательское"
+						"cpu_monitoring": "Контроль процессора",
+						"disk_monitoring": "Контроль дисков",
+						"network_monitoring": "Контроль сети"
+				},
+				"subcategories": {
+					"cpu": {
+						"cpu_temperature": "Температура процессора",
+						"cpu_usage": "Загрузка процессора"
+					},
+					"disk": {
+						"disk_usage_percent":"Занятое место на диске %"
+					}
+				},
+				"modal": {
+					"delete": {
+						"confirmTitle": "Удаление правила",
+						"confirmMessage": "Вы уверены, что хотите удалить правило?"
+					}
 				}
 			},
 			"events": {

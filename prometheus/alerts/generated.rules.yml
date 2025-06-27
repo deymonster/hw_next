@@ -30,3 +30,19 @@ groups:
             Пороговое значение: 80
             Текущее значение: {{ $value }}
             Пороговое значение: 80
+  - name: disk_monitoring_alerts
+    rules:
+      - alert: 'Мониторинг свободного места '
+        expr: disk_usage_percent > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: disk_monitoring
+        annotations:
+          summary: ''
+          description: |-
+            Рабочее место: {{ $labels.instance }}
+            Текущее значение: {{ $value }}
+            Пороговое значение: 90
+            Текущее значение: {{ $value }}
+            Пороговое значение: 90
