@@ -261,7 +261,12 @@ export function AddAlertRuleModal({ isOpen, onClose, selectedCategory }: AddAler
             toast.success('Правило алерта успешно создано')
             handleModalClose()
         } catch (error) {
-            toast.error('Ошибка при создании правила')
+            console.error('Error creating alert rule:', error)
+            if (error instanceof Error && error.message.includes('уже существует')) {
+            toast.error(t('Правило с указанными параметрами уже существует'))
+            } else {
+                toast.error(t('Ошибка при создании правила'))
+            }
         } finally {
             setIsSubmitting(false)
         }

@@ -72,6 +72,11 @@ export function AlertRulesTable() {
                             </Button>
                         </div>
                     </div>
+
+                    {/* Добавляем счетчик правил */}
+                    <div className="text-xs text-muted-foreground">
+                        {t('totalRules')}: {alertRules?.length || 0}
+                    </div>
                     
                     <div className="overflow-x-auto">
                         <DataTable

@@ -124,47 +124,6 @@ export function createAlertRulesColumns(t: (key: string) => string): ColumnDef<A
                     </div>
                 )
             }
-        },
-        
-        {
-            id: "actions",
-            header: () => <div className="text-center text-xs">{t('table.columns.actions')}</div>,
-            cell: ({ row }) => {
-                const rule = row.original
-                
-                return (
-                    <div className="text-center">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-6 w-6 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <MoreHorizontal className="h-3 w-3" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => console.log('View', rule.id)}>
-                                    {t('actions.view')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => console.log('Edit', rule.id)}>
-                                    {t('actions.edit')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => console.log('Toggle', rule.id)}>
-                                    {rule.enabled ? t('actions.disable') : t('actions.enable')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => console.log('Duplicate', rule.id)}>
-                                    {t('actions.duplicate')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                    onClick={() => console.log('Delete', rule.id)}
-                                    className="text-red-600"
-                                >
-                                    {t('actions.delete')}
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                )
-            },
-        },
+        }
     ]
 }

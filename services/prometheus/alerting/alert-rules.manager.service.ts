@@ -38,6 +38,27 @@ export class AlertRulesManagerService {
     private readonly configService: AlertRulesConfigService
   ) {}
 
+
+  /**
+   * Проверка на дублирование правила
+   */
+  async checkDuplicateRule(data: CreateAlertRuleRequest, userId: string): Promise<AlertRule | null> {
+    try {
+      const userRules = await this.alertRulesService.getUserRules(userId);
+
+      const duplicate = userRules.find(rule => 
+        rule.metric === data.metric &&
+        rule.operator === data.operator &&
+        rule.threshold === data.threshold
+      );
+
+      return duplicate || null;
+    } catch (error) {
+      console.error('Error checking for duplicate rules:', error);
+      return null;
+    }
+  }
+
   /**
    * Создает новое правило алерта с полной валидацией и синхронизацией
    * 
@@ -48,7 +69,10 @@ export class AlertRulesManagerService {
    * @throws {SyncError} Если не удалось синхронизировать с Prometheus
    */
   async createRule(request: CreateAlertRuleRequest, userId: string): Promise<AlertRule> {
-    
+    const duplicate = await this.checkDuplicateRule(request, userId);
+    if (duplicate) {
+      throw new ValidationError([`Правило с такими параметрами уже существует: ${request.metric} ${request.operator} ${request.threshold}`]);
+    }
     // Валидация данных
     const validation = await this.configService.validateRule(request);
     if (!validation.isValid) {
@@ -108,6 +132,8 @@ export class AlertRulesManagerService {
     await this.syncWithPrometheus('Failed to sync after rule toggle');
     return rule;
   }
+
+  
 
 
 

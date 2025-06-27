@@ -767,6 +767,15 @@
 				"addRule": "Добавить правило",
 				"syncWithPrometheus": "Синхронизировать с Prometheus",
 				"searchPlaceholder": "Поиск по названию...",
+				"totalRules": "Всего правил",
+				"severities": {
+					"warning": "Предупреждение",
+					"critical": "Критическое"
+				},
+				"status": {
+					"inactive": "Неактивно",
+					"active": "Активно"
+				},
 				"table": {
 					"columns": {
 						"name": "Название",
