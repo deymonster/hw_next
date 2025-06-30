@@ -48,3 +48,31 @@ export async function findAndMarkAllAsRead(userId: string): Promise<{
         return { error: 'Failed to mark events as read' };
     }
 }
+
+export async function findAllEvents(userId: string, options?: {
+    take?: number,
+    skip?: number,
+    orderBy?: string,
+    orderDir?: 'asc' | 'desc'
+}): Promise<{
+    events?: Event[],
+    total?: number,
+    error?: string
+}> {
+    if (!userId) {
+        return { error: 'User ID is required' }
+    }
+
+    try {
+        
+        const events = await services.data.event.findByUserId(userId, options);
+        
+        // Получаем общее количество событий для пагинации
+        const total = await services.data.event.count({ userId });
+        
+        return { events, total };
+    } catch (error) {
+        console.error(`[FIND_ALL_EVENTS_ERROR]`, error);
+        return { error: 'Failed to get events' };
+    }
+}

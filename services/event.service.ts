@@ -1,4 +1,4 @@
-import { Event, PrismaClient } from "@prisma/client";
+import { Event, Prisma, PrismaClient } from "@prisma/client";
 import { BaseRepository } from "./base.service";
 import { IEventCreateInput, IEventFindManyArgs, IEventRepository } from './event.interfaces';
 
@@ -20,12 +20,25 @@ export class EventService
         });
     }
 
-    async findByUserId(userId: string, take: number = 10): Promise<Event[]> {
+    async findByUserId(userId: string, 
+            options?: {
+                take?: number,
+                skip?: number,
+                orderBy?: string,
+                orderDir?: 'asc' | 'desc'
+        }): Promise<Event[]> {
+        const { take = 10, skip = 0, orderBy = 'createdAt', orderDir = 'desc' } = options || {};
+        
         return await this.model.findMany({
             where: { userId },
-            orderBy: { createdAt: 'desc' },
-            take
+            orderBy: { [orderBy]: orderDir },
+            take,
+            skip
         });
+    }
+
+    async count(where?: Prisma.EventWhereInput): Promise<number> {
+        return await this.model.count({ where })
     }
 
     async findAndMarkAsRead(userId: string, take: number = 10): Promise<Event[]> {

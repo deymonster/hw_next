@@ -16,11 +16,17 @@ export interface IEventRepository {
     create(data: IEventCreateInput): Promise<Event>;
     findMany(args?: IEventFindManyArgs): Promise<Event[]>;
     findById(id: string): Promise<Event | null>;
-    findByUserId(userId: string, take?: number): Promise<Event[]>;
+    findByUserId(userId: string, options?: {
+        take?: number,
+        skip?: number,
+        orderBy?: string,
+        orderDir?: 'asc' | 'desc'
+    }): Promise<Event[]>;
     findAndMarkAsRead(userId: string, take?: number): Promise<Event[]>;
     markAsRead(id: string): Promise<Event>;
     markAllAsRead(userId: string): Promise<Prisma.BatchPayload>;
     getUnreadCount(userId: string): Promise<number>;
+    count(where?: Prisma.EventWhereInput): Promise<number>;
     delete(id: string): Promise<Event>;
     deleteMany(userId: string): Promise<Prisma.BatchPayload>;
 }
