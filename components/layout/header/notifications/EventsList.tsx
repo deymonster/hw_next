@@ -1,8 +1,7 @@
 'use client'
 
 import { Fragment, useEffect, useState } from 'react'
-import { findAndMarkAllAsRead } from '@/app/actions/event'
-import { useCurrentSession } from '@/hooks/useCurrentSession'
+import { useEvents } from '@/hooks/useEvents'
 import { Event } from '@prisma/client'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
@@ -15,40 +14,27 @@ interface EventsListProps {
 
 export function EventsList({ onRead }: EventsListProps) {
   const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const { user } = useCurrentSession()
+  const { loading, error, fetchAndMarkAllAsRead } = useEvents()
 
   const t = useTranslations('layout.header.headerMenu.profileMenu.notifications')
 
   useEffect(() => {
     async function fetchNotifications() {
-      if (!user?.id) return
-
       try {
-        setLoading(true)
-        const result = await findAndMarkAllAsRead(user.id)
+        const result = await fetchAndMarkAllAsRead({
+          onSuccess: () => onRead?.(),
+        });
         
-        if (result.error) {
-          setError(result.error)
-        } else {
-          if (result.events) {
-            setEvents(result.events)
-          }
-          // Вызываем onRead если есть непрочитанные сообщения
-          if (result.unreadCount && result.unreadCount > 0) {
-            onRead?.()
-          }
+        if (result.events) {
+          setEvents(result.events);
         }
       } catch (error) {
-        setError('Failed to load notifications')
-      } finally {
-        setLoading(false)
+        console.error('Failed to load notifications', error);
       }
     }
 
     fetchNotifications()
-  }, [user?.id, onRead])
+  }, [fetchAndMarkAllAsRead, onRead])
 
   return (
     <div className="flex flex-col">

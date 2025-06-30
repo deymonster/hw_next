@@ -2,36 +2,38 @@
 
 import { useEffect, useState } from 'react';
 import { getUnreadEventCount } from '@/app/actions/event';
+import { useEvents } from '@/hooks/useEvents';
 import { useCurrentSession } from '@/hooks/useCurrentSession';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Bell } from 'lucide-react';
 import { EventsList } from './EventsList';
 
 export function Events() {
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const { unreadCount, loading } = useEvents();
   const [isOpen, setIsOpen] = useState(false);
-  const { user, loading } = useCurrentSession();
+
 
   const displayCount = unreadCount > 9 ? '9+' : unreadCount;
 
-  // Получаем количество непрочитанных при загрузке и при изменении isOpen
-  useEffect(() => {
-    async function fetchUnreadCount() {
-      if (user?.id) {
-        const count = await getUnreadEventCount(user.id);
-        setUnreadCount(count);
-      }
-    }
-    
-    fetchUnreadCount();
-
-    // Устанавливаем интервал для периодического обновления
-    const interval = setInterval(fetchUnreadCount, 30000); // Обновляем каждые 30 секунд
-
-    return () => clearInterval(interval);
-  }, [user?.id, isOpen]); // Обновляем счетчик при изменении isOpen
-
   if (loading) return null;
+
+  // Получаем количество непрочитанных при загрузке и при изменении isOpen
+  // useEffect(() => {
+  //   async function fetchUnreadCount() {
+  //     if (user?.id) {
+  //       const count = await getUnreadEventCount(user.id);
+  //       setUnreadCount(count);
+  //     }
+  //   }
+    
+  //   fetchUnreadCount();
+
+  //   // Устанавливаем интервал для периодического обновления
+  //   const interval = setInterval(fetchUnreadCount, 30000); // Обновляем каждые 30 секунд
+
+  //   return () => clearInterval(interval);
+  // }, [user?.id, isOpen]); // Обновляем счетчик при изменении isOpen
+
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -47,7 +49,7 @@ export function Events() {
         </div>
       </PopoverTrigger>
       <PopoverContent align="end" className="max-h-[500px] w-[320px] overflow-y-auto">
-        <EventsList onRead={() => setUnreadCount(0)} />
+        <EventsList onRead={() => {}} />
       </PopoverContent>
     </Popover>
   );

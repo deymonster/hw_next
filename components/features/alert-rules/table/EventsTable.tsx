@@ -1,12 +1,13 @@
 'use client'
 
 import { useTranslations } from "next-intl"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/ui/elements/DataTable"
 import { Event } from "@prisma/client"
-import { ArrowLeft, Trash2, CheckCheck } from "lucide-react"
+import { ArrowLeft, Trash2, CheckCheck, Loader2 } from "lucide-react"
 import { createEventsColumns } from "./EventsColumns"
+import { useEvents } from "@/hooks/useEvents"
 
 // Временные данные для демонстрации
 const mockEvents: Event[] = [
@@ -37,8 +38,12 @@ const mockEvents: Event[] = [
 export function EventsTable() {
     const t = useTranslations('dashboard.monitoring.events')
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
-    const [events, setEvents] = useState<Event[]>(mockEvents)
-    const [isLoading] = useState(false)
+    const [events, setEvents] = useState<Event[]>([])
+    const [total, setTotal] = useState<number>(0)
+    const [currentPage, setCurrentPage] = useState<number>(1)
+    const pageSize = 10
+
+    const { loading, error, fetchAllEvents, fetchAndMarkAllAsRead } = useEvents()
     const columns = useMemo(() => createEventsColumns((key: string) => t(key)), [t])
 
     const selectedEvent = useMemo(() => {
@@ -46,9 +51,41 @@ export function EventsTable() {
         return events.find(event => event.id === selectedEventId) || null
     }, [selectedEventId, events])
 
-    if (isLoading) {
-        return <div className="flex items-center justify-center p-4 text-sm">Загрузка событий...</div>
+    const loadEvents = async () => {
+        const result = await fetchAllEvents({
+            take: pageSize,
+            skip: (currentPage - 1) * pageSize,
+            orderBy: 'createdAt',
+            orderDir: 'desc'
+        })
+        
+        if (result.events) {
+            setEvents(result.events)
+            setTotal(result.total)
+        }
     }
+
+    useEffect(() => {
+        loadEvents()
+    }, [currentPage])
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center p-4 text-sm">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {t('loading')}
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="p-4 text-center text-destructive">
+                {error}
+            </div>
+        )
+    }
+
 
     const handleRowClick = (event: Event) => {
         setSelectedEventId(event.id)
@@ -57,13 +94,15 @@ export function EventsTable() {
     const handleClearAllEvents = async () => {
         // TODO: Implement clear all events
         console.log('Clear all events')
-        setEvents([])
+        loadEvents()
     }
 
     const handleMarkAllAsRead = async () => {
-        // TODO: Implement mark all as read
-        console.log('Mark all as read')
-        setEvents(events.map(event => ({ ...event, isRead: true })))
+        const result = await fetchAndMarkAllAsRead({})
+        if (!result.error) {
+            // Обновляем список событий после отметки всех как прочитанных
+            loadEvents()
+        }
     }
 
     return (
