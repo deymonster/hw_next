@@ -129,12 +129,17 @@ export class AlertProcessorService {
         const eventType = this.determineEventType(alert);
         const eventSeverity = this.mapAlertSeverityToEventSeverity(alert.labels.severity);
         
+        // Получаем исходное сообщение
+        let message = alert.annotations?.description || alert.annotations?.summary || 'No description available';
+        // Удаляем порт из IP-адреса в сообщении "Рабочее место: IP:PORT"
+        message = message.replace(/Рабочее место: ([\d\.]+):\d+/g, 'Рабочее место: $1');
+
         return await services.data.event.create({
             userId,
             type: eventType,
             severity: eventSeverity,
             title: `${alert.labels?.alertname || 'Unknown Alert'} - ${alert.status?.toUpperCase() || 'UNKNOWN'}`,
-            message: alert.annotations?.description || alert.annotations?.summary || 'No description available',
+            message: message,
             isRead: false
         });
     }

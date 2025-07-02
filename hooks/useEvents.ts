@@ -5,7 +5,8 @@ import {
   getUnreadEventCount,
   findUnreadEvents,
   findAndMarkAllAsRead,
-  findAllEvents
+  findAllEvents,
+  markEventAsRead
 } from '@/app/actions/event';
 
 interface CallbackOptions {
@@ -147,6 +148,41 @@ export function useEvents() {
       setLoading(false);
     }
   }, [user?.id]);
+
+  // Отметка отдельного события как прочитанного
+  const markAsRead = useCallback(async (
+    eventId: string,
+    { onSuccess, onError }: CallbackOptions = {}
+  ) => {
+    if (!eventId) return { event: null, error: 'Event ID is required' };
+    
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await markEventAsRead(eventId);
+      
+      if (result.error) {
+        setError(result.error);
+        onError?.(new Error(result.error));
+        return { event: null, error: result.error };
+      }
+      
+      // Обновляем счетчик непрочитанных, если событие было непрочитанным
+      if (result.event && !result.event.isRead) {
+        fetchUnreadCount();
+      }
+      
+      onSuccess?.();
+      return { event: result.event, error: undefined };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(errorMessage);
+      onError?.(error);
+      return { event: null, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchUnreadCount]);
   
   // Автоматическое обновление счетчика непрочитанных событий
   useEffect(() => {
@@ -168,6 +204,7 @@ export function useEvents() {
     fetchUnreadCount,
     fetchUnreadEvents,
     fetchAndMarkAllAsRead,
-    fetchAllEvents
+    fetchAllEvents,
+    markAsRead
   };
 }

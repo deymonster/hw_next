@@ -5,9 +5,11 @@ import { useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DataTable } from "@/components/ui/elements/DataTable"
 import { Event } from "@prisma/client"
-import { ArrowLeft, Trash2, CheckCheck, Loader2 } from "lucide-react"
+import { CheckCheck, Loader2 } from "lucide-react"
 import { createEventsColumns } from "./EventsColumns"
 import { useEvents } from "@/hooks/useEvents"
+
+import { EventDetail } from "../detail/EventDetail"
 
 // Временные данные для демонстрации
 const mockEvents: Event[] = [
@@ -43,9 +45,17 @@ export function EventsTable() {
     const [currentPage, setCurrentPage] = useState<number>(1)
     const pageSize = 10
 
-    const { loading, error, fetchAllEvents, fetchAndMarkAllAsRead } = useEvents()
-    const columns = useMemo(() => createEventsColumns((key: string) => t(key)), [t])
+    const handleMarkAsRead = async (eventId: string) => {
+        const result = await markAsRead(eventId, {});
+        if (!result.error) {
+            // Обновляем список событий после отметки как прочитанного
+            loadEvents();
+        }
+    }
 
+    const { loading, error, fetchAllEvents, fetchAndMarkAllAsRead, markAsRead } = useEvents()
+    const columns = useMemo(() => createEventsColumns((key: string) => t(key), handleMarkAsRead), [t])
+    
     const selectedEvent = useMemo(() => {
         if (!selectedEventId || !events) return null
         return events.find(event => event.id === selectedEventId) || null
@@ -91,12 +101,6 @@ export function EventsTable() {
         setSelectedEventId(event.id)
     }
 
-    const handleClearAllEvents = async () => {
-        // TODO: Implement clear all events
-        console.log('Clear all events')
-        loadEvents()
-    }
-
     const handleMarkAllAsRead = async () => {
         const result = await fetchAndMarkAllAsRead({})
         if (!result.error) {
@@ -108,26 +112,10 @@ export function EventsTable() {
     return (
         <>
             {selectedEvent ? (
-                <div>
-                    <Button
-                        variant="ghost"
-                        onClick={() => setSelectedEventId(null)}
-                        className="mb-4 h-8 text-xs"
-                    >
-                        <ArrowLeft className="mr-1 h-3 w-3" />
-                        {t('backToList')}
-                    </Button>
-                    <div className="bg-white p-4 sm:p-6 rounded-lg border">
-                        <h3 className="text-base sm:text-lg font-semibold mb-2">{selectedEvent.title}</h3>
-                        <p className="text-gray-600 mb-4 text-sm">{selectedEvent.message}</p>
-                        <div className="text-xs sm:text-sm text-gray-500 space-y-1">
-                            <p>Тип: {selectedEvent.type}</p>
-                            <p>Приоритет: {selectedEvent.severity}</p>
-                            <p>Создано: {selectedEvent.createdAt.toLocaleString()}</p>
-                            <p>Статус: {selectedEvent.isRead ? 'Прочитано' : 'Не прочитано'}</p>
-                        </div>
-                    </div>
-                </div>
+                <EventDetail 
+                    event={selectedEvent} 
+                    onBack={() => setSelectedEventId(null)} 
+                />
             ) : (
                 <div>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
@@ -137,11 +125,7 @@ export function EventsTable() {
                                 <span className="hidden sm:inline">{t('markAllAsRead')}</span>
                                 <span className="sm:hidden">Отметить все как прочитанные</span>
                             </Button>
-                            <Button variant="destructive" onClick={handleClearAllEvents} className="h-8 text-xs w-full sm:w-auto">
-                                <Trash2 className="mr-1 h-3 w-3" />
-                                <span className="hidden sm:inline">{t('clearAll')}</span>
-                                <span className="sm:hidden">Очистить все</span>
-                            </Button>
+                            
                         </div>
                     </div>
                     
@@ -169,3 +153,4 @@ export function EventsTable() {
         </>
     )
 }
+

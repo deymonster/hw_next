@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdowmmenu"
 
-export function createEventsColumns(t: (key: string) => string): ColumnDef<Event>[] {
+export function createEventsColumns(t: (key: string) => string, onMarkAsRead: (eventId: string) => void): ColumnDef<Event>[] {
     return [
         {
             accessorKey: 'title',
@@ -165,6 +165,8 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
             id: 'actions',
             header: () => <div className="text-center text-xs">{t('table.columns.actions')}</div>,
             cell: ({row}) => {
+                const isRead = row.original.isRead;
+
                 return (
                     <div className="text-center">
                         <DropdownMenu>
@@ -175,12 +177,10 @@ export function createEventsColumns(t: (key: string) => string): ColumnDef<Event
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => console.log('Mark as read', row.original.id)}>
+                                <DropdownMenuItem onClick={() => onMarkAsRead(row.original.id)}>
                                     {t('actions.markAsRead')}
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => console.log('Delete', row.original.id)}>
-                                    {t('actions.delete')}
-                                </DropdownMenuItem>
+                                
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

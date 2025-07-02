@@ -49,6 +49,23 @@ export async function findAndMarkAllAsRead(userId: string): Promise<{
     }
 }
 
+export async function markEventAsRead(eventId: string): Promise<{ 
+    event?: Event, 
+    error?: string 
+}> {
+    if (!eventId) {
+        return { error: 'Event ID is required' };
+    }
+
+    try {
+        const event = await services.data.event.markAsRead(eventId);
+        return { event };
+    } catch (error) {
+        console.error(`[MARK_EVENT_AS_READ_ERROR]`, error);
+        return { error: 'Failed to mark event as read' };
+    }
+}
+
 export async function findAllEvents(userId: string, options?: {
     take?: number,
     skip?: number,
