@@ -8,48 +8,51 @@
 import { Device, DeviceStatus, DeviceType } from '@prisma/client'
 
 export interface DeviceFilterOptions {
-    status?: DeviceStatus[]
-    type?: DeviceType
-    departmentId?: string
-    employeeId?: string
-    orderBy?: {
-        field: 'name' | 'lastUpdate' | 'lastSeen'
-        direction: 'asc' | 'desc'
-    }
-    OR?: Array<{departmentId: string}>
+	status?: DeviceStatus[]
+	type?: DeviceType
+	departmentId?: string
+	employeeId?: string
+	orderBy?: {
+		field: 'name' | 'lastUpdate' | 'lastSeen'
+		direction: 'asc' | 'desc'
+	}
+	OR?: Array<{ departmentId: string }>
 }
 
 export interface IDeviceCreateInput {
-    name: string
-    ipAddress: string
-    agentKey: string
-    type: DeviceType
-    deviceTag?: string
-    departmentId?: string
+	name: string
+	ipAddress: string
+	agentKey: string
+	type: DeviceType
+	deviceTag?: string
+	departmentId?: string
 }
 
 export interface IDeviceFindManyArgs {
-    where?: {
-        status?: DeviceStatus
-        type?: DeviceType
-        departmentId?: string
-    }
-    orderBy?: {
-        [key: string]: 'asc' | 'desc'
-    }
-    take?: number
-    skip?: number
+	where?: {
+		status?: DeviceStatus
+		type?: DeviceType
+		departmentId?: string
+	}
+	orderBy?: {
+		[key: string]: 'asc' | 'desc'
+	}
+	take?: number
+	skip?: number
 }
 
 export interface IDeviceRepository {
-    // Базовые операции наследуются из IBaseRepository
-    
-    // Специфичные методы для устройств
-    findByAgentKey(agentKey: string): Promise<Device | null>
-    findByIpAddress(ipAddress: string): Promise<Device | null>
-    findByLocation(departmentId: string): Promise<Device[]>
-    findActiveDevices(): Promise<Device[]>
-    updateStatus(id: string, status: DeviceStatus): Promise<Device>
-    updateLastSeen(id: string): Promise<Device>
-    updateDepartmentDevices(departmentId: string, deviceIds: string[]): Promise<void>
+	// Базовые операции наследуются из IBaseRepository
+
+	// Специфичные методы для устройств
+	findByAgentKey(agentKey: string): Promise<Device | null>
+	findByIpAddress(ipAddress: string): Promise<Device | null>
+	findByLocation(departmentId: string): Promise<Device[]>
+	findActiveDevices(): Promise<Device[]>
+	updateStatus(id: string, status: DeviceStatus): Promise<Device>
+	updateLastSeen(id: string): Promise<Device>
+	updateDepartmentDevices(
+		departmentId: string,
+		deviceIds: string[]
+	): Promise<void>
 }

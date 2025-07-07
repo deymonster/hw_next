@@ -1,118 +1,137 @@
-import { Inventory, PrismaClient, InventoryItem } from "@prisma/client"
-import { BaseRepository } from "../base.service"
-import { IInventoryCreateInput, IInventoryFindManyArgs, IInventoryItemCreateInput, IInventoryRepository } from "./inventory.interface"
+import { Inventory, InventoryItem, PrismaClient } from '@prisma/client'
+
+import { BaseRepository } from '../base.service'
+import {
+	IInventoryCreateInput,
+	IInventoryFindManyArgs,
+	IInventoryItemCreateInput,
+	IInventoryRepository
+} from './inventory.interface'
 
 export class InventoryService
-    extends BaseRepository<Inventory, IInventoryCreateInput, IInventoryFindManyArgs, PrismaClient['inventory'], string>
-    implements IInventoryRepository 
+	extends BaseRepository<
+		Inventory,
+		IInventoryCreateInput,
+		IInventoryFindManyArgs,
+		PrismaClient['inventory'],
+		string
+	>
+	implements IInventoryRepository
 {
-    constructor(prisma: PrismaClient) {
-        super(prisma, (p) => p.inventory)
-    }
+	constructor(prisma: PrismaClient) {
+		super(prisma, p => p.inventory)
+	}
 
-    async findWithItems(id: string): Promise<Inventory & { items: InventoryItem[] }> {
-        const inventory = await this.model.findUnique({
-            where: { id },
-            include: {
-                items: {
-                    include: {
-                        device: true,
-                        employee: true,
-                        department: true
-                    }
-                },
-                departments: true
-            }
-        })
+	async findWithItems(
+		id: string
+	): Promise<Inventory & { items: InventoryItem[] }> {
+		const inventory = await this.model.findUnique({
+			where: { id },
+			include: {
+				items: {
+					include: {
+						device: true,
+						employee: true,
+						department: true
+					}
+				},
+				departments: true
+			}
+		})
 
-        if (!inventory) {
-            throw new Error('Инвентаризация не найдена')
-        }
+		if (!inventory) {
+			throw new Error('Инвентаризация не найдена')
+		}
 
-        return inventory
-    }
+		return inventory
+	}
 
-    async findAllWithItems(args: IInventoryFindManyArgs): Promise<Array<Inventory & { items: InventoryItem[] }>> {
-        const inventories = await this.model.findMany({
-            where: args?.where,
-            orderBy: args?.orderBy,
-            include: {
-                items: {
-                    include: {
-                        device: true,
-                        employee: true,
-                        department: true
-                    }
-                },
-                user: args?.include?.user || false,
-                departments: true
-            }
-        })
-        
-        return inventories
-    }
+	async findAllWithItems(
+		args: IInventoryFindManyArgs
+	): Promise<Array<Inventory & { items: InventoryItem[] }>> {
+		const inventories = await this.model.findMany({
+			where: args?.where,
+			orderBy: args?.orderBy,
+			include: {
+				items: {
+					include: {
+						device: true,
+						employee: true,
+						department: true
+					}
+				},
+				user: args?.include?.user || false,
+				departments: true
+			}
+		})
 
-    async addItem(inventoryId: string, item: IInventoryItemCreateInput): Promise<InventoryItem> {
-        // Получаем информацию об устройстве, чтобы взять данные о сотруднике и отделе
-        const device = await this.prisma.device.findUnique({
-            where: { id: item.deviceId },
-            select: { employeeId: true, departmentId: true }
-        });
+		return inventories
+	}
 
-        return await this.prisma.inventoryItem.create({
-            data: {
-                ...item,
-                inventoryId,
-                employeeId: item.employeeId || device?.employeeId,
-                departmentId: item.departmentId || device?.departmentId
-            }
-        })
-    }
+	async addItem(
+		inventoryId: string,
+		item: IInventoryItemCreateInput
+	): Promise<InventoryItem> {
+		// Получаем информацию об устройстве, чтобы взять данные о сотруднике и отделе
+		const device = await this.prisma.device.findUnique({
+			where: { id: item.deviceId },
+			select: { employeeId: true, departmentId: true }
+		})
 
-    async removeItem(inventoryId: string, itemId: string): Promise<void> {
-        const item = await this.prisma.inventoryItem.findFirst({
-            where: {
-                id: itemId,
-                inventoryId
-            }
-        })
+		return await this.prisma.inventoryItem.create({
+			data: {
+				...item,
+				inventoryId,
+				employeeId: item.employeeId || device?.employeeId,
+				departmentId: item.departmentId || device?.departmentId
+			}
+		})
+	}
 
-        if (!item) {
-            throw new Error('Элемент инвентаризации не найден')
-        }
+	async removeItem(inventoryId: string, itemId: string): Promise<void> {
+		const item = await this.prisma.inventoryItem.findFirst({
+			where: {
+				id: itemId,
+				inventoryId
+			}
+		})
 
-        await this.prisma.inventoryItem.delete({
-            where: { id: itemId }
-        })
-    }
+		if (!item) {
+			throw new Error('Элемент инвентаризации не найден')
+		}
 
-    async getLatestInventory(userId: string): Promise<Inventory | null> {
-        return await this.model.findFirst({
-            where: { userId },
-            orderBy: { startDate: 'desc' },
-            include: {
-                items: true,
-                departments: true
-            }
-        })
-    }
+		await this.prisma.inventoryItem.delete({
+			where: { id: itemId }
+		})
+	}
 
-    async delete(id: string): Promise<Inventory>  {
-        const inventory = await this.model.findUnique({
-            where: { id },
-            include:  { items: true}
-        })
+	async getLatestInventory(userId: string): Promise<Inventory | null> {
+		return await this.model.findFirst({
+			where: { userId },
+			orderBy: { startDate: 'desc' },
+			include: {
+				items: true,
+				departments: true
+			}
+		})
+	}
 
-        if (!inventory) {
-            throw new Error('Инвентаризация не найдена')
-        }
+	async delete(id: string): Promise<Inventory> {
+		const inventory = await this.model.findUnique({
+			where: { id },
+			include: { items: true }
+		})
 
-        await this.prisma.inventoryItem.deleteMany({
-            where: { inventoryId: id }
-        })
+		if (!inventory) {
+			throw new Error('Инвентаризация не найдена')
+		}
 
-        return await this.model.delete({
-            where: { id }
-        })
-    }
+		await this.prisma.inventoryItem.deleteMany({
+			where: { inventoryId: id }
+		})
+
+		return await this.model.delete({
+			where: { id }
+		})
+	}
 }

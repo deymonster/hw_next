@@ -1,4 +1,4 @@
-{	
+{
 	"layout": {
 		"header": {
 			"logo": {
@@ -48,9 +48,9 @@
 			}
 		}
 	},
-    "auth": {
-        "register": {
-            "heading": "Регистрация в NITRINOnet Monitoring",
+	"auth": {
+		"register": {
+			"heading": "Регистрация в NITRINOnet Monitoring",
 			"backButtonLabel": "Есть учетная запись? Войти",
 			"usernameLabel": "Имя пользователя",
 			"usernameDescription": "Под этим именем вас будут знать другие пользователи.",
@@ -59,11 +59,11 @@
 			"passwordLabel": "Пароль",
 			"passwordDescription": "Пароль должен содержать не менее 8 символов.",
 			"submitButton": "Зарегистрироваться",
-            "registeringButton": "Регистрация...",
+			"registeringButton": "Регистрация...",
 			"successAlertTitle": "Проверьте свою почту",
 			"successAlertDescription": "На ваш адрес электронной почты было отправлено письмо для подтверждения. Если вы не видите письмо, проверьте папку «Спам»",
-			"errorMessage": "Ошибка при создании аккаунта" 
-        },
+			"errorMessage": "Ошибка при создании аккаунта"
+		},
 		"errors": {
 			"INVALID_CREDENTIALS": "Неверный email или пароль",
 			"EMAIL_NOT_VERIFIED": "Email не подтвержден",
@@ -79,12 +79,12 @@
 			"AUTHENTICATION_FAILED": "Произошла ошибка при аутентификации",
 			"UPDATE_PASSWORD_FAILED": "Произошла ошибка при обновлении пароля"
 		},
-        "verify": {
-            "heading": "Верификация аккаунта",
-            "verifying": "Проверяем ваш email...",
-            "successMessage": "Аккаунт верифицирован",
+		"verify": {
+			"heading": "Верификация аккаунта",
+			"verifying": "Проверяем ваш email...",
+			"successMessage": "Аккаунт верифицирован",
 			"errorMesage": "Ошибка при верификации аккаунта"
-        },
+		},
 
 		"login": {
 			"heading": "Войти в NITRINOnet Monitoring",
@@ -122,9 +122,8 @@
 			"successMessage": "Пароль успешно изменён",
 			"errorMessage": "Ошибка при установлении нового пароля",
 			"invalidToken": "Неверный или устаревший токен"
-			
 		}
-    },
+	},
 	"dashboard": {
 		"settings": {
 			"header": {
@@ -140,11 +139,10 @@
 				"header": {
 					"heading": "Профиль",
 					"description": "Настройте ваш профиль, обновите аватар"
-
 				},
 				"avatar": {
 					"heading": "Изображение профиля",
-					"updateButton":  "Обновить изображение профиля",
+					"updateButton": "Обновить изображение профиля",
 					"confirmModal": {
 						"heading": "Удаление аватара",
 						"message": "Вы уверены, что хотите удалить изображение профиля? Это действие нельзя будет отменить."
@@ -166,7 +164,6 @@
 					"submitButton": "Сохранить изменения",
 					"succesMessage": "Профиль успешно обновлен",
 					"errorMessage": "Ошибка при обновлении профиля"
-
 				}
 			},
 			"account": {
@@ -191,7 +188,6 @@
 					"verifyCodeButton": "Проверить код",
 					"successMessage": "Почта успешно обновлена",
 					"errorMessage": "Ошибка при обновлении почты"
-					
 				},
 				"password": {
 					"heading": "Пароль от аккаунта",
@@ -245,7 +241,6 @@
 					"telegramCheck": "Ошибка при проверке настроек Telegram",
 					"telegramNotConfigured": "Пожалуйста, настройте Telegram бота в разделе настроек Telegram"
 				}
-
 			},
 			"smtpSettings": {
 				"header": {
@@ -316,16 +311,16 @@
 				"sendTest": "Отправить тестовое сообщение",
 				"connectDescription": "Бот успешно проверен! Теперь откройте чат с ботом и нажмите /start",
 				"errors": {
-				"verify": "Ошибка проверки настроек бота",
-				"save": "Ошибка сохранения настроек бота",
-				"start": "Ошибка запуска бота",
-				"testMessage": "Ошибка отправки тестового сообщения"
+					"verify": "Ошибка проверки настроек бота",
+					"save": "Ошибка сохранения настроек бота",
+					"start": "Ошибка запуска бота",
+					"testMessage": "Ошибка отправки тестового сообщения"
 				},
 				"success": {
-				"testMessage": "Тестовое сообщение отправлено",
-				"verify": "Бот успешно проверен! Теперь откройте чат с ботом и нажмите /start",
-				"save": "Настройки бота успешно сохранены",
-				"start": "Бот успешно запущен"
+					"testMessage": "Тестовое сообщение отправлено",
+					"verify": "Бот успешно проверен! Теперь откройте чат с ботом и нажмите /start",
+					"save": "Настройки бота успешно сохранены",
+					"start": "Бот успешно запущен"
 				}
 			},
 			"sessions": {
@@ -358,10 +353,9 @@
 					"createdAt": "Дата создания"
 				}
 			}
-	
 		},
 		"devices": {
-			"header":{
+			"header": {
 				"heading": "Устройства",
 				"description": "Управляйте устройствами, которые вы мониторите в NITRINO Monitoring"
 			},
@@ -372,7 +366,7 @@
 				"tag": "Тег"
 			},
 			"scanModal": {
-				"trigger":  "Поиск устройств",
+				"trigger": "Поиск устройств",
 				"heading": "Поиск устройств",
 				"subnetLabel": "Подсеть",
 				"scanButton": "Сканировать",
@@ -392,19 +386,18 @@
 					"new": "Новое",
 					"registered": "Зарегистрирован"
 				}
-
 			},
 			"actions": {
-					"updateIp": "Обновить IP-адрес",
-					"updatingIp": "Обновление IP-адреса...",
-					"updateIpSuccess": "IP-адрес успешно обновлен",
-					"errorUpdatingIp": "Ошибка при обновлении IP-адреса",
-					"edit": "Редактировать",
-					"delete": "Удалить",
-					"deleteSuccess": "Устройство успешно удалено",
-					"deleteError": "Не удалост удалить устройство",
-					"deleteConfirmTitle": "Удаление устройства",
-					"deleteConfirmMessage": "Вы уверены, что хотите удалить устройство \"{name}\"? Это действие нельзя отменить. "
+				"updateIp": "Обновить IP-адрес",
+				"updatingIp": "Обновление IP-адреса...",
+				"updateIpSuccess": "IP-адрес успешно обновлен",
+				"errorUpdatingIp": "Ошибка при обновлении IP-адреса",
+				"edit": "Редактировать",
+				"delete": "Удалить",
+				"deleteSuccess": "Устройство успешно удалено",
+				"deleteError": "Не удалост удалить устройство",
+				"deleteConfirmTitle": "Удаление устройства",
+				"deleteConfirmMessage": "Вы уверены, что хотите удалить устройство \"{name}\"? Это действие нельзя отменить. "
 			}
 		},
 		"departments": {
@@ -449,7 +442,7 @@
 					"unselectAll": "Снять выделение",
 					"success": "Устройства сотрудника успешно обновлены",
 					"submitting": "Сохранение...",
-					"error": "Ошибка при обновлении устройств"					
+					"error": "Ошибка при обновлении устройств"
 				}
 			},
 			"detail": {
@@ -459,7 +452,7 @@
 				"departmentName": "Название отдела",
 				"departmentDescription": "Описание",
 				"noDepartmentDescription": "Нет описания",
-				"deviceCount":"Количество устройств",
+				"deviceCount": "Количество устройств",
 				"noEmployee": "В этом отделе пока нет сотрудников",
 				"employeeCount": "Количество сотрудников",
 				"fullName": "ФИО",
@@ -471,7 +464,7 @@
 				"online": "В сети",
 				"offline": "Не в сети",
 				"lastActivity": "Последняя активность",
-				"noData":"Нет данных"
+				"noData": "Нет данных"
 			},
 			"addDepartment": "Добавить"
 		},
@@ -488,7 +481,7 @@
 					"phone": "Телефон",
 					"department": "Отдел",
 					"devicesCount": "Устройства"
-					},
+				},
 				"empty": "Сотрудники не найдены",
 				"loading": "Загрузка списка сотрудников...",
 				"search": "Поиск сотрудников...",
@@ -523,7 +516,7 @@
 					"lastNameLabel": "Фамилия",
 					"lastNamePlaceholder": "Введите фамилию сотрудника",
 					"emailLabel": "Email",
-					"emailPlaceholder":"Введите email сотрудника",
+					"emailPlaceholder": "Введите email сотрудника",
 					"phoneLabel": "Телефон",
 					"phonePlaceholder": "Введите телефон сотрудника",
 					"departmentLabel": "Отдел",
@@ -580,7 +573,7 @@
 			},
 			"table": {
 				"columns": {
-					"date": "Дата создаия",
+					"date": "Дата создания",
 					"createdBy": "Ответственный",
 					"devicesCount": "Количество устройств",
 					"departments": "Отделы"
@@ -603,30 +596,30 @@
 			"modal": {
 				"create": {
 					"title": "Создание инвентаризации",
-                    "description": "Заполните необходимую информацию для создания инвентаризации",
-                    "steps": {
-                        "department": {
-                            "title": "Выбор отдела",
-                            "description": "Выберите отдел для проведения инвентаризации",
-                            "departmentLabel": "Отдел",
+					"description": "Заполните необходимую информацию для создания инвентаризации",
+					"steps": {
+						"department": {
+							"title": "Выбор отдела",
+							"description": "Выберите отдел для проведения инвентаризации",
+							"departmentLabel": "Отдел",
 							"selectAll": "Выбрать все",
-                            "unselectAll": "Снять выбор",
-                            "departmentPlaceholder": "Выберите отдел",
-                            "nextButton": "Далее",
+							"unselectAll": "Снять выбор",
+							"departmentPlaceholder": "Выберите отдел",
+							"nextButton": "Далее",
 							"loading": "Загрузка отделов...",
 							"errors": {
 								"required": "Отдел обязателен для выбора"
 							}
-                        },
+						},
 						"devices": {
 							"title": "Выбор устройств",
 							"description": "Выберите нужные устройства",
 							"nextButton": "Далее",
 							"backButton": "Назад",
 							"loading": "Загрузка устройств...",
-							"noDevices":"Нет доступных устройств",
+							"noDevices": "Нет доступных устройств",
 							"selectAll": "Выбрать все",
-                            "unselectAll": "Снять выбор",
+							"unselectAll": "Снять выбор",
 							"errors": {
 								"required": "Необходимо выбрать хотя бы одно устройство"
 							}
@@ -645,7 +638,7 @@
 							"errorFetchingInfo": "Ошибка при получении информации",
 							"cpu": "Процессор",
 							"memory": "Оперативная память",
-							"os":"Операционная система",
+							"os": "Операционная система",
 							"collectionComplete": "Сбор  данных завершен",
 							"collectionCompleteWithErrors": "Сбор данных завершен с ошибками",
 							"devicesProcessed": "Обработано устройств: {total}",
@@ -663,12 +656,12 @@
 							"submittingButton": "Создание...",
 							"successTitle": "Инвентаризация успешно создана!",
 							"successDescription": "Данные инвентаризации сохранены в системе. Вы можете просмотреть их в разделе 'Инвентаризация'.",
-                        	"successMessage": "Инвентаризация успешно создана",
-                        	"errorMessage": "Ошибка при создании инвентаризации",
+							"successMessage": "Инвентаризация успешно создана",
+							"errorMessage": "Ошибка при создании инвентаризации",
 							"errorAddingItem": "Ошибка при добавлении устройства в инвентаризацию",
-                        	"processingItems": "Обработка устройств: {current} из {total}"
+							"processingItems": "Обработка устройств: {current} из {total}"
 						}
-                    }
+					}
 				}
 			},
 			"steps": {
@@ -677,15 +670,15 @@
 				"step2": "Сбор данных",
 				"step3": "Формирование отчета",
 				"deviceSelection": {
-                        "selectAll": "Выбрать все",
-                        "unselectAll": "Снять выделение",
-                        "selected": "Выбрано устройств: {count}",
-                        "noDevices": "Нет доступных устройств"
-                },
+					"selectAll": "Выбрать все",
+					"unselectAll": "Снять выделение",
+					"selected": "Выбрано устройств: {count}",
+					"noDevices": "Нет доступных устройств"
+				},
 				"dataCollection": {
 					"collecting": "Сбор данных...",
 					"progress": "Обработано {current} из {total} устройств",
-					 "error": "Ошибка при сборе данных"
+					"error": "Ошибка при сборе данных"
 				},
 				"report": {
 					"generating": "Формирование отчета...",
@@ -720,7 +713,7 @@
 				"heading": "Мониторинг",
 				"description": "Настройка мониторинга и просмотр событий"
 			},
-			
+
 			"categories": {
 				"hardware_change": "Изменение оборудования",
 				"performance": "Производительность",
@@ -762,7 +755,7 @@
 				"rules": "Правила",
 				"events": "События"
 			},
-			
+
 			"alertRules": {
 				"addRule": "Добавить правило",
 				"syncWithPrometheus": "Синхронизировать с Prometheus",
@@ -779,7 +772,6 @@
 					"cpu_usage": "Загрузка процессора",
 					"disk_usage_percent": "Занятое место на диске %",
 					"Hardware_Change_Detected": "Контроль оборудования"
-					
 				},
 				"operators": {
 					"greater_than": "больше",
@@ -793,7 +785,6 @@
 				"status": {
 					"inactive": "Неактивно",
 					"active": "Активно"
-		
 				},
 				"detail": {
 					"status": "Статус",
@@ -827,10 +818,10 @@
 					}
 				},
 				"categories": {
-						"hardware_change": "Изменение оборудования",
-						"cpu_monitoring": "Контроль процессора",
-						"disk_monitoring": "Контроль дисков",
-						"network_monitoring": "Контроль сети"
+					"hardware_change": "Изменение оборудования",
+					"cpu_monitoring": "Контроль процессора",
+					"disk_monitoring": "Контроль дисков",
+					"network_monitoring": "Контроль сети"
 				},
 				"subcategories": {
 					"cpu": {
@@ -838,7 +829,7 @@
 						"cpu_usage": "Загрузка процессора"
 					},
 					"disk": {
-						"disk_usage_percent":"Занятое место на диске %"
+						"disk_usage_percent": "Занятое место на диске %"
 					}
 				},
 				"modal": {
@@ -860,15 +851,14 @@
 						"status": "Статус",
 						"createdAt": "Дата создания",
 						"actions": "Действия"
-
 					}
 				},
 				"categories": {
-						"hardware_change": "Изменение оборудования",
-						"performance": "Производительность",
-						"health": "Состояние системы",
-						"custom": "Пользовательское"
-					},
+					"hardware_change": "Изменение оборудования",
+					"performance": "Производительность",
+					"health": "Состояние системы",
+					"custom": "Пользовательское"
+				},
 				"severities": {
 					"low": "Низкий",
 					"medium": "Средний",
@@ -905,8 +895,6 @@
 				"message": "Сообщение",
 				"severity": "Приоритет",
 				"type": "Тип"
-				
-
 			}
 		}
 	},
@@ -928,7 +916,6 @@
 			"next": "Вперед",
 			"page": "страница",
 			"of": "из"
-
 		}
 	},
 	"utils": {

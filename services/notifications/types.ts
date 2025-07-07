@@ -1,29 +1,28 @@
 export interface NotificationPayload {
-    subject?: string;
-    text: string;
-    html?: string;
+	subject?: string
+	text: string
+	html?: string
 }
 
 export interface EmailPayload extends NotificationPayload {
-    to: string;
-    from?: string;
+	to: string
+	from?: string
 }
 
 export interface TelegramPayload extends NotificationPayload {
-    chatId: string | number;
-    userId: string;
-    text: string;
+	chatId: string | number
+	userId: string
+	text: string
 }
 
 export interface SmtpConfig {
-    host: string;
-    port: number;
-    secure: boolean;
-    auth: {
-        user: string;
-        encryptedPassword: string;
-    };
-    fromEmail: string;
-    fromName?: string | null;
+	host: string
+	port: number
+	secure: boolean
+	auth: {
+		user: string
+		encryptedPassword: string
+	}
+	fromEmail: string
+	fromName?: string | null
 }
-

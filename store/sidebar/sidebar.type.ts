@@ -1,4 +1,4 @@
 export interface SidebarStore {
-    isCollapsed: boolean
-    setIsCollapsed: (value: boolean) => void
+	isCollapsed: boolean
+	setIsCollapsed: (value: boolean) => void
 }

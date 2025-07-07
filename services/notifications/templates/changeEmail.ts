@@ -1,4 +1,8 @@
-export const changeEmailTemplate = (currentEmail: string, newEmail: string, code: string) => `
+export const changeEmailTemplate = (
+	currentEmail: string,
+	newEmail: string,
+	code: string
+) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -75,4 +79,4 @@ export const changeEmailTemplate = (currentEmail: string, newEmail: string, code
     </div>
 </body>
 </html>
-`;
+`

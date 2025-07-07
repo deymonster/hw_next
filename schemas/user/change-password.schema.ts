@@ -1,18 +1,9 @@
-import {z} from 'zod'
+import { z } from 'zod'
 
+export const changePasswordSchema = z.object({
+	oldPassword: z.string().min(8),
 
- export const changePasswordSchema = z.object({
+	newPassword: z.string().min(8)
+})
 
-    oldPassword: z
-       .string()
-       .min(8),
-
-    newPassword: z
-        .string()
-       .min(8),
-    
- })
-
- export type TypeChangePasswordSchema = z.infer<typeof changePasswordSchema>
-
- 
+export type TypeChangePasswordSchema = z.infer<typeof changePasswordSchema>

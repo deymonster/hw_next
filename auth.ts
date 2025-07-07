@@ -1,4 +1,10 @@
-import NextAuth from "next-auth"
-import { authConfig } from "@/libs/auth/config"
+import NextAuth from 'next-auth'
 
-export const { auth, signIn, signOut, handlers: { GET, POST } } = NextAuth(authConfig)
+import { authConfig } from '@/libs/auth/config'
+
+export const {
+	auth,
+	signIn,
+	signOut,
+	handlers: { GET, POST }
+} = NextAuth(authConfig)

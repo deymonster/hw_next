@@ -1,6 +1,5 @@
-import { NotificationPayload } from './types';
-
+import { NotificationPayload } from './types'
 
 export abstract class BaseNotificationService {
-    abstract send(payload: NotificationPayload): Promise<boolean>;
+	abstract send(payload: NotificationPayload): Promise<boolean>
 }

@@ -1,20 +1,20 @@
-import { EmailService } from './email.service';
-import { TelegramService } from './telegram.service';
+import { EmailService } from './email.service'
+import { TelegramService } from './telegram.service'
 
 export class NotificationFactory {
-    private readonly emailService: EmailService;
-    private readonly telegramService: TelegramService;
+	private readonly emailService: EmailService
+	private readonly telegramService: TelegramService
 
-    constructor() {
-        this.emailService = new EmailService();
-        this.telegramService = new TelegramService();
-    }
+	constructor() {
+		this.emailService = new EmailService()
+		this.telegramService = new TelegramService()
+	}
 
-    get email() {
-        return this.emailService;
-    }
+	get email() {
+		return this.emailService
+	}
 
-    get telegram() {
-        return this.telegramService;
-    }
+	get telegram() {
+		return this.telegramService
+	}
 }

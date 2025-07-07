@@ -1,35 +1,35 @@
 {
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowSyntheticDefaultImports": true,
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "noUnusedLocals": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "forceConsistentCasingInFileNames": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"],
-      "@/services/*": ["./services/*"]
-    },
-    "types": ["node", "next-auth"]
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "middleware.ts"]
+	"compilerOptions": {
+		"target": "ES2017",
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"allowSyntheticDefaultImports": true,
+		"allowJs": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"noImplicitAny": true,
+		"noUnusedLocals": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"noEmit": true,
+		"esModuleInterop": true,
+		"module": "esnext",
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"jsx": "preserve",
+		"incremental": true,
+		"forceConsistentCasingInFileNames": true,
+		"plugins": [
+			{
+				"name": "next"
+			}
+		],
+		"paths": {
+			"@/*": ["./*"],
+			"@/services/*": ["./services/*"]
+		},
+		"types": ["node", "next-auth"]
+	},
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+	"exclude": ["node_modules", "middleware.ts"]
 }

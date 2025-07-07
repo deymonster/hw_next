@@ -63,4 +63,4 @@ export const verifyEmailTemplate = (code: string) => `
     </div>
 </body>
 </html>
-`;
+`

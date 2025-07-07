@@ -1,39 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-    <title>SSE Test</title>
-</head>
-<body>
-    <div id="messages"></div>
-    <script>
-        const messagesDiv = document.getElementById('messages');
-        const deviceId = '192.168.13.179'; // Ваш deviceId
+	<head>
+		<title>SSE Test</title>
+	</head>
+	<body>
+		<div id="messages"></div>
+		<script>
+			const messagesDiv = document.getElementById('messages')
+			const deviceId = '192.168.13.179' // Ваш deviceId
 
-        function addMessage(message) {
-            const div = document.createElement('div');
-            div.textContent = new Date().toISOString() + ': ' + message;
-            messagesDiv.appendChild(div);
-        }
+			function addMessage(message) {
+				const div = document.createElement('div')
+				div.textContent = new Date().toISOString() + ': ' + message
+				messagesDiv.appendChild(div)
+			}
 
-        const eventSource = new EventSource(`/api/metrics/stream/${deviceId}`);
+			const eventSource = new EventSource(
+				`/api/metrics/stream/${deviceId}`
+			)
 
-        eventSource.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                addMessage(`Получены данные типа: ${data.type}`);
-                console.log(data); // Полные данные в консоли
-            } catch (error) {
-                addMessage(`Ошибка парсинга: ${error.message}`);
-            }
-        };
+			eventSource.onmessage = event => {
+				try {
+					const data = JSON.parse(event.data)
+					addMessage(`Получены данные типа: ${data.type}`)
+					console.log(data) // Полные данные в консоли
+				} catch (error) {
+					addMessage(`Ошибка парсинга: ${error.message}`)
+				}
+			}
 
-        eventSource.onerror = (error) => {
-            addMessage(`Ошибка соединения: ${error.type}`);
-        };
+			eventSource.onerror = error => {
+				addMessage(`Ошибка соединения: ${error.type}`)
+			}
 
-        eventSource.onopen = () => {
-            addMessage('Соединение установлено');
-        };
-    </script>
-</body>
+			eventSource.onopen = () => {
+				addMessage('Соединение установлено')
+			}
+		</script>
+	</body>
 </html>

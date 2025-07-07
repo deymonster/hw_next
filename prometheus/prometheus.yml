@@ -1,40 +1,40 @@
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+    scrape_interval: 15s
+    evaluation_interval: 15s
 
 alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: ['alertmanager:9093']
+    alertmanagers:
+        - static_configs:
+              - targets: ['alertmanager:9093']
 
 rule_files:
-  - "/etc/prometheus/alerts/*.rules.yml"
+    - '/etc/prometheus/alerts/*.rules.yml'
 
 scrape_configs:
-  - job_name: 'pushgateway'
-    static_configs:
-      - targets: ['pushgateway:9091']
-  - job_name: 'windows-agents'
-    scrape_interval: 15s
-    metrics_path: '/metrics'
-    scheme: 'http'
-   
-    file_sd_configs:
-      - files:
-          - /etc/prometheus/targets/windows_targets.json
+    - job_name: 'pushgateway'
+      static_configs:
+          - targets: ['pushgateway:9091']
+    - job_name: 'windows-agents'
+      scrape_interval: 15s
+      metrics_path: '/metrics'
+      scheme: 'http'
 
-    # Переписываем адреса агентов для перенаправления на Nginx
-    relabel_configs:
-      # Сохраняем оригинальный адрес в метке instance
-      - source_labels: [__address__]
-        target_label: instance
-        
-      # Изменяем путь метрик, добавляя оригинальный адрес
-      - source_labels: [__address__]
-        regex: (.*)
-        target_label: __metrics_path__
-        replacement: /metrics/${1}
-        
-      # В последнюю очередь меняем адрес на прокси
-      - target_label: __address__
-        replacement: nginx-proxy:8080  # Используем имя сервиса из docker-compose
+      file_sd_configs:
+          - files:
+                - /etc/prometheus/targets/windows_targets.json
+
+      # Переписываем адреса агентов для перенаправления на Nginx
+      relabel_configs:
+          # Сохраняем оригинальный адрес в метке instance
+          - source_labels: [__address__]
+            target_label: instance
+
+          # Изменяем путь метрик, добавляя оригинальный адрес
+          - source_labels: [__address__]
+            regex: (.*)
+            target_label: __metrics_path__
+            replacement: /metrics/${1}
+
+          # В последнюю очередь меняем адрес на прокси
+          - target_label: __address__
+            replacement: nginx-proxy:8080 # Используем имя сервиса из docker-compose

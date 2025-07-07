@@ -1,24 +1,24 @@
 {
-  "New Component": {
-    "prefix": "nc",
-    "body": [
-      "interface ${TM_FILENAME_BASE}Props {}",
-      "",
-      "export function ${TM_FILENAME_BASE}({ }: ${TM_FILENAME_BASE}Props) {",
-      "  return <div>${TM_FILENAME_BASE}</div>",
-      "}",
-      ""
-    ],
-    "description": "Create a new React TypeScript component"
-  },
-  "New Form": {
-    "prefix": "nf",
-    "body": [
-      "export function ${TM_FILENAME_BASE}() {",
-      "  return <div>${TM_FILENAME_BASE}</div>",
-      "}",
-      ""
-    ],
-    "description": "Create a new Form component"
-  }
+	"New Component": {
+		"prefix": "nc",
+		"body": [
+			"interface ${TM_FILENAME_BASE}Props {}",
+			"",
+			"export function ${TM_FILENAME_BASE}({ }: ${TM_FILENAME_BASE}Props) {",
+			"  return <div>${TM_FILENAME_BASE}</div>",
+			"}",
+			""
+		],
+		"description": "Create a new React TypeScript component"
+	},
+	"New Form": {
+		"prefix": "nf",
+		"body": [
+			"export function ${TM_FILENAME_BASE}() {",
+			"  return <div>${TM_FILENAME_BASE}</div>",
+			"}",
+			""
+		],
+		"description": "Create a new Form component"
+	}
 }

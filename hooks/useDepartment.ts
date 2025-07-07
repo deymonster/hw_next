@@ -1,107 +1,140 @@
-import { Department, Device } from '@prisma/client';
-import { getDepartmentsWithCounts, createDepartment, updateDepartment, deleteDepartment } from '@/app/actions/department';
-import { IDepartmentCreateInput } from '@/services/department/department.interface';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateDepartmentDevices } from '@/app/actions/device';
+import { Department, Device } from '@prisma/client'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
+import {
+	createDepartment,
+	deleteDepartment,
+	getDepartmentsWithCounts,
+	updateDepartment
+} from '@/app/actions/department'
+import { updateDepartmentDevices } from '@/app/actions/device'
+import { IDepartmentCreateInput } from '@/services/department/department.interface'
 
 export type DepartmentWithCounts = Department & {
-    deviceCount: number;
-    employeesCount: number;
-    employees?: {
-        id: string;
-        firstName: string;
-        lastName: string;
-        email: string | null;
-        phone: string | null;
-        position: string | null;
-    }[];
-    devices?: (Device & {
-        deviceStatus?: {
-            isOnline: boolean;
-            lastSeen: Date | null;
-        };
-    })[];
+	deviceCount: number
+	employeesCount: number
+	employees?: {
+		id: string
+		firstName: string
+		lastName: string
+		email: string | null
+		phone: string | null
+		position: string | null
+	}[]
+	devices?: (Device & {
+		deviceStatus?: {
+			isOnline: boolean
+			lastSeen: Date | null
+		}
+	})[]
 }
 
 export const DEPARTMENTS_QUERY_KEY = ['departments'] as const
 
 export function useDepartment() {
-    const queryClient = useQueryClient()
-    
-    const { data: departments = [], isLoading, error } = useQuery({
-        queryKey: DEPARTMENTS_QUERY_KEY,
-        queryFn: async () => {
-            return getDepartmentsWithCounts();
-        }
-    })
+	const queryClient = useQueryClient()
 
-    const createMutation = useMutation({
-        mutationFn: (data: IDepartmentCreateInput) => createDepartment(data),
-        onSuccess: (newDepartment) => {
-            // Инвалидируем кэш после успешного создания
-            queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
-            
-            // Обновляем кэш для списка отделов
-            queryClient.setQueryData(DEPARTMENTS_QUERY_KEY, (oldData: DepartmentWithCounts[] | undefined) => {
-                return [...(oldData || []), { ...newDepartment, deviceCount: 0, employeesCount: 0 }];
-            })
-        }
-    })
+	const {
+		data: departments = [],
+		isLoading,
+		error
+	} = useQuery({
+		queryKey: DEPARTMENTS_QUERY_KEY,
+		queryFn: async () => {
+			return getDepartmentsWithCounts()
+		}
+	})
 
-    // Обновление отдела
-    const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: Partial<IDepartmentCreateInput> }) => {
-            // Если есть устройства для обновления, сначала обновляем их
-            if (data.devices?.set) {
-                const deviceIds = data.devices.set.map(d => d.id);
-                updateDepartmentDevices({ id, deviceIds });
-            }
-            return updateDepartment(id, data);
-        },
-        onSuccess: (updatedDepartment) => {
-            // Обновляем все связанные запросы
-            queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
-            
-            // Обновляем кэш для списка отделов
-            queryClient.setQueryData(DEPARTMENTS_QUERY_KEY, (oldData: DepartmentWithCounts[] | undefined) => {
-                if (!oldData) return [updatedDepartment]
-                return oldData.map(dep => dep.id === updatedDepartment.id ? updatedDepartment : dep)
-            })
+	const createMutation = useMutation({
+		mutationFn: (data: IDepartmentCreateInput) => createDepartment(data),
+		onSuccess: newDepartment => {
+			// Инвалидируем кэш после успешного создания
+			queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
 
-            // Обновляем кэш для конкретного отдела
-            queryClient.setQueryData(['department', updatedDepartment.id], updatedDepartment)
-        }
-    })
+			// Обновляем кэш для списка отделов
+			queryClient.setQueryData(
+				DEPARTMENTS_QUERY_KEY,
+				(oldData: DepartmentWithCounts[] | undefined) => {
+					return [
+						...(oldData || []),
+						{ ...newDepartment, deviceCount: 0, employeesCount: 0 }
+					]
+				}
+			)
+		}
+	})
 
-    // Удаление отдела
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => deleteDepartment(id),
-        onSuccess: (_, id) => {
-            // Инвалидируем кэш после успешного удаления
-            queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
-            // Удаляем кэш конкретного отдела
-            queryClient.removeQueries({ queryKey: [...DEPARTMENTS_QUERY_KEY, id] })
-        }
-    })
+	// Обновление отдела
+	const updateMutation = useMutation({
+		mutationFn: ({
+			id,
+			data
+		}: {
+			id: string
+			data: Partial<IDepartmentCreateInput>
+		}) => {
+			// Если есть устройства для обновления, сначала обновляем их
+			if (data.devices?.set) {
+				const deviceIds = data.devices.set.map(d => d.id)
+				updateDepartmentDevices({ id, deviceIds })
+			}
+			return updateDepartment(id, data)
+		},
+		onSuccess: updatedDepartment => {
+			// Обновляем все связанные запросы
+			queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
 
+			// Обновляем кэш для списка отделов
+			queryClient.setQueryData(
+				DEPARTMENTS_QUERY_KEY,
+				(oldData: DepartmentWithCounts[] | undefined) => {
+					if (!oldData) return [updatedDepartment]
+					return oldData.map(dep =>
+						dep.id === updatedDepartment.id
+							? updatedDepartment
+							: dep
+					)
+				}
+			)
 
-    return {
-        departments,
-        isLoading,
-        error,
+			// Обновляем кэш для конкретного отдела
+			queryClient.setQueryData(
+				['department', updatedDepartment.id],
+				updatedDepartment
+			)
+		}
+	})
 
-        createDepartment: createMutation.mutate,
-        updateDepartment: updateMutation.mutate,
-        deleteDepartment: deleteMutation.mutate,
+	// Удаление отдела
+	const deleteMutation = useMutation({
+		mutationFn: (id: string) => deleteDepartment(id),
+		onSuccess: (_, id) => {
+			// Инвалидируем кэш после успешного удаления
+			queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
+			// Удаляем кэш конкретного отдела
+			queryClient.removeQueries({
+				queryKey: [...DEPARTMENTS_QUERY_KEY, id]
+			})
+		}
+	})
 
-        isCreating: createMutation.isPending,
-        isUpdating: updateMutation.isPending,
-        isDeleting: deleteMutation.isPending,
+	return {
+		departments,
+		isLoading,
+		error,
 
-        createError: createMutation.error,
-        updateError: updateMutation.error,
-        deleteError: deleteMutation.error,
-        refetch: () => queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
-    }
-    
+		createDepartment: createMutation.mutate,
+		updateDepartment: updateMutation.mutate,
+		deleteDepartment: deleteMutation.mutate,
+
+		isCreating: createMutation.isPending,
+		isUpdating: updateMutation.isPending,
+		isDeleting: deleteMutation.isPending,
+
+		createError: createMutation.error,
+		updateError: updateMutation.error,
+		deleteError: deleteMutation.error,
+		refetch: () =>
+			queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
+	}
 }

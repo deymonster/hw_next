@@ -1,4 +1,4 @@
-{	
+{
 	"layout": {
 		"header": {
 			"logo": {
@@ -48,9 +48,9 @@
 			}
 		}
 	},
-    "auth": {
-        "register": {
-            "heading": "Register on NITRINOnet Monitoring",
+	"auth": {
+		"register": {
+			"heading": "Register on NITRINOnet Monitoring",
 			"backButtonLabel": "Already have an account? Sign in",
 			"usernameLabel": "Username",
 			"usernameDescription": "This is the name other users will know you by. You can change it later.",
@@ -59,11 +59,11 @@
 			"passwordLabel": "Password",
 			"passwordDescription": "The password must contain at least 8 characters.",
 			"submitButton": "Sign up",
-            "registeringButton": "Registration...",
+			"registeringButton": "Registration...",
 			"successAlertTitle": "Check Your Email",
 			"successAlertDescription": "A verification email has been sent to your inbox. If you don't see the email, check your spam folder",
 			"errorMessage": "Error when creating an account"
-        },
+		},
 		"errors": {
 			"INVALID_CREDENTIALS": "Invalid email or password",
 			"EMAIL_NOT_VERIFIED": "Email not verified",
@@ -79,12 +79,12 @@
 			"AUTHENTICATION_FAILED": "Authentication failed",
 			"UPDATE_PASSWORD_FAILED": "Failed to update password"
 		},
-        "verify": {
-            "heading": "Account verification",
-            "verifying": "Verifying your email...",
-            "successMessage": "Account verified",
+		"verify": {
+			"heading": "Account verification",
+			"verifying": "Verifying your email...",
+			"successMessage": "Account verified",
 			"errorMesage": "Verification error"
-        },
+		},
 		"login": {
 			"heading": "Login to NITRINOnet Monitoring",
 			"backButtonLabel": "Don't have an account? Sign up!",
@@ -122,7 +122,7 @@
 			"errorMessage": "Error when setting a new password",
 			"invalidToken": "Invalid or expired token"
 		}
-    },
+	},
 	"dashboard": {
 		"settings": {
 			"header": {
@@ -138,11 +138,10 @@
 				"header": {
 					"heading": "Profile",
 					"description": "Here you can change your profile settings"
-
 				},
 				"avatar": {
 					"heading": "Avatar profile",
-					"updateButton":  "Update avatar",
+					"updateButton": "Update avatar",
 					"confirmModal": {
 						"heading": "Remove avatar",
 						"message": "Are you sure you want to remove your avatar? This action cannot be undone."
@@ -164,7 +163,6 @@
 					"submitButton": "Update profile",
 					"succesMessage": "Profile successfully updated",
 					"errorMessage": "Error when updating profile"
-
 				}
 			},
 			"account": {
@@ -237,7 +235,11 @@
 					"description": "If you enable this option, you will receive notifications about events in the Telegram app."
 				},
 				"succesMessage": "Notifications successfully updated",
-				"errorMessage": "Error during notifications update"
+				"errorMessage": "Error during notifications update",
+				"errors": {
+					"telegramCheck": "Error checking Telegram settings",
+					"telegramNotConfigured": "Please configure Telegram bot in the Telegram settings section"
+				}
 			},
 			"smtpSettings": {
 				"header": {
@@ -294,11 +296,11 @@
 			},
 			"telegramSettings": {
 				"header": {
-				"heading": "Telegram Bot Settings"
+					"heading": "Telegram Bot Settings"
 				},
 				"botToken": {
-				"heading": "Bot Token",
-				"description": "Enter the token received from @BotFather"
+					"heading": "Bot Token",
+					"description": "Enter the token received from @BotFather"
 				},
 				"verify": "Verify",
 				"reconfigure": "Reconfigure",
@@ -307,10 +309,10 @@
 				"sendTest": "Send Test Message",
 				"connectDescription": "Bot successfully verified! Now open the chat with the bot and press /start",
 				"errors": {
-				"verify": "Error verifying bot settings",
-				"save": "Error saving bot settings",
-				"start": "Error starting bot",
-				"testMessage": "Error sending test message"
+					"verify": "Error verifying bot settings",
+					"save": "Error saving bot settings",
+					"start": "Error starting bot",
+					"testMessage": "Error sending test message"
 				},
 				"success": {
 					"testMessage": "Test message sent",
@@ -351,7 +353,7 @@
 			}
 		},
 		"devices": {
-			"header":{
+			"header": {
 				"heading": "Devices",
 				"description": "Manage devices that you monitor in NITRINO Monitoring"
 			},
@@ -362,7 +364,7 @@
 				"tag": "Tag"
 			},
 			"scanModal": {
-				"trigger":  "Scan devices",
+				"trigger": "Scan devices",
 				"heading": "Scan devices",
 				"subnetLabel": "Subnet",
 				"scanButton": "Scan",
@@ -382,19 +384,18 @@
 					"new": "New",
 					"registered": "Registered"
 				}
-
 			},
 			"actions": {
-					"updateIp": "Update IP",
-					"updatingIp": "Updating IP",
-					"updateIpSuccess": "IP address was successfully updated",
-					"errorUpdatingIp": "Error updating IP address",
-					"edit": "Edit",
-					"delete": "Delete",
-					"deleteSuccess": "Device successfully deleted",
-					"deleteError": "Error deleting device",
-					"deleteConfirmTitle": "Deliting device",
-					"deleteConfirmMessage": "Are you sure that you want to delete device \"{name}\"? This action cannot be undone"
+				"updateIp": "Update IP",
+				"updatingIp": "Updating IP",
+				"updateIpSuccess": "IP address was successfully updated",
+				"errorUpdatingIp": "Error updating IP address",
+				"edit": "Edit",
+				"delete": "Delete",
+				"deleteSuccess": "Device successfully deleted",
+				"deleteError": "Error deleting device",
+				"deleteConfirmTitle": "Deliting device",
+				"deleteConfirmMessage": "Are you sure that you want to delete device \"{name}\"? This action cannot be undone"
 			}
 		},
 		"departments": {
@@ -404,7 +405,8 @@
 			},
 			"columns": {
 				"name": "Department",
-				"deviceCount": "Device count"
+				"deviceCount": "Device count",
+				"employeesCount": "Employees"
 			},
 			"modal": {
 				"add": {
@@ -444,7 +446,7 @@
 					"phone": "Phone",
 					"department": "Department",
 					"devicesCount": "Devices"
-					},
+				},
 				"empty": "Employees not found",
 				"loading": "Loading list of employees...",
 				"search": "Search employees...",
@@ -515,7 +517,7 @@
 				"offline": "Offline",
 				"noDevices": "No assigned devices",
 				"assignedDevices": "Assigned Devices",
-        		"manageDevices": "Manage Devices",
+				"manageDevices": "Manage Devices",
 				"deviceCount": "Device count",
 				"position": "Position",
 				"phoneNotSet": "Not set",
@@ -528,6 +530,337 @@
 				"info": "Information"
 			},
 			"addEmployee": "Add"
+		},
+		"inventory": {
+			"header": {
+				"heading": "Inventory",
+				"description": "Manage inventory of your company"
+			},
+			"table": {
+				"columns": {
+					"date": "Inventory Date",
+					"createdBy": "CreatedBy",
+					"devicesCount": "Device count",
+					"departments": "Departments"
+				},
+				"loading": "Loading inventories...",
+				"error": "Error while loading inventpries",
+				"empty": "No inventories found",
+				"refetch": "Refetch",
+				"searchPlaceholder": "Search by date...",
+				"dateFrom": "Date from",
+				"dateTo": "Date to",
+				"create": "Create inventory"
+			},
+			"status": {
+				"inProgress": "In progress",
+				"completed": "Completed",
+				"failed": "Failed"
+			},
+			"addInventory": "Add inventory",
+			"modal": {
+				"create": {
+					"title": "Creating inventory",
+					"description": "Fill in the necessary information to create an inventory",
+					"steps": {
+						"department": {
+							"title": "Department selection",
+							"description": "Select department for inventory",
+							"departmentLabel": "Department Label",
+							"selectAll": "Select all",
+							"unselectAll": "Unselect all",
+							"departmentPlaceholder": "Select department",
+							"nextButton": "Next",
+							"loading": "Loading departments...",
+							"errors": {
+								"required": "Department is required"
+							}
+						},
+						"devices": {
+							"title": "Device selection",
+							"description": "Select devices for inventory",
+							"nextButton": "Next",
+							"backButton": "Back",
+							"loading": "Device loading...",
+							"noDevices": "No devices available",
+							"selectAll": "Select all",
+							"unselectAll": "Unselect all",
+							"errors": {
+								"required": "At least one device must be selected"
+							}
+						},
+						"hardware": {
+							"title": "Data Collection",
+							"description": "Device data collection",
+							"nextButton": "Next",
+							"backButton": "Back",
+							"loading": "Loading device information...",
+							"loadingProgress": "Progress: {progress}%",
+							"statusLoading": "Collecting device data...",
+							"statusSuccess": "Data collection successfully completed",
+							"statusError": "Error collecting data",
+							"fetchingInfo": "Retrieving information...",
+							"errorFetchingInfo": "Error retrieving information",
+							"cpu": "Processor",
+							"memory": "RAM",
+							"os": "Operating System",
+							"collectionComplete": "Data collection completed",
+							"collectionCompleteWithErrors": "Data collection completed with errors",
+							"devicesProcessed": "Devices processed: {total}",
+							"successCount": "Devices successfully processed: {count}",
+							"errorCount": "Devices with errors: {count}"
+						},
+						"final": {
+							"title": "Inventory Completion",
+							"description": "Check the information and click 'Create' to complete the inventory process.",
+							"summaryTitle": "Inventory Summary",
+							"itemsCount": "Number of devices: {count}",
+							"dateInfo": "Creation date: {date}",
+							"backButton": "Back",
+							"submitButton": "Create",
+							"submittingButton": "Creating...",
+							"successTitle": "Inventory successfully created!",
+							"successDescription": "Inventory data has been saved in the system. You can view it in the 'Inventory' section.",
+							"successMessage": "Inventory successfully created",
+							"errorMessage": "Error creating inventory",
+							"errorAddingItem": "Error adding device to inventory",
+							"processingItems": "Processing devices: {current} of {total}"
+						}
+					}
+				}
+			},
+			"steps": {
+				"heading": "Inventory Process",
+				"step1": "Device Selection",
+				"step2": "Data Collection",
+				"step3": "Report Generation",
+				"deviceSelection": {
+					"selectAll": "Select all",
+					"unselectAll": "Deselect all",
+					"selected": "Selected devices: {count}",
+					"noDevices": "No available devices"
+				},
+				"dataCollection": {
+					"collecting": "Collecting data...",
+					"progress": "Processed {current} of {total} devices",
+					"error": "Error collecting data"
+				},
+				"report": {
+					"generating": "Generating report...",
+					"error": "Error generating report",
+					"download": "Download report",
+					"success": "Report successfully generated"
+				}
+			},
+			"detail": {
+				"heading": "Inventory",
+				"inventory": "Inventory",
+				"info": "Information",
+				"devices": "Devices",
+				"departments": "Departments",
+				"date": "Date",
+				"items": "Number of devices",
+				"itemsCount": "device(s)",
+				"noDevices": "No devices found",
+				"noDepartments": "No departments found",
+				"deleteConfirm": {
+					"heading": "Delete Inventory",
+					"message": "Are you sure you want to delete this inventory? This action cannot be undone."
+				},
+				"deleteSuccess": "Inventory successfully deleted",
+				"deleteError": "Error deleting inventory",
+				"exportSuccess": "Export successfully completed",
+				"exportError": "Error during export"
+			}
+		},
+		"monitoring": {
+			"header": {
+				"heading": "Monitoring",
+				"description": "Configure monitoring and view events"
+			},
+
+			"categories": {
+				"hardware_change": "Hardware Change",
+				"performance": "Performance",
+				"health": "System Health",
+				"custom": "Custom"
+			},
+			"severities": {
+				"low": "Low",
+				"medium": "Medium",
+				"high": "High",
+				"info": "Information",
+				"warning": "Warning",
+				"critical": "Critical"
+			},
+			"eventTypes": {
+				"system": "System",
+				"user": "User",
+				"device": "Device",
+				"alert": "Alert",
+				"info": "Information"
+			},
+			"operators": {
+				"greater_than": ">",
+				"less_than": "<",
+				"greater_equal": ">=",
+				"less_equal": "<=",
+				"equal": "=",
+				"not_equal": "!="
+			},
+			"actions": {
+				"view": "View",
+				"edit": "Edit",
+				"enable": "Enable",
+				"disable": "Disable",
+				"duplicate": "Duplicate",
+				"delete": "Delete"
+			},
+			"tabs": {
+				"rules": "Rules",
+				"events": "Events"
+			},
+
+			"alertRules": {
+				"addRule": "Add Rule",
+				"syncWithPrometheus": "Sync with Prometheus",
+				"searchPlaceholder": "Search by name...",
+				"totalRules": "Total rules",
+				"severities": {
+					"warning": "Warning",
+					"critical": "Critical",
+					"info": "Informational"
+				},
+				"backToList": "Back",
+				"metrics": {
+					"cpu_temperature": "CPU Temperature",
+					"cpu_usage": "CPU Usage",
+					"disk_usage_percent": "Disk Usage %",
+					"Hardware_Change_Detected": "Hardware Control"
+				},
+				"operators": {
+					"greater_than": "greater than",
+					"less_than": "less than",
+					"equal": "equal to",
+					"greater_equal": "greater than or equal to",
+					"less_equal": "less than or equal to",
+					"not_equal": "not equal to"
+				},
+				"for": "for",
+				"status": {
+					"inactive": "Inactive",
+					"active": "Active"
+				},
+				"detail": {
+					"status": "Status",
+					"enabled": "Active",
+					"disabled": "Inactive",
+					"category": "Category",
+					"subcategory": "Subcategory",
+					"triggerCondition": "Trigger Condition",
+					"duration": "Duration",
+					"severity": "Priority"
+				},
+				"duplicate": "Duplicate",
+				"edit": "Edit",
+				"delete": "Delete",
+				"deleteSuccess": "Rule successfully deleted",
+				"deleteError": "Error deleting rule",
+				"enableSuccess": "Rule activated",
+				"disableSuccess": "Rule deactivated",
+				"toggleError": "Error changing rule status",
+				"table": {
+					"columns": {
+						"name": "Name",
+						"category": "Category",
+						"severity": "Priority",
+						"status": "Status",
+						"metric": "Metric",
+						"threshold": "Threshold",
+						"duration": "Duration",
+						"createdAt": "Creation Date",
+						"actions": "Actions"
+					}
+				},
+				"categories": {
+					"hardware_change": "Hardware Change",
+					"cpu_monitoring": "CPU Monitoring",
+					"disk_monitoring": "Disk Monitoring",
+					"network_monitoring": "Network Monitoring"
+				},
+				"subcategories": {
+					"cpu": {
+						"cpu_temperature": "CPU Temperature",
+						"cpu_usage": "CPU Usage"
+					},
+					"disk": {
+						"disk_usage_percent": "Disk Usage %"
+					}
+				},
+				"modal": {
+					"delete": {
+						"confirmTitle": "Delete Rule",
+						"confirmMessage": "Are you sure you want to delete this rule?"
+					}
+				}
+			},
+			"events": {
+				"markAllAsRead": "Mark all as read",
+				"clearAll": "Clear all",
+				"searchPlaceholder": "Search by name...",
+				"table": {
+					"columns": {
+						"title": "Name",
+						"type": "Type",
+						"severity": "Priority",
+						"status": "Status",
+						"createdAt": "Creation Date",
+						"actions": "Actions"
+					}
+				},
+				"categories": {
+					"hardware_change": "Hardware Change",
+					"performance": "Performance",
+					"health": "System Health",
+					"custom": "Custom"
+				},
+				"severities": {
+					"low": "Low",
+					"medium": "Medium",
+					"high": "High",
+					"critical": "Critical",
+					"info": "Informational",
+					"warning": "Warning"
+				},
+				"eventTypes": {
+					"system": "System",
+					"user": "User",
+					"device": "Device",
+					"alert": "Alert",
+					"info": "Information"
+				},
+				"status": {
+					"active": "Active",
+					"inactive": "Inactive",
+					"read": "Read",
+					"unread": "Unread",
+					"title": "Status"
+				},
+				"actions": {
+					"markAsRead": "Mark as read",
+					"delete": "Delete"
+				},
+				"loading": "Loading events",
+				"backToList": "Back",
+				"createdAt": "Creation Date",
+				"detail": {
+					"info": "Event Details",
+					"id": "Id"
+				},
+				"message": "Message",
+				"severity": "Priority",
+				"type": "Type"
+			}
 		}
 	},
 	"components": {

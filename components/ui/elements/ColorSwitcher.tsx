@@ -1,22 +1,21 @@
 'use client'
 
-import { useConfig } from "@/hooks/useConfig"
-import { useEffect } from "react"
+import { useEffect } from 'react'
 
-
+import { useConfig } from '@/hooks/useConfig'
 
 export function ColorSwitcher() {
-    const { theme } = useConfig()
+	const { theme } = useConfig()
 
-    useEffect(() => {
-        document.body.classList.forEach(className => {
-            if(className.match(/^theme.*/)) {
-                document.body.classList.remove(className)
-            }
-        })
-        if (theme){
-            return document.body.classList.add(`theme-${theme}`)
-        }
-    }, [theme])
-  return null
+	useEffect(() => {
+		document.body.classList.forEach(className => {
+			if (className.match(/^theme.*/)) {
+				document.body.classList.remove(className)
+			}
+		})
+		if (theme) {
+			return document.body.classList.add(`theme-${theme}`)
+		}
+	}, [theme])
+	return null
 }
