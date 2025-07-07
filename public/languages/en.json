@@ -15,8 +15,9 @@
 					},
 					"successMessage": "Successfully logged out",
 					"errorMessage": "Logout error",
-					"profile": "Profile",
-					"dashboard": "Dashboard",
+					"settings": "Settings",
+					"devices": "Devices",
+					"alerts": "Monitoring",
 					"logout": "Sign out"
 				}
 			},

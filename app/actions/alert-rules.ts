@@ -307,3 +307,36 @@ export async function importAlertRulesFromYaml(yamlContent: string): Promise<{
 		}
 	}
 }
+
+/**
+ * Синхронизация правил с Prometheus
+ */
+export async function syncWithPrometheus(): Promise<{
+	success: boolean
+	error?: string
+}> {
+	try {
+		console.log('[SYNC_WITH_PROMETHEUS] Syncing alert rules with Prometheus')
+		
+		await services.alertRulesManager.syncWithPrometheus(
+			'Failed to sync alert rules with Prometheus'
+		)
+
+		console.log('[SYNC_WITH_PROMETHEUS] Sync successful')
+
+		return {
+			success: true
+		}
+	} catch (error) {
+		console.error('[SYNC_WITH_PROMETHEUS] Error:', error)
+		return {
+			success: false,
+			error:
+				error instanceof Error
+					? error.message
+					: 'Failed to sync alert rules with Prometheus'
+		}
+	}
+}
+
+

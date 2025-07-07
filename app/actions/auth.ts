@@ -204,7 +204,7 @@ export async function clearSession() {
 		}
 		await signOut({
 			redirect: true,
-			redirectTo: '/account/login'
+			redirectTo: '/'
 		})
 	} catch (error) {
 		console.error('[CLEAR_SESSION_ERROR]', error)

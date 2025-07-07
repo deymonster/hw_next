@@ -12,6 +12,8 @@ import { createAlertRulesColumns } from './AlertRulesColumns'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/ui/elements/DataTable'
 import { useAlertRules } from '@/hooks/useAlertRules'
+import { syncWithPrometheus } from '@/app/actions/alert-rules'
+import { toast } from 'sonner'
 
 export function AlertRulesTable() {
 	const t = useTranslations('dashboard.monitoring.alertRules')
@@ -40,8 +42,17 @@ export function AlertRulesTable() {
 	}
 
 	const handleSyncWithPrometheus = async () => {
-		// TODO: Implement sync with Prometheus
-		console.log('Sync with Prometheus')
+		try {
+			const result = await syncWithPrometheus()
+			if (result.success) {
+				toast.success('Правила успешно синхронизированы с Prometheus')
+			} else {
+				toast.error(result.error || 'Ошибка синхронизации с Prometheus')
+			}
+		} catch (error) {
+			console.error('Ошибка при синхронизации с Prometheus:', error)
+			toast.error('Ошибка синхронизации с Prometheus')
+		}
 	}
 
 	if (error) {

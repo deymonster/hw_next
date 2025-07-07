@@ -1,6 +1,6 @@
 'use client'
 
-import { LayoutDashboard, Loader2, LogOut, User } from 'lucide-react'
+import { Bell, Cpu, LayoutDashboard, Loader2, LogOut } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -30,9 +30,7 @@ export function ProfileMenu() {
 		try {
 			await exit()
 			toast.success(t('successMessage'))
-			setTimeout(() => {
-				router.push('/account/login')
-			}, 2000)
+			
 		} catch (error) {
 			console.error('Logout error:', error)
 			toast.error(t('errorMessage'))
@@ -61,17 +59,25 @@ export function ProfileMenu() {
 						</h2>
 					</div>
 					<DropdownMenuSeparator />
-					<Link href={`/${user.name}`}>
-						<DropdownMenuItem>
-							<User className='mr-2 size-4' />
-							{t('profile')}
-						</DropdownMenuItem>
-					</Link>
-
+					
 					<Link href='/dashboard/settings'>
 						<DropdownMenuItem>
 							<LayoutDashboard className='mr-2 size-4' />
-							{t('dashboard')}
+							{t('settings')}
+						</DropdownMenuItem>
+					</Link>
+
+					<Link href='/dashboard/devices'>
+						<DropdownMenuItem>
+							<Cpu className='mr-2 size-4' />
+							{t('devices')}
+						</DropdownMenuItem>
+					</Link>
+
+					<Link href='/dashboard/alert-rules'>
+						<DropdownMenuItem>
+							<Bell className='mr-2 size-4' />
+							{t('alerts')}
 						</DropdownMenuItem>
 					</Link>
 
