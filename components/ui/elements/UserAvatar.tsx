@@ -48,7 +48,7 @@ export function UserAvatar({ size, profile, isLive }: UserAvatarProps) {
 				)}
 			>
 				<AvatarImage
-					src={imageUrl || ''}
+					src={imageUrl || undefined}
 					// src="https://github.com/shadcn.png"
 					alt={profile.name || 'User avatar'}
 					className='object-cover'

@@ -18,23 +18,34 @@ import {
 import { UserAvatar } from '@/components/ui/elements/UserAvatar'
 import { useAuth } from '@/hooks/useAuth'
 import { useUser } from '@/hooks/useUser'
+import { useState } from 'react'
 
 export function ProfileMenu() {
 	const t = useTranslations('layout.header.headerMenu.profileMenu')
-	const router = useRouter()
-
 	const { exit } = useAuth()
 	const { user, loading } = useUser()
+	const [isLoggingOut, setIsLoggingOut] = useState(false)
 
 	const handleLogout = async () => {
 		try {
+			setIsLoggingOut(true)
 			await exit()
 			toast.success(t('successMessage'))
 			
 		} catch (error) {
 			console.error('Logout error:', error)
 			toast.error(t('errorMessage'))
+			setIsLoggingOut(false)
 		}
+	}
+
+	// Если происходит выход, показываем спиннер на весь экран
+	if (isLoggingOut) {
+		return (
+			<div className="fixed inset-0 z-50 flex h-screen items-center justify-center bg-background/80 backdrop-blur-sm">
+				<div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+			</div>
+		)
 	}
 
 	return loading || !user ? (

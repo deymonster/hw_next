@@ -1,7 +1,7 @@
 import { signOut as nextAuthSignOut, useSession } from 'next-auth/react'
 import { useEffect } from 'react'
 
-import { authenticate, clearSession, getCurrentUser } from '@/app/actions/auth'
+import { authenticate, getCurrentUser } from '@/app/actions/auth'
 import { authStore } from '@/store/auth/auth.store'
 import { StoreUser } from '@/store/auth/auth.types'
 import { useRouter } from 'next/navigation'
@@ -43,8 +43,6 @@ export function useAuth(): {
 			console.log('[useAuth] Clearing client store');
 			store.clear()
 			console.log('[useAuth] Client store cleared');
-
-			await clearSession()
 
 			await nextAuthSignOut({
 				redirect: true,
