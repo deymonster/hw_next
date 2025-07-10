@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Trash } from 'lucide-react'
-import { type ChangeEvent, useRef } from 'react'
+import { type ChangeEvent, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { useTranslations } from 'use-intl'
@@ -20,15 +20,26 @@ import { Form, FormField } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUser } from '@/hooks/useUser'
 import { getMediaSource } from '@/utils/get-media-source'
+import { useSearchParams } from 'next/navigation'
 
 export function ChangeAvatarForm() {
 	const t = useTranslations('dashboard.settings.profile.avatar')
-	const { user, loading, updateAvatar, deleteAvatar } = useUser()
+	const { user, loading, updateAvatar, deleteAvatar, updateSession } = useUser()
 	const inputRef = useRef<HTMLInputElement>(null)
+
+	const searchParams = useSearchParams()
+	const shouldRefresh = searchParams.get('refresh') === 'true'
 
 	const form = useForm<TypeUploadFileSchema>({
 		resolver: zodResolver(UploadFileSchema)
 	})
+
+	useEffect(() => {
+		if (shouldRefresh && !loading) {
+			// Принудительно обновляем сессию
+			updateSession()
+		}
+	}, [shouldRefresh, loading, updateSession])
 
 	async function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
 		const file = event.target.files?.[0]

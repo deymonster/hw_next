@@ -23,6 +23,7 @@ export function RedisAdapter(client: Redis): Adapter {
 			name: user.name ?? null
 		} as AdapterUser
 	}
+	
 
 	return {
 		async createUser(user) {

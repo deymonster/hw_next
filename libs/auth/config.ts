@@ -2,7 +2,7 @@ import { Role } from '@prisma/client'
 import type { NextAuthConfig } from 'next-auth'
 import { headers } from 'next/headers'
 
-import { AUTH_ROUTES, SESSION_CONFIG } from './constants'
+import { AUTH_ERRORS, AUTH_ROUTES, SESSION_CONFIG } from './constants'
 import { providers } from './providers'
 import { CustomSession, CustomUser } from './types'
 
@@ -44,10 +44,19 @@ export const authConfig: NextAuthConfig = {
 			}
 
 			// Если это обновление сессии через updateSession
-			if (trigger === 'update' && session?.user) {
-				return {
-					...token,
-					...session.user
+			// if (trigger === 'update' && session?.user) {
+			// 	return {
+			// 		...token,
+			// 		...session.user
+			// 	}
+			// }
+			// Добавляем обработку sessionId при обновлении
+			if (trigger === 'update') {
+				if (session?.user) {
+				token = { ...token, ...session.user }
+				}
+				if (session?.sessionId) {
+				token.sessionId = session.sessionId
 				}
 			}
 
@@ -71,32 +80,59 @@ export const authConfig: NextAuthConfig = {
 		},
 
 		async signIn({ user }) {
-			if (user.id) {
-				try {
-					const redis = getRedisService()
-					const headersList = await headers()
-					const userAgent = headersList.get('user-agent')
-					const ip =
-						headersList.get('x-forwarded-for') ||
-						headersList.get('x-real-ip') ||
-						'unknown'
+			if (!user.id) return false
+			try {
+				const redis = getRedisService()
+				const headersList = await headers()
 
-					const redisSessionId = await redis.createUserSession(
-						user.id,
-						{
-							userAgent: userAgent || undefined,
-							ip: typeof ip === 'string' ? ip : undefined
-						}
-					)
-					console.log('[AUTH] Created Redis session:', redisSessionId)
-					;(user as CustomUser).sessionId = redisSessionId
-				} catch (error) {
-					console.error('[AUTH] REdis session creation error', error)
-				}
+				const userAgent = headersList.get('user-agent')
+				const ip =
+					headersList.get('x-forwarded-for') ||
+					headersList.get('x-real-ip') ||
+					'unknown'
+
+				const redisSessionId = await redis.createUserSession(
+					user.id,
+					{
+						userAgent: userAgent || undefined,
+						ip: typeof ip === 'string' ? ip : undefined
+					}
+				)
+				console.log('[AUTH] Created Redis session:', redisSessionId)
+				;(user as CustomUser).sessionId = redisSessionId
+				return true
+			} catch (error) {
+				console.error('[AUTH] REdis session creation error', error)
+				throw new Error(AUTH_ERRORS.AUTHENTICATION_FAILED)
 			}
-			return true
 		}
 	},
+
+	events: {
+    async signOut(message) {
+			try {
+				let sessionId: string | undefined
+
+				if ('token' in message) {
+				sessionId = message.token?.sessionId
+				} 
+				else if ('session' in message) {
+				// Для database стратегии получаем sessionId из Redis по sessionToken
+				const sessionToken = message.session?.sessionToken
+				if (sessionToken) {
+					const sessionData = await getRedisService().getSessionByToken(sessionToken)
+					sessionId = sessionData?.sessionId
+				}
+				}
+
+				if (sessionId) {
+				await getRedisService().deleteSession(sessionId)
+				}
+			} catch (error) {
+				console.error('[AUTH] Session deletion error', error)
+			}
+			}
+		},
 
 	secret: process.env.NEXTAUTH_SECRET,
 	useSecureCookies: process.env.NODE_ENV === 'production',

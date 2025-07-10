@@ -8,6 +8,7 @@ import { auth, signIn, signOut } from '@/auth'
 import { AUTH_ERRORS } from '@/libs/auth/constants'
 import { CustomUser } from '@/libs/auth/types'
 import { services } from '@/services/index'
+import { getRedisService } from '@/services/redis/redis.service'
 
 export async function updatePasswordWithToken(
 	token: string,
@@ -130,8 +131,16 @@ export async function getCurrentUser(
 
 		// Если не нужно обновлять данные из БД, возвращаем данные из сессии
 		if (!forceRefetch) {
+			const customUser: CustomUser = {
+				id: session.user.id as string, // Здесь мы уверены, что id существует, т.к. проверили выше
+				email: session.user.email as string,
+				role: session.user.role,
+				name: session.user.name,
+				image: session.user.image,
+				sessionId: session.user.sessionId
+			}
 			return {
-				user: session.user,
+				user: customUser,
 				error: null,
 				loading: false
 			}
@@ -149,9 +158,18 @@ export async function getCurrentUser(
 				}
 			}
 
+			const customUser: CustomUser = {
+				id: user.id,
+				email: user.email,
+				role: user.role,
+				name: user.name,
+				image: user.image,
+				sessionId: session.user.sessionId
+			}
+
 			// Возвращаем данные из БД
 			return {
-				user,
+				user: customUser,
 				error: null,
 				loading: false
 			}
@@ -180,32 +198,57 @@ export async function getCurrentUser(
 // Action для удаления сессии
 export async function clearSession() {
 	try {
+		console.log('[CLEAR_SESSION] Starting session cleanup');
 		const session = await auth()
+		console.log('[CLEAR_SESSION] Session data:', JSON.stringify(session, null, 2));
+		// if (session?.user?.id && session?.user?.sessionId) {
+		// 	// Удаляем сессию из Redis
+		// 	const origin = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+		// 	const deleteUrl = `${origin}/api/auth/session-check/delete`;
+		// 	console.log('[CLEAR_SESSION] Deleting session at URL:', deleteUrl);
+		// 	console.log('[CLEAR_SESSION] Session data:', {
+		// 		userId: session.user.id,
+		// 		sessionId: session.user.sessionId
+		// 	});
+		// 	const response = await fetch(
+		// 		deleteUrl,
+		// 		{
+		// 			method: 'POST',
+		// 			headers: {
+		// 				'Content-Type': 'application/json'
+		// 			},
+		// 			body: JSON.stringify({
+		// 				userId: session.user.id,
+		// 				sessionId: session.user.sessionId
+		// 			})
+		// 		}
+		// 	)
 
-		if (session?.user?.id && session?.user?.sessionId) {
-			// Удаляем сессию из Redis
-			const response = await fetch(
-				`${process.env.NEXTAUTH_URL}/api/auth/session-check/delete`,
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						userId: session.user.id,
-						sessionId: session.user.sessionId
-					})
-				}
-			)
-
-			if (!response.ok) {
-				throw new Error('Failed to delete Redis session')
-			}
+		// 	if (!response.ok) {
+		// 		throw new Error('Failed to delete Redis session')
+		// 	}
+		// }
+		if (!session?.user?.id || !session?.user?.sessionId) {
+			console.log('[CLEAR_SESSION] Missing session data, cannot delete Redis session');
+			return;
 		}
-		await signOut({
-			redirect: true,
-			redirectTo: '/'
-		})
+		const redis = getRedisService()
+		console.log('[CLEAR_SESSION] Deleting Redis session:', {
+			userId: session.user.id,
+			sessionId: session.user.sessionId
+		});
+		try {
+			await redis.deleteUserSession(session.user.id, session.user.sessionId);
+			console.log('[CLEAR_SESSION] Redis session deleted successfully');
+		} catch (redisError) {
+			console.error('[CLEAR_SESSION] Redis deletion error:', redisError);
+		}
+		console.log('[CLEAR_SESSION] Calling NextAuth signOut');
+		// await signOut({
+		// 	redirect: true,
+		// 	redirectTo: '/'
+		// })
+		console.log('[CLEAR_SESSION] SignOut completed');
 	} catch (error) {
 		console.error('[CLEAR_SESSION_ERROR]', error)
 		if (

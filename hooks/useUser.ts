@@ -1,5 +1,7 @@
 import { useSession } from 'next-auth/react'
 import { useCallback } from 'react'
+import { authStore } from '@/store/auth/auth.store'
+import { StoreUser } from '@/store/auth/auth.types'
 
 import {
 	confirmEmailChange,
@@ -19,8 +21,36 @@ interface CallbackOptions {
 
 export function useUser() {
 	const { data: session, status, update: updateSession } = useSession()
-	const user = session?.user
-	const isAuthenticated = status === 'authenticated'
+	const store = authStore()
+	const user = store.user
+	const isAuthenticated = store.isAuthenticated
+
+	const updateUserDataInStores = useCallback(
+		async (userData: Partial<StoreUser>) => {
+			if (!user) return false
+
+			// Обновляем сессию Next.js
+			await updateSession({
+				user: {
+					...session?.user,
+					...userData
+				}
+			})
+
+			// Обновляем хранилище Zustand
+			// Важно: передаем полный объект StoreUser с обновленными полями
+			store.setUser({
+				id: user.id,
+				email: user.email,
+				role: user.role,
+				name: userData.name !== undefined ? userData.name : user.name,
+				image: userData.image !== undefined ? userData.image : user.image
+			})
+
+			return true
+		},
+		[user, session?.user, updateSession, store]
+	)
 
 	const initiateChangeEmail = useCallback(
 		async (
@@ -82,11 +112,9 @@ export function useUser() {
 			try {
 				const updatedUser = await confirmEmailChange(user.id)
 				if (updatedUser) {
-					await updateSession({
-						user: {
-							...session?.user,
-							email: updatedUser.email
-						}
+					// Используем общую функцию для обновления данных
+					await updateUserDataInStores({
+						email: updatedUser.email
 					})
 					onSuccess?.()
 					return updatedUser
@@ -98,7 +126,7 @@ export function useUser() {
 				return null
 			}
 		},
-		[user?.id, session?.user, updateSession]
+		[user?.id, updateUserDataInStores]
 	)
 
 	const updatePassword = useCallback(
@@ -136,11 +164,9 @@ export function useUser() {
 			try {
 				const updatedUser = await updateUserEmail(user.id, email)
 				if (updatedUser) {
-					await updateSession({
-						user: {
-							...session?.user,
-							email: updatedUser.email
-						}
+					// Используем общую функцию для обновления данных
+					await updateUserDataInStores({
+						email: updatedUser.email
 					})
 					onSuccess?.()
 					return updatedUser
@@ -152,7 +178,7 @@ export function useUser() {
 				return null
 			}
 		},
-		[user?.id, session?.user, updateSession]
+		[user?.id, updateUserDataInStores]
 	)
 
 	const updateName = useCallback(
@@ -161,11 +187,9 @@ export function useUser() {
 			try {
 				const updatedUser = await updateUserName(user.id, name)
 				if (updatedUser) {
-					await updateSession({
-						user: {
-							...session?.user,
-							name: updatedUser.name
-						}
+					// Используем общую функцию для обновления данных
+					await updateUserDataInStores({
+						name: updatedUser.name
 					})
 					onSuccess?.()
 					return updatedUser
@@ -177,7 +201,7 @@ export function useUser() {
 				return null
 			}
 		},
-		[user?.id, session?.user, updateSession]
+		[user?.id, updateUserDataInStores]
 	)
 
 	const updateAvatar = useCallback(
@@ -187,11 +211,9 @@ export function useUser() {
 			try {
 				const updatedUser = await updateUserAvatar(user.id, file)
 				if (updatedUser) {
-					await updateSession({
-						user: {
-							...session?.user,
-							image: updatedUser.image
-						}
+					// Используем общую функцию для обновления данных
+					await updateUserDataInStores({
+						image: updatedUser.image
 					})
 					onSuccess?.()
 					return updatedUser
@@ -203,7 +225,7 @@ export function useUser() {
 				return null
 			}
 		},
-		[user?.id, session?.user, updateSession]
+		[user?.id, updateUserDataInStores]
 	)
 
 	const deleteAvatar = useCallback(
@@ -213,11 +235,9 @@ export function useUser() {
 			try {
 				const updatedUser = await deleteUserAvatar(user.id)
 				if (updatedUser) {
-					await updateSession({
-						user: {
-							...session?.user,
-							image: null
-						}
+					// Используем общую функцию для обновления данных
+					await updateUserDataInStores({
+						image: null
 					})
 					onSuccess?.()
 					return updatedUser
@@ -229,7 +249,7 @@ export function useUser() {
 				return null
 			}
 		},
-		[user?.id, session?.user, updateSession]
+		[user?.id, updateUserDataInStores]
 	)
 
 	return {
@@ -243,6 +263,7 @@ export function useUser() {
 		initiateChangeEmail,
 		verifyEmailCode,
 		confirmEmailUpdate,
-		updatePassword
+		updatePassword,
+		updateSession
 	}
 }

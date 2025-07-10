@@ -12,7 +12,6 @@ import { loginSchema, type TypeLoginSchema } from '@/schemas/auth/login.schema'
 
 import { AuthWrapper } from '../AuthWrapper'
 
-import { authenticate } from '@/app/actions/auth'
 import { Button } from '@/components/ui/button'
 import {
 	Form,
@@ -27,13 +26,12 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 
 export function LoginForm() {
-	const { auth } = useAuth()
-	const router = useRouter()
-
+	const { auth, login } = useAuth()
 	const searchParams = useSearchParams()
 	const t = useTranslations('auth.login')
 	const errors = useTranslations('auth.errors')
 	const [isLoadingLogin, setIsLoadingLogin] = useState(false)
+	const [isSubmitted, setIsSubmitted] = useState(false)
 
 	const form = useForm<TypeLoginSchema>({
 		resolver: zodResolver(loginSchema),
@@ -48,35 +46,43 @@ export function LoginForm() {
 	const onSubmit = async (data: TypeLoginSchema) => {
 		try {
 			setIsLoadingLogin(true)
-			const formData = new FormData()
-			formData.append('email', data.email)
-			formData.append('password', data.password)
-
+			setIsSubmitted(true)
+			
 			// Получаем маршрут откуда пришел пользователь
 			const from = searchParams.get('from') || undefined
 			console.log('Authenticating...')
-			const result = await authenticate(from, formData)
+			const result = await login(data.email, data.password, from)
 			console.log('Authentication result:', result)
 
 			if (result.error) {
 				toast.error(errors(result.error))
+				setIsSubmitted(false)
 				return
 			}
 
 			if (result.success && result.callbackUrl) {
 				console.log('Authentication successful, setting auth state')
-				auth() // Просто устанавливаем isAuthenticated в true
 				toast.success(t('successMessage'))
-				router.push(result.callbackUrl)
 			} else {
 				toast.error(t('errorMessage'))
+				setIsSubmitted(false)
 			}
 		} catch (error) {
 			console.error('Login error:', error)
 			toast.error(t('errorMessage'))
+			setIsSubmitted(false)
 		} finally {
 			setIsLoadingLogin(false)
 		}
+	}
+
+	// Если форма отправлена, показываем спиннер на весь экран
+	if (isSubmitted) {
+		return (
+			<div className="flex h-screen items-center justify-center">
+				<div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+			</div>
+		)
 	}
 
 	return (
