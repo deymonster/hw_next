@@ -53,10 +53,10 @@ export const authConfig: NextAuthConfig = {
 			// Добавляем обработку sessionId при обновлении
 			if (trigger === 'update') {
 				if (session?.user) {
-				token = { ...token, ...session.user }
+					token = { ...token, ...session.user }
 				}
 				if (session?.sessionId) {
-				token.sessionId = session.sessionId
+					token.sessionId = session.sessionId
 				}
 			}
 
@@ -91,13 +91,10 @@ export const authConfig: NextAuthConfig = {
 					headersList.get('x-real-ip') ||
 					'unknown'
 
-				const redisSessionId = await redis.createUserSession(
-					user.id,
-					{
-						userAgent: userAgent || undefined,
-						ip: typeof ip === 'string' ? ip : undefined
-					}
-				)
+				const redisSessionId = await redis.createUserSession(user.id, {
+					userAgent: userAgent || undefined,
+					ip: typeof ip === 'string' ? ip : undefined
+				})
 				console.log('[AUTH] Created Redis session:', redisSessionId)
 				;(user as CustomUser).sessionId = redisSessionId
 				return true
@@ -109,30 +106,32 @@ export const authConfig: NextAuthConfig = {
 	},
 
 	events: {
-    async signOut(message) {
+		async signOut(message) {
 			try {
 				let sessionId: string | undefined
 
 				if ('token' in message) {
-				sessionId = message.token?.sessionId
-				} 
-				else if ('session' in message) {
-				// Для database стратегии получаем sessionId из Redis по sessionToken
-				const sessionToken = message.session?.sessionToken
-				if (sessionToken) {
-					const sessionData = await getRedisService().getSessionByToken(sessionToken)
-					sessionId = sessionData?.sessionId
-				}
+					sessionId = message.token?.sessionId
+				} else if ('session' in message) {
+					// Для database стратегии получаем sessionId из Redis по sessionToken
+					const sessionToken = message.session?.sessionToken
+					if (sessionToken) {
+						const sessionData =
+							await getRedisService().getSessionByToken(
+								sessionToken
+							)
+						sessionId = sessionData?.sessionId
+					}
 				}
 
 				if (sessionId) {
-				await getRedisService().deleteSession(sessionId)
+					await getRedisService().deleteSession(sessionId)
 				}
 			} catch (error) {
 				console.error('[AUTH] Session deletion error', error)
 			}
-			}
-		},
+		}
+	},
 
 	secret: process.env.NEXTAUTH_SECRET,
 	useSecureCookies: process.env.NODE_ENV === 'production',

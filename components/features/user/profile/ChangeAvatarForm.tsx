@@ -2,7 +2,8 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Trash } from 'lucide-react'
-import { type ChangeEvent, useRef, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { type ChangeEvent, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { useTranslations } from 'use-intl'
@@ -20,11 +21,11 @@ import { Form, FormField } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUser } from '@/hooks/useUser'
 import { getMediaSource } from '@/utils/get-media-source'
-import { useSearchParams } from 'next/navigation'
 
 export function ChangeAvatarForm() {
 	const t = useTranslations('dashboard.settings.profile.avatar')
-	const { user, loading, updateAvatar, deleteAvatar, updateSession } = useUser()
+	const { user, loading, updateAvatar, deleteAvatar, updateSession } =
+		useUser()
 	const inputRef = useRef<HTMLInputElement>(null)
 
 	const searchParams = useSearchParams()

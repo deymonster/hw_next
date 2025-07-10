@@ -235,8 +235,10 @@ export class RedisService {
 
 	async deleteSession(sessionId: string): Promise<void> {
 		// Получаем sessionData чтобы узнать userId
-		const sessionData = await this.client.hgetall(`${KEY_PREFIXES.SESSION_INFO}${sessionId}`)
-		
+		const sessionData = await this.client.hgetall(
+			`${KEY_PREFIXES.SESSION_INFO}${sessionId}`
+		)
+
 		if (sessionData && sessionData.userId) {
 			// Используем существующий метод
 			await this.deleteUserSession(sessionData.userId, sessionId)
@@ -259,10 +261,10 @@ export class RedisService {
 			`${KEY_PREFIXES.USER_SESSIONS}${userId}`
 		)
 		if (sessionIds.length > 0) {
-		// Удаляем информацию о сессиях
+			// Удаляем информацию о сессиях
 			await Promise.all(
-				sessionIds.map(id => 
-				this.client.del(`${KEY_PREFIXES.SESSION_INFO}${id}`)
+				sessionIds.map(id =>
+					this.client.del(`${KEY_PREFIXES.SESSION_INFO}${id}`)
 				)
 			)
 			// Удаляем set с идентификаторами сессий
@@ -270,34 +272,36 @@ export class RedisService {
 		}
 	}
 
-	async getSessionByToken(sessionToken: string): Promise<{ sessionId?: string; userId?: string } | null> {
+	async getSessionByToken(
+		sessionToken: string
+	): Promise<{ sessionId?: string; userId?: string } | null> {
 		// 1. Сначала проверим, есть ли у нас сессия с таким токеном
-		const sessionKey = `${KEY_PREFIXES.SESSION_INFO}${sessionToken}`;
-		const exists = await this.client.exists(sessionKey);
-		
+		const sessionKey = `${KEY_PREFIXES.SESSION_INFO}${sessionToken}`
+		const exists = await this.client.exists(sessionKey)
+
 		if (!exists) {
-			return null;
+			return null
 		}
 
 		// 2. Получаем данные сессии
-		const sessionData = await this.client.hgetall(sessionKey);
-		
+		const sessionData = await this.client.hgetall(sessionKey)
+
 		if (!sessionData || Object.keys(sessionData).length === 0) {
-			return null;
+			return null
 		}
 
 		// 3. Конвертируем данные из Redis hash в нормальный объект
 		try {
-			const session = this.convertFromRedisHash(sessionData);
+			const session = this.convertFromRedisHash(sessionData)
 			return {
-			sessionId: session.sessionId,
-			userId: session.userId
-			};
+				sessionId: session.sessionId,
+				userId: session.userId
+			}
 		} catch (error) {
-			console.error('[Redis] Failed to parse session data:', error);
-			return null;
+			console.error('[Redis] Failed to parse session data:', error)
+			return null
 		}
-		} 
+	}
 }
 
 // Экспортируем функцию для получения инстанса

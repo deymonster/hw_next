@@ -9,18 +9,16 @@ import { Sidebar } from '@/components/layout/sidebar/Sidebar'
 
 export default function SiteLayout({ children }: PropsWithChildren<unknown>) {
 	const pathname = usePathname()
-	
+
 	// Если это главная страница, показываем только содержимое без меню и заголовка
 	if (pathname === '/') {
 		return (
 			<div className='flex h-full flex-col'>
-				<div className='flex-1'>
-					{children}
-				</div>
+				<div className='flex-1'>{children}</div>
 			</div>
 		)
 	}
-	
+
 	// Для всех остальных страниц в группе (site) показываем полный макет с меню и заголовком
 	return (
 		<div className='flex h-full flex-col'>

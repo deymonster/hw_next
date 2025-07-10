@@ -42,13 +42,12 @@ export interface AuthResponse {
 
 declare module 'next-auth' {
 	interface Session extends CustomSession {}
-	interface User extends CustomUser {} 
+	interface User extends CustomUser {}
 	interface JWT extends CustomJWT {}
 
 	interface EventCallbacks {
-		signOut: (message: 
-		| { token: JWT | null } 
-		| { session: AdapterSession | null }
-		) => Awaitable<void> 
-  	}
+		signOut: (
+			message: { token: JWT | null } | { session: AdapterSession | null }
+		) => Awaitable<void>
+	}
 }

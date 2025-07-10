@@ -316,8 +316,10 @@ export async function syncWithPrometheus(): Promise<{
 	error?: string
 }> {
 	try {
-		console.log('[SYNC_WITH_PROMETHEUS] Syncing alert rules with Prometheus')
-		
+		console.log(
+			'[SYNC_WITH_PROMETHEUS] Syncing alert rules with Prometheus'
+		)
+
 		await services.alertRulesManager.syncWithPrometheus(
 			'Failed to sync alert rules with Prometheus'
 		)
@@ -338,5 +340,3 @@ export async function syncWithPrometheus(): Promise<{
 		}
 	}
 }
-
-

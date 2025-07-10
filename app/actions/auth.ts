@@ -8,7 +8,6 @@ import { auth, signIn, signOut } from '@/auth'
 import { AUTH_ERRORS } from '@/libs/auth/constants'
 import { CustomUser } from '@/libs/auth/types'
 import { services } from '@/services/index'
-import { getRedisService } from '@/services/redis/redis.service'
 
 export async function updatePasswordWithToken(
 	token: string,
@@ -194,7 +193,6 @@ export async function getCurrentUser(
 		}
 	}
 }
-
 
 export async function logout() {
 	await signOut()

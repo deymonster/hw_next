@@ -3,7 +3,7 @@
 import { Bell, Cpu, LayoutDashboard, Loader2, LogOut } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Events } from './notifications/Events'
@@ -18,7 +18,6 @@ import {
 import { UserAvatar } from '@/components/ui/elements/UserAvatar'
 import { useAuth } from '@/hooks/useAuth'
 import { useUser } from '@/hooks/useUser'
-import { useState } from 'react'
 
 export function ProfileMenu() {
 	const t = useTranslations('layout.header.headerMenu.profileMenu')
@@ -31,7 +30,6 @@ export function ProfileMenu() {
 			setIsLoggingOut(true)
 			await exit()
 			toast.success(t('successMessage'))
-			
 		} catch (error) {
 			console.error('Logout error:', error)
 			toast.error(t('errorMessage'))
@@ -42,8 +40,8 @@ export function ProfileMenu() {
 	// Если происходит выход, показываем спиннер на весь экран
 	if (isLoggingOut) {
 		return (
-			<div className="fixed inset-0 z-50 flex h-screen items-center justify-center bg-background/80 backdrop-blur-sm">
-				<div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+			<div className='fixed inset-0 z-50 flex h-screen items-center justify-center bg-background/80 backdrop-blur-sm'>
+				<div className='h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary'></div>
 			</div>
 		)
 	}
@@ -70,7 +68,7 @@ export function ProfileMenu() {
 						</h2>
 					</div>
 					<DropdownMenuSeparator />
-					
+
 					<Link href='/dashboard/settings'>
 						<DropdownMenuItem>
 							<LayoutDashboard className='mr-2 size-4' />

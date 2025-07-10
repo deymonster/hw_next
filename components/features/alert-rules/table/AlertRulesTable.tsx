@@ -4,16 +4,16 @@ import { AlertRule } from '@prisma/client'
 import { ArrowLeft, RefreshCw } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 
 import { AddAlertRule } from '../add/AddAlertRule'
 import { AlertRuleDetail } from '../detail/AlertRuleDetail'
 import { createAlertRulesColumns } from './AlertRulesColumns'
 
+import { syncWithPrometheus } from '@/app/actions/alert-rules'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/ui/elements/DataTable'
 import { useAlertRules } from '@/hooks/useAlertRules'
-import { syncWithPrometheus } from '@/app/actions/alert-rules'
-import { toast } from 'sonner'
 
 export function AlertRulesTable() {
 	const t = useTranslations('dashboard.monitoring.alertRules')

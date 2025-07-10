@@ -1,7 +1,5 @@
 import { useSession } from 'next-auth/react'
 import { useCallback } from 'react'
-import { authStore } from '@/store/auth/auth.store'
-import { StoreUser } from '@/store/auth/auth.types'
 
 import {
 	confirmEmailChange,
@@ -13,6 +11,8 @@ import {
 	updateUserPassword,
 	verifyEmailChangeCode
 } from '@/app/actions/user'
+import { authStore } from '@/store/auth/auth.store'
+import { StoreUser } from '@/store/auth/auth.types'
 
 interface CallbackOptions {
 	onSuccess?: () => void
@@ -44,7 +44,8 @@ export function useUser() {
 				email: user.email,
 				role: user.role,
 				name: userData.name !== undefined ? userData.name : user.name,
-				image: userData.image !== undefined ? userData.image : user.image
+				image:
+					userData.image !== undefined ? userData.image : user.image
 			})
 
 			return true

@@ -82,12 +82,14 @@ export default async function middleware(request: NextRequest) {
 			const from = request.nextUrl.searchParams.get('from') || '/'
 			return NextResponse.redirect(new URL(from, request.url))
 		}
-		
+
 		// Если пользователь авторизован и находится на главной странице, перенаправляем на dashboard
 		if (isPublicPage) {
-			return NextResponse.redirect(new URL('/dashboard/settings', request.url))
+			return NextResponse.redirect(
+				new URL('/dashboard/settings', request.url)
+			)
 		}
-		
+
 		// Иначе пропускаем дальше
 		return NextResponse.next()
 	}

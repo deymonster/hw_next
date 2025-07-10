@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-// Заменяем импорт User из Prisma на CustomUser из auth/types
-import { CustomUser } from '@/libs/auth/types'
+
 import { useAuth } from './useAuth'
 
 import { getCurrentUser } from '@/app/actions/auth'
+// Заменяем импорт User из Prisma на CustomUser из auth/types
+import { CustomUser } from '@/libs/auth/types'
 
 export function useCurrent() {
 	const { isAuthenticated, exit } = useAuth()

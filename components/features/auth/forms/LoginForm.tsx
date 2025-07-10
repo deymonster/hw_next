@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 
 export function LoginForm() {
-	const { auth, login } = useAuth()
+	const { login } = useAuth()
 	const searchParams = useSearchParams()
 	const t = useTranslations('auth.login')
 	const errors = useTranslations('auth.errors')
@@ -47,7 +47,7 @@ export function LoginForm() {
 		try {
 			setIsLoadingLogin(true)
 			setIsSubmitted(true)
-			
+
 			// Получаем маршрут откуда пришел пользователь
 			const from = searchParams.get('from') || undefined
 			console.log('Authenticating...')
@@ -79,8 +79,8 @@ export function LoginForm() {
 	// Если форма отправлена, показываем спиннер на весь экран
 	if (isSubmitted) {
 		return (
-			<div className="flex h-screen items-center justify-center">
-				<div className="h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary"></div>
+			<div className='flex h-screen items-center justify-center'>
+				<div className='h-8 w-8 animate-spin rounded-full border-b-2 border-t-2 border-primary'></div>
 			</div>
 		)
 	}
