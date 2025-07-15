@@ -13,35 +13,39 @@ const smtpConfigSchema = z.object({
 	SMTP_FROM_NAME: z.string().min(1, 'SMTP_FROM_NAME is required')
 })
 
-// Проверка переменных окружения
-const smtpConfig = smtpConfigSchema.safeParse(process.env)
-console.log('SMTP_HOST:', process.env.SMTP_HOST)
+// Переменная для хранения конфигурации
+let smtpConfigData: z.infer<typeof smtpConfigSchema> | null = null;
+let transporter: nodemailer.Transporter | null = null;
 
-if (!smtpConfig.success) {
-	console.error('❌ Invalid SMTP configuration:', smtpConfig.error.format())
-	throw new Error('Invalid SMTP configuration. Fix your .env file.')
-}
+// Функция для проверки и инициализации SMTP-конфигурации
+const initSmtpConfig = () => {
+	if (smtpConfigData) return true; // Если уже инициализировано, возвращаем true
 
-// Экспортируем конфигурацию
-const {
-	SMTP_HOST,
-	SMTP_PORT,
-	SMTP_USER,
-	SMTP_PASSWORD,
-	SMTP_FROM_EMAIL,
-	SMTP_FROM_NAME
-} = smtpConfig.data
+	// Проверка переменных окружения
+	const smtpConfig = smtpConfigSchema.safeParse(process.env)
+	console.log('SMTP_HOST:', process.env.SMTP_HOST)
 
-// Создание транспорта для отправки почты
-const transporter = nodemailer.createTransport({
-	host: SMTP_HOST,
-	port: parseInt(SMTP_PORT, 10),
-	secure: false, // Если порт 587 (для STARTTLS)
-	auth: {
-		user: SMTP_USER,
-		pass: SMTP_PASSWORD
+	if (!smtpConfig.success) {
+		console.error('❌ Invalid SMTP configuration:', smtpConfig.error.format())
+		return false;
 	}
-})
+
+	// Сохраняем конфигурацию
+	smtpConfigData = smtpConfig.data;
+
+	// Создание транспорта для отправки почты
+	transporter = nodemailer.createTransport({
+		host: smtpConfigData.SMTP_HOST,
+		port: parseInt(smtpConfigData.SMTP_PORT, 10),
+		secure: false, // Если порт 587 (для STARTTLS)
+		auth: {
+			user: smtpConfigData.SMTP_USER,
+			pass: smtpConfigData.SMTP_PASSWORD
+		}
+	});
+
+	return true;
+};
 
 // Функция отправки почты
 export async function sendMail({
@@ -57,6 +61,11 @@ export async function sendMail({
 	text: string // Текстовое содержание
 	html?: string // HTML-содержание (опционально)
 }) {
+	// Инициализируем конфигурацию при первом вызове
+	if (!initSmtpConfig() || !smtpConfigData || !transporter) {
+		throw new Error('Invalid SMTP configuration. Fix your .env file.');
+	}
+
 	try {
 		// Проверяем доступность SMTP-сервера
 		await transporter.verify()
@@ -68,7 +77,7 @@ export async function sendMail({
 	// Формируем от кого письмо (используем значения из .env, если email не указан)
 	const from = email
 		? `${email}` // Если передан email, используем его
-		: `${SMTP_FROM_NAME} <${SMTP_FROM_EMAIL}>` // Используем данные из конфигурации
+		: `${smtpConfigData.SMTP_FROM_NAME} <${smtpConfigData.SMTP_FROM_EMAIL}>` // Используем данные из конфигурации
 
 	try {
 		const info = await transporter.sendMail({

@@ -10,24 +10,38 @@ import { decrypt } from '@/utils/crypto/crypto'
 
 export class EmailService extends BaseNotificationService {
 	private fromName: string
+	private isConfigValid: boolean = false
 
 	constructor() {
 		super()
 
-		if (!process.env.SMTP_HOST) throw new Error('SMTP_HOST is not defined')
-		if (!process.env.SMTP_PORT) throw new Error('SMTP_PORT is not defined')
-		if (!process.env.SMTP_USER) throw new Error('SMTP_USER is not defined')
-		if (!process.env.SMTP_PASSWORD)
-			throw new Error('SMTP_PASSWORD is not defined')
-		if (!process.env.SMTP_FROM_EMAIL)
-			throw new Error('SMTP_FROM_EMAIL is not defined')
+		// Проверяем наличие переменных окружения, но не выбрасываем исключение
+		this.isConfigValid = !!process.env.SMTP_HOST && 
+			!!process.env.SMTP_PORT && 
+			!!process.env.SMTP_USER && 
+			!!process.env.SMTP_PASSWORD && 
+			!!process.env.SMTP_FROM_EMAIL
 
-		this.fromName =
-			process.env.SMTP_FROM_NAME || 'NITRINOnet Monitoring System'
+		// Устанавливаем имя отправителя по умолчанию
+		this.fromName = process.env.SMTP_FROM_NAME || 'NITRINOnet Monitoring System'
+	}
+
+	// Проверка конфигурации перед отправкой
+	private validateConfig(): void {
+		if (!this.isConfigValid) {
+			if (!process.env.SMTP_HOST) throw new Error('SMTP_HOST is not defined')
+			if (!process.env.SMTP_PORT) throw new Error('SMTP_PORT is not defined')
+			if (!process.env.SMTP_USER) throw new Error('SMTP_USER is not defined')
+			if (!process.env.SMTP_PASSWORD) throw new Error('SMTP_PASSWORD is not defined')
+			if (!process.env.SMTP_FROM_EMAIL) throw new Error('SMTP_FROM_EMAIL is not defined')
+		}
 	}
 
 	// Создание транспорта из системных настроек env
 	private async createSystemTransporter() {
+		// Проверяем конфигурацию перед созданием транспорта
+		this.validateConfig()
+
 		return nodemailer.createTransport({
 			host: process.env.SMTP_HOST!,
 			port: Number(process.env.SMTP_PORT!),
@@ -42,6 +56,9 @@ export class EmailService extends BaseNotificationService {
 	// Метод для отправки с системными настройками из env
 	async send(payload: EmailPayload): Promise<boolean> {
 		try {
+			// Проверяем конфигурацию перед отправкой
+			this.validateConfig()
+
 			if (!('to' in payload)) {
 				console.error('[EMAIL_SERVICE_ERROR] No recipient specified')
 				return false
