@@ -4,7 +4,7 @@ import {
 	CreateAlertRuleRequest,
 	UpdateAlertRuleRequest
 } from './alert-rules.config.types'
-import { AlertCategory, ComparisonOperator } from './alert-rules.types'
+import { ComparisonOperator } from './alert-rules.types'
 
 /**
  * Интерфейс для сервиса работы с конфигурационными файлами Prometheus

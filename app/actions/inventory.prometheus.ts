@@ -28,6 +28,9 @@ interface DeviceStaticData {
 			date?: string
 			version?: string
 		}
+		cpu?: {
+			model?: string
+		}
 		motherboard?: {
 			manufacturer?: string
 			product?: string

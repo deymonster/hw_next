@@ -7,21 +7,11 @@ import {
 	CpuUsagePercent,
 	DiskHealthStatus,
 	DiskMetrics,
-	DiskReadBytesPerSecond,
-	DiskUsageBytes,
-	DiskUsagePercent,
-	DiskWriteBytesPerSecond,
-	FreeMemoryBytes,
 	GpuInfo,
-	GpuMemoryBytes,
 	MemoryMetrics,
 	MemoryModuleInfo,
 	MotherBoardInfo,
-	NetworkDroppedPackets,
-	NetworkErrors,
-	NetworkRXPerSecond,
 	NetworkStatus,
-	NetworkTXPerSecond,
 	ProcessCpuUsagePercent,
 	ProcessGroupCpuUsage,
 	ProcessGroupMemoryPrivate,
@@ -30,11 +20,8 @@ import {
 	ProcessInstanceCount,
 	ProcessListInfo,
 	PrometheusApiResponse,
-	PrometheusMetricResult,
 	SerialNumber,
 	SystemInformation,
-	TotalMemoryBytes,
-	UsedMemoryBytes,
 	UUIDMetric
 } from './prometheus.interfaces'
 
@@ -135,45 +122,6 @@ export class PrometheusParser {
 		return mappedResults
 	}
 
-	/**
-	 * Получает значение метрики по имени
-	 * @param name Имя метрики
-	 * @returns Строковое значение метрики или undefined
-	 */
-	private async getValue(name: string): Promise<string | undefined> {
-		const startTime = Date.now()
-		await this.log(
-			'debug',
-			`[PROMETHEUS_PARSER] Getting value for metric: ${name}`
-		)
-
-		if (!this.response?.data?.result) {
-			this.log('warn', '[PROMETHEUS_PARSER] No data in response')
-			return undefined
-		}
-
-		const result = this.response.data.result.find(item => {
-			const metricName = item.metric.__name__ || item.metric.name
-			return metricName === name
-		})
-
-		if (!result?.value) {
-			this.log(
-				'warn',
-				`[PROMETHEUS_PARSER] No value found for metric ${name}`
-			)
-			return undefined
-		}
-
-		const value = result.value[1]
-		const endTime = Date.now()
-		this.log(
-			'debug',
-			`[PROMETHEUS_PARSER] Found value for ${name} in ${endTime - startTime}ms:`,
-			value
-		)
-		return value
-	}
 
 	/**
 	 * Получает числовое значение метрики с учетом лейблов
@@ -450,6 +398,7 @@ export class PrometheusParser {
 		return {
 			model: cpuInfo?.processor || '', // Модель процессора с fallback
 			usage: Math.round(await this.getMetricValue('cpu_usage_percent')), // Округленный процент использования
+			cores: logicalCores,
 			temperature: {
 				sensors: temperatures, // Все сенсоры с их значениями
 				average: averageTemp // Средняя температура
@@ -746,9 +695,10 @@ export class PrometheusParser {
 		const processes = Array.from(processGroups.values()).sort(
 			(a, b) => b.metrics.cpu - a.metrics.cpu
 		)
+		// В конце метода getProcessList()
 		return {
-			total: processes.length,
-			processes: processes
+		    total: processes?.length || 0,
+		    processes: processes || []
 		}
 	}
 

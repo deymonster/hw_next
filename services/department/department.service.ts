@@ -1,8 +1,6 @@
 import {
 	Department,
 	Device,
-	DeviceStatus,
-	DeviceType,
 	PrismaClient
 } from '@prisma/client'
 

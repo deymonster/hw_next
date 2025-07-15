@@ -336,8 +336,8 @@ export interface PrometheusMetricResult {
 		job: string
 		[key: string]: string // Для дополнительных лейблов
 	}
-	value?: [number, string]
-	values?: Array<[number, string]>
+	value?: MetricValue
+	values?: Array<MetricValue>
 }
 
 /**
@@ -356,8 +356,8 @@ export interface PrometheusApiResponse {
 				job: string
 				[key: string]: string | undefined // Разрешаем undefined значения
 			}
-			value?: [number, string]
-			values?: Array<[number, string]>
+			value?: MetricValue
+			values?: Array<MetricValue>
 		}>
 	}
 }

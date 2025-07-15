@@ -11,16 +11,24 @@ interface ProcessTableProps {
 	sortField: SortField
 	sortDirection: SortDirection
 	handleSort: (field: SortField) => void
+	showAllProcesses: boolean
 }
+
+// Количество процессов для отображения, если showAllProcesses = false
+const TOP_PROCESSES_COUNT = 10
 
 export function ProcessTable({
 	processes,
 	sortField,
 	sortDirection,
-	handleSort
+	handleSort,
+	showAllProcesses
 }: ProcessTableProps) {
 	// Sort processes based on current sort field and direction
 	const sortedProcesses = React.useMemo(() => {
+		// Добавляем проверку на undefined
+		if (!processes) return []
+
 		return [...processes].sort((a, b) => {
 			let comparison = 0
 
@@ -44,6 +52,20 @@ export function ProcessTable({
 			return sortDirection === 'asc' ? comparison : -comparison
 		})
 	}, [processes, sortField, sortDirection])
+
+	// Применяем фильтрацию в зависимости от showAllProcesses
+	const displayedProcesses = React.useMemo(() => {
+		// Проверяем, что sortedProcesses определен и является массивом
+		if (!sortedProcesses || !Array.isArray(sortedProcesses)) {
+			return []
+		}
+
+		if (showAllProcesses) {
+			return sortedProcesses
+		} else {
+			return sortedProcesses.slice(0, TOP_PROCESSES_COUNT)
+		}
+	}, [sortedProcesses, showAllProcesses])
 
 	// Render sortable column header
 	const renderSortableHeader = (label: string, field: SortField) => (
@@ -92,7 +114,7 @@ export function ProcessTable({
 				</thead>
 
 				<tbody>
-					{sortedProcesses.map((process, index) => (
+					{displayedProcesses.map((process, index) => (
 						<tr
 							key={index}
 							className='border-b border-border transition-colors hover:bg-muted/20'
@@ -145,6 +167,14 @@ export function ProcessTable({
 					))}
 				</tbody>
 			</table>
+
+			{!showAllProcesses && processes.length > TOP_PROCESSES_COUNT && (
+				<div className='p-2 text-center text-xs text-muted-foreground'>
+					Показаны топ-{TOP_PROCESSES_COUNT} процессов. Включите
+					&quot;Show all processes&quot; для просмотра всех{' '}
+					{processes.length} процессов.
+				</div>
+			)}
 		</div>
 	)
 }

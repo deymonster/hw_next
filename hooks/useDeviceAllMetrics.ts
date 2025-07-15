@@ -31,7 +31,7 @@ export function useDeviceAllMetrics(deviceId: string) {
 			diskMetrics: sseMetrics?.diskMetrics,
 			memoryMetrics: sseMetrics?.memoryMetrics,
 			networkMetrics: sseMetrics?.networkMetrics,
-			processes: processMetrics,
+			processes: processMetrics || { total: 0, processes: [] },
 			lastUpdated
 		},
 		status: {

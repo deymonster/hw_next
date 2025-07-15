@@ -20,6 +20,7 @@ interface CustomToken {
 export const authConfig: NextAuthConfig = {
 	providers,
 	session: SESSION_CONFIG,
+	trustHost: true,
 
 	pages: {
 		signIn: AUTH_ROUTES.SIGN_IN,

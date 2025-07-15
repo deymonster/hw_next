@@ -19,9 +19,9 @@ export function VerifyAccountForm({ token }: VerifyAccountFormProps) {
 	const { auth } = useAuth()
 	const router = useRouter()
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const [isVerifying, setIsVerifying] = useState(true)
+	const [_isVerifying, setIsVerifying] = useState(true)
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const [verificationStatus, setVerificationStatus] = useState<
+	const [_verificationStatus, setVerificationStatus] = useState<
 		'pending' | 'success' | 'error'
 	>('pending')
 

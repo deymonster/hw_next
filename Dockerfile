@@ -6,10 +6,10 @@ WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
 # Копируем файлы зависимостей
-COPY package.json yarn.lock* ./
+COPY package.json yarn.lock* .yarnrc* ./
 
 # Устанавливаем зависимости
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile --network-timeout 600000
 
 # Этап сборки
 FROM node:20-alpine AS builder
@@ -21,6 +21,9 @@ COPY . .
 
 # Генерируем Prisma клиент
 RUN npx prisma generate
+
+# Форматируем код перед сборкой
+RUN yarn format
 
 # Собираем приложение
 RUN yarn build
@@ -43,8 +46,8 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Устанавливаем только production зависимости
-COPY package.json ./
-RUN yarn install --production --frozen-lockfile
+COPY --from=builder /app/package.json /app/yarn.lock* ./
+RUN yarn install --production --frozen-lockfile --network-timeout 600000
 
 # Переключаемся на пользователя nextjs
 USER nextjs

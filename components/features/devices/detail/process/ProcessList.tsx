@@ -18,7 +18,7 @@ interface ProcessListProps {
 	onReconnect: () => void
 }
 
-type SortField = 'name' | 'pid' | 'cpu' | 'memory'
+type SortField = 'name' | 'instances' | 'cpu' | 'memory'
 type SortDirection = 'asc' | 'desc'
 
 export function ProcessList({
@@ -64,7 +64,7 @@ export function ProcessList({
 
 				{isLoading && !data && <ProcessSkeleton />}
 
-				{data && data.processes && data.processes.length > 0 ? (
+				{data && data.processes ? (
 					<ProcessTable
 						processes={data.processes}
 						sortField={sortField}

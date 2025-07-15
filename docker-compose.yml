@@ -15,21 +15,21 @@ services:
         env_file:
             - .env
 
-    # nextjs:
-    #   build:
-    #     context: .
-    #     dockerfile: Dockerfile
-    #   container_name: nextjs_app
-    #   ports:
-    #     - "3000:3000"
-    #   depends_on:
-    #     - postgres
-    #     - redis
-    #   env_file:
-    #     - .env
-    #   networks:
-    #     - hw-network
-    #   restart: unless-stopped
+    nextjs:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: nextjs_app
+      ports:
+        - "3000:3000"
+      depends_on:
+        - postgres
+        - redis
+      env_file:
+        - .env.prod
+      networks:
+        - hw-network
+      restart: unless-stopped
 
     prometheus:
         image: prom/prometheus:v2.36.0

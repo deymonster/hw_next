@@ -2,6 +2,7 @@
 
 import { ArrowLeftFromLine, ArrowRightFromLine } from 'lucide-react'
 import { useTranslations } from 'next-intl'
+import { useCallback } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Hint } from '@/components/ui/elements/Hint'
@@ -11,12 +12,20 @@ export function SidebarHeader() {
 	const t = useTranslations('layout.sidebar.header')
 	const { isCollapsed, open, close } = useSidebar()
 
+	const handleOpen = useCallback(() => {
+		open()
+	}, [open])
+
+	const handleClose = useCallback(() => {
+		close()
+	}, [close])
+
 	const label = isCollapsed ? t('expand') : t('collapse')
 
 	return isCollapsed ? (
 		<div className='mb-4 hidden w-full items-center justify-center pt-4 lg:flex'>
 			<Hint label={label} side='right' asChild>
-				<Button onClick={() => open()} variant='ghost' size='icon'>
+				<Button onClick={handleOpen} variant='ghost' size='icon'>
 					<ArrowRightFromLine className='size-4' />
 				</Button>
 			</Hint>
@@ -27,7 +36,7 @@ export function SidebarHeader() {
 				{t('navigation')}
 			</h2>
 			<Hint label={label} side='right' asChild>
-				<Button onClick={() => close()} variant='ghost' size='icon'>
+				<Button onClick={handleClose} variant='ghost' size='icon'>
 					<ArrowLeftFromLine className='size-4' />
 				</Button>
 			</Hint>

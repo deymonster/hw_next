@@ -6,7 +6,6 @@ import {
 	HardDrive,
 	Info,
 	type LucideIcon,
-	Settings,
 	User
 } from 'lucide-react'
 

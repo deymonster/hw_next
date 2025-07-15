@@ -27,8 +27,14 @@ export async function scanNetwork(
 	}
 }
 
-export async function findAgentByKey(agentKey: string): Promise<string | null> {
-	return services.infrastructure.network_scanner.findAgentNewIp(agentKey)
+export async function findAgentByKey(
+	agentKey: string,
+	options?: Omit<NetworkScannerOptions, 'targetAgentKey'>
+): Promise<string | null> {
+	return services.infrastructure.network_scanner.findAgentNewIp(
+		agentKey,
+		options
+	)
 }
 
 export async function getCurrentSubnet(): Promise<string> {

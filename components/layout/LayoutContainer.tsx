@@ -1,6 +1,6 @@
 'use client'
 
-import { type PropsWithChildren, useEffect } from 'react'
+import { type PropsWithChildren, useEffect, useRef } from 'react'
 
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { useSidebar } from '@/hooks/useSidebar'
@@ -8,16 +8,23 @@ import { cn } from '@/utils/tw-merge'
 
 export function LayoutContainer({ children }: PropsWithChildren<unknown>) {
 	const isMobile = useMediaQuery('(max-width: 1024px)')
-
 	const { isCollapsed, open, close } = useSidebar()
+	// Track if the initial state has been set
+	const initialStateSet = useRef(false)
 
 	useEffect(() => {
-		if (isMobile) {
-			if (!isCollapsed) close()
-		} else {
-			if (isCollapsed) open()
+		// Only set the initial state based on screen size
+		// Don't override user's manual actions after initial load
+		if (!initialStateSet.current) {
+			if (isMobile) {
+				close()
+			} else {
+				open()
+			}
+			initialStateSet.current = true
 		}
-	}, [isMobile, isCollapsed, open, close])
+	}, [isMobile, open, close])
+
 	return (
 		<main
 			className={cn(

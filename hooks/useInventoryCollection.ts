@@ -7,8 +7,6 @@
 import { Device } from '@prisma/client'
 import { useCallback, useState } from 'react'
 
-import { useInventory } from './useInventory'
-
 import { getDeviceInfo } from '@/app/actions/inventory.prometheus'
 
 /**
@@ -100,7 +98,7 @@ export function useInventoryCollection() {
 				motherboard: hardwareInfo?.motherboard || null,
 				memory: hardwareInfo?.memory || null,
 				storage: hardwareInfo?.disks || null,
-				networkCards: hardwareInfo?.network || null,
+				networkCards: hardwareInfo?.networkInterfaces || null,
 				videoCards: hardwareInfo?.gpus || null,
 				diskUsage: null, // У нас нет этой информации из getDeviceInfo
 				departmentId: device.departmentId || null,

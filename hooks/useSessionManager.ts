@@ -22,7 +22,7 @@ export function useSessionManager() {
 
 	const getCurrentSession = () => {
 		if (!session?.user?.sessionId || !sessions.length) return null
-		return sessions.find(s => s.sessionId === session.user.sessionId)
+		return sessions.find(s => s.sessionId === session?.user?.sessionId)
 	}
 
 	const fetchSessions = useCallback(async () => {
@@ -53,7 +53,7 @@ export function useSessionManager() {
 	const removeSession = useCallback(
 		async (sessionId: string, options?: RemoveSessionOptions) => {
 			try {
-				if (!session?.user.id) return null
+				if (!session?.user?.id) return null
 				setError(null)
 				const response = await fetch('/api/auth/session-check/delete', {
 					method: 'POST',
@@ -79,7 +79,7 @@ export function useSessionManager() {
 				return false
 			}
 		},
-		[session?.user.id, fetchSessions]
+		[session?.user?.id, fetchSessions]
 	)
 
 	return {

@@ -6,7 +6,6 @@ import {
 	ReactNode,
 	useCallback,
 	useContext,
-	useEffect,
 	useRef,
 	useState
 } from 'react'
@@ -37,7 +36,7 @@ export function DevicesProvider({ children }: { children: ReactNode }) {
 	)
 	const [devices, setDevices] = useState<Device[]>([])
 	const [isLoading, setIsLoading] = useState(false)
-	const [refreshCounter, setRefreshCounter] = useState(0)
+	const [_, setRefreshCounter] = useState(0)
 
 	const setDevicesWithCache = useCallback((newDevices: Device[]) => {
 		console.log('[DEVICES_CONTEXT] Setting devices with cache:', newDevices)

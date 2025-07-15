@@ -1,5 +1,3 @@
-import { ChangeType } from '@prisma/client'
-
 import {
 	AlertCategory,
 	AlertSeverity,

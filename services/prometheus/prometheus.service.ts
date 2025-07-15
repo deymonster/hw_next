@@ -523,7 +523,7 @@ export class PrometheusService {
 				)
 
 				// Проверяем статус агента
-				const status = await this.getAgentStatus(ipAddress)
+				//const status = await this.getAgentStatus(ipAddress)
 
 				// Пробуем получить метрики независимо от статуса агента
 				try {

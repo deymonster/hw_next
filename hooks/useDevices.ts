@@ -1,6 +1,6 @@
 'use client'
 
-import { Device, DeviceStatus, DeviceType } from '@prisma/client'
+import { DeviceStatus, DeviceType } from '@prisma/client'
 import { useCallback, useState } from 'react'
 
 import {

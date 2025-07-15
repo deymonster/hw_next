@@ -3,10 +3,8 @@
 import React from 'react'
 import { SWRConfig } from 'swr'
 
-import { useAuth } from '@/hooks/useAuth'
 
 export function SWRProvider({ children }: { children: React.ReactNode }) {
-	const { user } = useAuth()
 
 	return (
 		<SWRConfig
