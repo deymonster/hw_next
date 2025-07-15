@@ -15,6 +15,10 @@ RUN yarn install --frozen-lockfile --network-timeout 600000
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Добавляем build-arg для ENCRYPTION_KEY
+ARG ENCRYPTION_KEY
+ENV ENCRYPTION_KEY=${ENCRYPTION_KEY}
+
 # Копируем зависимости из предыдущего этапа
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -32,7 +36,7 @@ RUN yarn build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Добавляем пользователя nextjs для безопасности
 RUN addgroup --system --gid 1001 nodejs

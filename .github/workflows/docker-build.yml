@@ -46,9 +46,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
       - name: Build and push Nginx proxy
         uses: docker/build-push-action@v4
         with:
