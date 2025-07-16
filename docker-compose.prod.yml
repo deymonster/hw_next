@@ -65,7 +65,7 @@ services:
             - nextjs
 
     nginx-combined:
-        image: nginx:alpine
+        image: deymonster/hw-monitor-nginx-combined:latest
         container_name: nginx_combined
         ports:
             - '80:80'   # Основной порт для monitoring.local
