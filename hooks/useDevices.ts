@@ -35,15 +35,15 @@ export function useDevices(options?: UseDevicesOptions) {
 
 	const fetchDevices = useCallback(
 		async (filters?: DeviceFilterOptions) => {
-			console.log('[CLIENT] useDevices - Fetching devices...')
+			// console.log('[CLIENT] useDevices - Fetching devices...')
 			try {
 				setIsLoading(true)
 				setError(null)
 				const result = await getDevices(filters)
-				console.log(
-					'[CLIENT] useDevices - Devices fetched:',
-					result?.length
-				)
+				// console.log(
+				// 	'[CLIENT] useDevices - Devices fetched:',
+				// 	result?.length
+				// )
 				setDevices(result || [])
 				return result
 			} catch (error) {
@@ -66,18 +66,18 @@ export function useDevices(options?: UseDevicesOptions) {
 	)
 
 	const forceRefreshDevices = useCallback(async () => {
-		console.log('[CLIENT] useDevices - Force refreshing devices...')
+		// console.log('[CLIENT] useDevices - Force refreshing devices...')
 		try {
 			// Получаем свежие данные напрямую из БД
-			console.log('[CLIENT] useDevices - Fetching fresh data...')
+			// console.log('[CLIENT] useDevices - Fetching fresh data...')
 			const freshDevices = await getDevices({})
-			console.log(
-				`[CLIENT] useDevices - Received ${freshDevices?.length || 0} devices from server`
-			)
+			// console.log(
+			// 	`[CLIENT] useDevices - Received ${freshDevices?.length || 0} devices from server`
+			// )
 
 			// Обновляем состояние в контексте
 			setDevices(freshDevices || [])
-			console.log('[CLIENT] useDevices - Force refresh completed')
+			// console.log('[CLIENT] useDevices - Force refresh completed')
 
 			return freshDevices
 		} catch (error) {
@@ -89,19 +89,19 @@ export function useDevices(options?: UseDevicesOptions) {
 	const addNewDevice = useCallback(
 		async (data: IDeviceCreateInput) => {
 			try {
-				console.log(
-					'[CACHE] useDevices - Adding new device:',
-					data.name
-				)
+				// console.log(
+				// 	'[CACHE] useDevices - Adding new device:',
+				// 	data.name
+				// )
 				setIsLoading(true)
 				const result = await createDevice(data)
-				console.log(
-					'[CACHE] useDevices - Device created, refreshing device list...'
-				)
+				// console.log(
+				// 	'[CACHE] useDevices - Device created, refreshing device list...'
+				// )
 				await fetchDevices()
-				console.log(
-					'[CACHE] useDevices - Device list refreshed after adding new device'
-				)
+				// console.log(
+				// 	'[CACHE] useDevices - Device list refreshed after adding new device'
+				// )
 				if (options?.onSuccess) {
 					options.onSuccess()
 				}
@@ -180,7 +180,7 @@ export function useDevices(options?: UseDevicesOptions) {
 					setDevices(updatedDevices)
 				}
 
-				console.log('Update IP result:', result)
+				// console.log('Update IP result:', result)
 				if (options?.onSuccess) {
 					options.onSuccess()
 				}
@@ -199,21 +199,21 @@ export function useDevices(options?: UseDevicesOptions) {
 		async (id: string) => {
 			try {
 				setIsLoading(true)
-				console.log('[CLIENT] useDevices - Deleting device:', id)
+				// console.log('[CLIENT] useDevices - Deleting device:', id)
 
 				// Удаляем устройство из БД
 				await deleteDeviceById(id)
-				console.log('[CLIENT] useDevices - Device deleted')
+				// console.log('[CLIENT] useDevices - Device deleted')
 
 				if (options?.onSuccess) {
 					options.onSuccess()
 				}
 				return true
 			} catch (error) {
-				console.error(
-					'[CLIENT] useDevices - Error deleting device:',
-					error
-				)
+				// console.error(
+				// 	'[CLIENT] useDevices - Error deleting device:',
+				// 	error
+				// )
 				options?.onError?.(error as Error)
 				return false
 			} finally {

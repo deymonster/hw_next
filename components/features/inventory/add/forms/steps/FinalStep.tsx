@@ -3,7 +3,7 @@
 import { CheckCircle, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -32,69 +32,75 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 	const progress =
 		totalItems > 0 ? Math.round((currentItemIndex / totalItems) * 100) : 0
 
-	useEffect(() => {
-		const addItems = async () => {
-			if (!inventoryId || currentItemIndex >= totalItems) {
-				if (currentItemIndex >= totalItems && inventoryId) {
-					setIsSuccess(true)
-					toast.success(t('successMessage'))
-
-					// Сбрасываем состояние контекста
-					resetState()
-					refetch()
-					// Закрываем модальное окно через 1.5 секунды
-					setTimeout(() => {
-						onFinish()
-					}, 1500)
-				}
-				return
-			}
-
-			try {
-				const item = state.inventoryItems[currentItemIndex]
-
-				if (processedDeviceIds.has(item.deviceId)) {
-					setCurrentItemIndex(prev => prev + 1)
-					return
-				}
-				await addInventoryItemAsync({
-					inventoryId,
-					item: {
-						deviceId: item.deviceId,
-						inventoryId: inventoryId,
-						processor: item.processor || undefined,
-						motherboard: item.motherboard,
-						memory: item.memory,
-						storage: item.storage,
-						networkCards: item.networkCards,
-						videoCards: item.videoCards,
-						diskUsage: item.diskUsage,
-						employeeId: item.employeeId || undefined,
-						departmentId: item.departmentId || undefined
-					}
-				})
-
-				setProcessedDeviceIds(prev => new Set(prev).add(item.deviceId))
-
-				setCurrentItemIndex(prev => prev + 1)
-			} catch (error) {
-				console.error(error)
-				toast.error(t('errorAddingItem'))
-			}
+	// Функция для добавления элементов инвентаризации
+	const addItems = async (invId: string) => {
+		if (!invId || totalItems === 0) {
+			return
 		}
-		addItems()
-	}, [
-		inventoryId,
-		currentItemIndex,
-		totalItems,
-		processedDeviceIds,
-		addInventoryItemAsync,
-		onFinish,
-		refetch,
-		resetState,
-		state.inventoryItems,
-		t
-	])
+
+		setIsSubmitting(true)
+		setCurrentItemIndex(0) // Сбрасываем индекс при начале процесса
+		setProcessedDeviceIds(new Set()) // Сбрасываем обработанные устройства
+
+		try {
+			// Обрабатываем каждый элемент последовательно
+			for (let i = 0; i < totalItems; i++) {
+				const item = state.inventoryItems[i]
+
+				// Пропускаем дубликаты deviceId
+				if (processedDeviceIds.has(item.deviceId)) {
+					setCurrentItemIndex(i + 1)
+					continue
+				}
+
+				try {
+					await addInventoryItemAsync({
+						inventoryId: invId,
+						item: {
+							deviceId: item.deviceId,
+							inventoryId: invId,
+							processor: item.processor || undefined,
+							motherboard: item.motherboard,
+							memory: item.memory,
+							storage: item.storage,
+							networkCards: item.networkCards,
+							videoCards: item.videoCards,
+							diskUsage: item.diskUsage,
+							employeeId: item.employeeId || undefined,
+							departmentId: item.departmentId || undefined
+						}
+					})
+
+					// Добавляем устройство в список обработанных
+					setProcessedDeviceIds(prev => new Set([...prev, item.deviceId]))
+					// Обновляем индекс текущего элемента для прогресс-бара
+					setCurrentItemIndex(i + 1)
+				} catch (error) {
+					console.error(`Ошибка при добавлении устройства ${item.deviceName}:`, error)
+					toast.error(`${t('errorAddingItem')}: ${item.deviceName}`)
+					// Продолжаем с следующим устройством даже при ошибке
+					setCurrentItemIndex(i + 1)
+				}
+			}
+
+			// После успешного добавления всех элементов
+			setIsSuccess(true)
+			toast.success(t('successMessage'))
+
+			// Сбрасываем состояние контекста
+			resetState()
+			refetch()
+
+			// Закрываем модальное окно через 1.5 секунды
+			setTimeout(() => {
+				onFinish()
+			}, 1500)
+		} catch (error) {
+			console.error('Ошибка при добавлении элементов инвентаризации:', error)
+			toast.error(t('errorAddingItems'))
+			setIsSubmitting(false)
+		}
+	}
 
 	const handleSubmit = async () => {
 		try {
@@ -107,6 +113,13 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 				return
 			}
 
+			// Проверяем наличие устройств для инвентаризации
+			if (state.inventoryItems.length === 0) {
+				toast.error(t('noDevicesError'))
+				setIsSubmitting(false)
+				return
+			}
+
 			// Создаем новую инвентаризацию и получаем её ID
 			const newInventoryId = await createInventory(
 				session.user.id,
@@ -114,13 +127,17 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 					? state.selectedDepartments
 					: undefined
 			)
+
+			// Устанавливаем ID и запускаем процесс добавления устройств
 			setInventoryId(newInventoryId)
+			await addItems(newInventoryId)
 		} catch (error) {
-			console.error(error)
+			console.error('Ошибка при создании инвентаризации:', error)
 			toast.error(t('errorMessage'))
 			setIsSubmitting(false)
 		}
 	}
+
 	return (
 		<div className='space-y-8'>
 			<div>
