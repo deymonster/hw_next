@@ -50,12 +50,13 @@ jobs:
             ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Build and push Nginx proxy
+          
+      - name: Build and push Nginx combined
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./Dockerfile.nginx
+          file: ./Dockerfile.nginx-combined
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx:${{ github.sha }},${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:${{ github.sha }},${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
