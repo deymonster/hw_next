@@ -3,10 +3,22 @@ import Redis from 'ioredis'
 import redis from './client'
 import { KEY_PREFIXES, TTL } from './constants'
 import type { UserSession } from './types'
+import { Logger } from '../logger/logger.service'
+import { LoggerService, LogLevel } from '../logger/logger.interface'
 
 export class RedisService {
 	private readonly client: Redis
 	private static instance: RedisService | null = null
+	private readonly logger = Logger.getInstance()
+
+	private async log(level: keyof LogLevel, message: string, ...args: any[]) {
+		await this.logger.log(
+			LoggerService.REDIS_SERVICE,
+			level,
+			message,
+			...args
+		)
+	}
 
 	private generateUUID(): string {
 		// Используем Web Crypto API вместо crypto
@@ -122,7 +134,7 @@ export class RedisService {
 		}
 	): Promise<string> {
 		const sessionId = this.generateUUID()
-		console.log('[Redis] Creating new session:', sessionId)
+		await this.log('info', '[CREATING_SESSION]', { sessionId })
 
 		const browser = data.userAgent
 			? this.getBrowserInfo(data.userAgent)
@@ -155,10 +167,10 @@ export class RedisService {
 		}
 
 		const key = `${KEY_PREFIXES.SESSION_INFO}${sessionId}`
-		console.log('[Redis] Setting session with key:', key)
+		await this.log('debug', '[SETTING_SESSION]', { key })
 
 		const hashData = this.convertToRedisHash(session)
-		console.log('[Redis] Hash data to save:', hashData)
+		await this.log('debug', '[HASH_DATA]', { hashData })
 
 		await this.client.hset(key, hashData)
 
@@ -177,18 +189,18 @@ export class RedisService {
 
 	async getSession(sessionId: string): Promise<UserSession | null> {
 		const key = `${KEY_PREFIXES.SESSION_INFO}${sessionId}`
-		console.log('[Redis] Getting session with key:', key)
+		await this.log('debug', '[GETTING_SESSION]', { key })
 
 		const exists = await this.client.exists(key)
-		console.log('[Redis] Key exists:', exists)
+		await this.log('debug', '[KEY_EXISTS]', { exists })
 
 		if (!exists) {
-			console.log('[Redis] Session key not found')
+			await this.log('info', '[SESSION_NOT_FOUND]', { sessionId })
 			return null
 		}
 
 		const sessionData = await this.client.hgetall(key)
-		console.log('[Redis] Raw session data:', sessionData)
+		await this.log('debug', '[RAW_SESSION_DATA]', { sessionData })
 		return sessionData && Object.keys(sessionData).length > 0
 			? this.convertFromRedisHash(sessionData)
 			: null
@@ -218,6 +230,7 @@ export class RedisService {
 	}
 
 	async deactivateSession(sessionId: string): Promise<void> {
+		await this.log('info', '[DEACTIVATING_SESSION]', { sessionId })
 		await this.client.hset(
 			`${KEY_PREFIXES.SESSION_INFO}${sessionId}`,
 			'isActive',
@@ -226,6 +239,7 @@ export class RedisService {
 	}
 
 	async deleteUserSession(userId: string, sessionId: string): Promise<void> {
+		await this.log('info', '[DELETING_USER_SESSION]', { userId, sessionId })
 		await this.client.del(`${KEY_PREFIXES.SESSION_INFO}${sessionId}`)
 		await this.client.srem(
 			`${KEY_PREFIXES.USER_SESSIONS}${userId}`,
@@ -234,6 +248,7 @@ export class RedisService {
 	}
 
 	async deleteSession(sessionId: string): Promise<void> {
+		await this.log('info', '[DELETING_SESSION]', { sessionId })
 		// Получаем sessionData чтобы узнать userId
 		const sessionData = await this.client.hgetall(
 			`${KEY_PREFIXES.SESSION_INFO}${sessionId}`
@@ -257,6 +272,7 @@ export class RedisService {
 	}
 
 	async deleteAllUserSessions(userId: string): Promise<void> {
+		await this.log('info', '[DELETING_ALL_USER_SESSIONS]', { userId })
 		const sessionIds = await this.client.smembers(
 			`${KEY_PREFIXES.USER_SESSIONS}${userId}`
 		)
@@ -275,11 +291,13 @@ export class RedisService {
 	async getSessionByToken(
 		sessionToken: string
 	): Promise<{ sessionId?: string; userId?: string } | null> {
+		await this.log('debug', '[GETTING_SESSION_BY_TOKEN]', { sessionToken })
 		// 1. Сначала проверим, есть ли у нас сессия с таким токеном
 		const sessionKey = `${KEY_PREFIXES.SESSION_INFO}${sessionToken}`
 		const exists = await this.client.exists(sessionKey)
 
 		if (!exists) {
+			await this.log('info', '[SESSION_TOKEN_NOT_FOUND]', { sessionToken })
 			return null
 		}
 
@@ -287,6 +305,7 @@ export class RedisService {
 		const sessionData = await this.client.hgetall(sessionKey)
 
 		if (!sessionData || Object.keys(sessionData).length === 0) {
+			await this.log('warn', '[SESSION_DATA_EMPTY]', { sessionToken })
 			return null
 		}
 
@@ -298,7 +317,7 @@ export class RedisService {
 				userId: session.userId
 			}
 		} catch (error) {
-			console.error('[Redis] Failed to parse session data:', error)
+			await this.log('error', '[SESSION_PARSE_ERROR]', { sessionToken, error })
 			return null
 		}
 	}
