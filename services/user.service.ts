@@ -14,6 +14,8 @@ import {
 
 import { AUTH_ERRORS } from '@/libs/auth/constants'
 import { sendMail } from '@/libs/send-mail'
+import { Logger } from './logger/logger.service'
+import { LoggerService, LogLevel } from './logger/logger.interface'
 
 export class UserService
 	extends BaseRepository<
@@ -25,6 +27,17 @@ export class UserService
 	>
 	implements IUserRepository
 {
+	private readonly logger = Logger.getInstance()
+
+	private async log(level: keyof LogLevel, message: string, ...args: any[]) {
+		await this.logger.log(
+			LoggerService.USER_SERVICE,
+			level,
+			message,
+			...args
+		)
+	}
+
 	constructor(prisma: PrismaClient) {
 		super(prisma, p => p.user)
 	}
@@ -103,7 +116,7 @@ export class UserService
 					html
 				})
 			} catch (mailError: any) {
-				console.error('[SEND_MAIL_ERROR]', mailError)
+				await this.log('error', '[SEND_MAIL_ERROR]', mailError)
 
 				// Удаляем пользователя, если письмо не отправлено
 				await this.prisma.user.delete({ where: { id: user.id } })
@@ -121,7 +134,7 @@ export class UserService
 				user: userWithoutPassword
 			}
 		} catch (error) {
-			console.error('[CREATE_USER_ERROR]', error)
+			await this.log('error', '[CREATE_USER_ERROR]', error)
 			return {
 				success: false,
 				error: 'Произошла ошибка при создании пользователя'
@@ -206,14 +219,14 @@ export class UserService
 
 	async updateUserImage(userId: string, imageUrl: string): Promise<User> {
 		try {
-			console.log('ImageUrl in user service', imageUrl)
+			await this.log('info', 'ImageUrl in user service', imageUrl)
 			const updatedUser = await this.update(userId, {
 				image: imageUrl,
 				updatedAt: new Date()
 			})
 			return updatedUser
 		} catch (error) {
-			console.error('[UPDATE_USER_IMAGE_ERROR]', error)
+			await this.log('error', '[UPDATE_USER_IMAGE_ERROR]', error)
 			throw new Error('Failed to update user image')
 		}
 	}
@@ -226,7 +239,7 @@ export class UserService
 			})
 			return updatedUser
 		} catch (error) {
-			console.error('[REMOVE_USER_IMAGE_ERROR]', error)
+			await this.log('error', '[REMOVE_USER_IMAGE_ERROR]', error)
 			throw new Error('Failed to remove user image')
 		}
 	}

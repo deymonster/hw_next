@@ -39,12 +39,21 @@ export class Logger implements ILoggerService {
 
 	private async rotateLogIfNeeded() {
 		try {
+			// Проверяем существование файла перед получением статистики
+			try {
+				await fs.access(this.logFile)
+			} catch {
+				// Файл не существует, создаем пустой файл
+				await fs.writeFile(this.logFile, '')
+				return // Нет необходимости в ротации для нового файла
+			}
+			
 			const stats = await fs.stat(this.logFile)
 			if (stats.size >= this.maxLogSize) {
 				const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 				const newPath = `${this.logFile}.${timestamp}`
 				await fs.rename(this.logFile, newPath)
-
+			
 				// Очистка старых логов
 				const files = await fs.readdir(this.logDir)
 				const logFiles = files
@@ -52,7 +61,7 @@ export class Logger implements ILoggerService {
 					.map(file => path.join(this.logDir, file))
 					.sort()
 					.reverse()
-
+			
 				// Удаляем старые файлы, оставляя только maxLogFiles последних
 				if (logFiles.length > this.maxLogFiles) {
 					const filesToDelete = logFiles.slice(this.maxLogFiles)

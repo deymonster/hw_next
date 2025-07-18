@@ -71,7 +71,7 @@ services:
         image: deymonster/hw-monitor-nginx-combined:latest
         container_name: nginx_combined
         ports:
-            - '80:80'   # Основной порт для monitoring.local
+            - '0.0.0.0:80:80'   # Основной порт для monitoring.local
             - '8080:8080' # Для обратной совместимости с Prometheus
         volumes:
             - ./nginx_combined/conf.d:/etc/nginx/conf.d
