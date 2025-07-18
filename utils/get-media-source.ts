@@ -12,11 +12,8 @@ export function getMediaSource(path: string | null): string | undefined {
 		return path
 	}
 
-	const baseUrl =
-		process.env.NEXT_PUBLIC_STORAGE_URL ||
-		(process.env.NODE_ENV === 'production'
-			? 'https://your-production-domain.com' // Change this
-			: 'http://localhost:8081')
+	// Используем относительный путь вместо абсолютного URL
+	const baseUrl = '/uploads'
 
 	// Убираем лишний слеш если он есть в начале пути
 	const normalizedPath = path.startsWith('/') ? path : `/${path}`
