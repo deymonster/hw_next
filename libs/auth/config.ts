@@ -144,7 +144,7 @@ export const authConfig: NextAuthConfig = {
 				sameSite: 'lax',
 				path: '/',
 				secure: process.env.NODE_ENV === 'production',
-				domain: undefined
+				domain: process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_SERVER_IP || undefined : undefined
 			}
 		}
 	}
