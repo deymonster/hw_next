@@ -3,6 +3,9 @@ import createNextIntlPlugin from 'next-intl/plugin'
 
 const withNextIntl = createNextIntlPlugin('./libs/i18n/request.ts')
 
+// Получаем IP-адрес сервера из переменной окружения
+const serverIp = process.env.NEXT_PUBLIC_SERVER_IP || '192.168.1.227'
+
 const nextConfig: NextConfig = {
 	reactStrictMode: true,
 	output: 'standalone', // Добавлено для оптимизации Docker-образа
@@ -12,6 +15,13 @@ const nextConfig: NextConfig = {
 			{
 				protocol: 'http',
 				hostname: 'localhost',
+				port: '8081',
+				pathname: '/uploads/**'
+			},
+			// Используем переменную окружения для IP-адреса
+			{
+				protocol: 'http',
+				hostname: serverIp,
 				port: '8081',
 				pathname: '/uploads/**'
 			}
