@@ -15,6 +15,18 @@ services:
         env_file:
             - .env.prod
 
+    db-migrate:
+      image: deymonster/hw-monitor:latest
+      container_name: db-migrate
+      command: npx prisma migrate deploy
+      depends_on:
+        - postgres
+      env_file:
+        - .env.prod
+      networks:
+        - hw-network
+      restart: "no"
+
     nextjs:
       image: deymonster/hw-monitor:latest
       container_name: nextjs_app
@@ -23,6 +35,7 @@ services:
       depends_on:
         - postgres
         - redis
+        - db-migrate
       env_file:
         - .env.prod
       networks:

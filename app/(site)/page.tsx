@@ -83,7 +83,7 @@ export default function Home() {
 
 			{/* Футер */}
 			<footer className='border-t bg-muted py-6'>
-				<div className='container text-center text-sm text-muted-foreground'>
+				<div className='container mx-auto flex justify-center text-sm text-muted-foreground'>
 					&copy; {new Date().getFullYear()} NITRINOnet Monitoring. Все
 					права защищены.
 				</div>
