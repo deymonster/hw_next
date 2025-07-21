@@ -135,7 +135,8 @@ export const authConfig: NextAuthConfig = {
 	},
 
 	secret: process.env.NEXTAUTH_SECRET,
-	useSecureCookies: process.env.NODE_ENV === 'production',
+	// useSecureCookies: process.env.NODE_ENV === 'production',
+	useSecureCookies: false,
 	cookies: {
 		sessionToken: {
 			name: 'authjs.session-token',
@@ -143,8 +144,11 @@ export const authConfig: NextAuthConfig = {
 				httpOnly: true,
 				sameSite: 'lax',
 				path: '/',
-				secure: process.env.NODE_ENV === 'production',
-				domain: process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_SERVER_IP || undefined : undefined
+				secure: false,
+				domain: process.env.NODE_ENV === 'production' ? 
+				new URL(process.env.NEXTAUTH_URL || '').hostname || 
+				process.env.NEXT_PUBLIC_SERVER_IP || 
+				undefined : undefined
 			}
 		}
 	}

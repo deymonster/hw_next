@@ -13,13 +13,13 @@ services:
         networks:
             - hw-network
         env_file:
-            - .env
+            - .env.prod
 
     nextjs:
       image: deymonster/hw-monitor:latest
       container_name: nextjs_app
       ports:
-        - "3000:3000"
+        - "0.0.0.0:3000:3000"
       depends_on:
         - postgres
         - redis
@@ -50,7 +50,7 @@ services:
             - '--web.console.templates=/usr/share/prometheus/consoles'
             - '--web.enable-lifecycle'
         env_file:
-            - .env
+            - .env.prod
 
     alertmanager:
         image: prom/alertmanager:v0.26.0
@@ -67,12 +67,12 @@ services:
         depends_on:
             - nextjs
 
-    nginx-combined:
+    nginx-proxy:
         image: deymonster/hw-monitor-nginx-combined:latest
         container_name: nginx_combined
         ports:
             - '0.0.0.0:80:80'   # Основной порт для monitoring.local
-            - '8080:8080' # Для обратной совместимости с Prometheus
+            - '0.0.0.0:8080:8080' # Для обратной совместимости с Prometheus
         volumes:
             - ./nginx_combined/conf.d:/etc/nginx/conf.d
             - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
@@ -88,7 +88,7 @@ services:
         image: redis:alpine
         container_name: redis_container
         env_file:
-            - .env
+            - .env.prod
         command: redis-server --requirepass ${REDIS_PASSWORD}
         ports:
             - '6379:6379'
