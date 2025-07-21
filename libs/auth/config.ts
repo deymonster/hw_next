@@ -145,10 +145,7 @@ export const authConfig: NextAuthConfig = {
 				sameSite: 'lax',
 				path: '/',
 				secure: false,
-				domain: process.env.NODE_ENV === 'production' ? 
-				new URL(process.env.NEXTAUTH_URL || '').hostname || 
-				process.env.NEXT_PUBLIC_SERVER_IP || 
-				undefined : undefined
+				domain: undefined
 			}
 		}
 	}
