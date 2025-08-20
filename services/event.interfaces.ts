@@ -33,4 +33,5 @@ export interface IEventRepository {
 	count(where?: Prisma.EventWhereInput): Promise<number>
 	delete(id: string): Promise<Event>
 	deleteMany(userId: string): Promise<Prisma.BatchPayload>
+	confirmHardwareChangeEvents(deviceId: string): Promise<{ count: number }>
 }

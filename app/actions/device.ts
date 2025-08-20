@@ -214,3 +214,39 @@ export async function updateDepartmentDevices({
 		throw error
 	}
 }
+
+/**
+ * Подтверждение смены оборудования
+ */
+export async function confirmHardwareChange(
+  deviceId: string,
+  password: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Получаем устройство
+    const device = await services.data.device.findById(deviceId)
+    if (!device) {
+      return { success: false, error: 'Device not found' }
+    }
+
+    // Отправляем запрос к агенту
+    const result = await services.data.device.confirmHardwareChange(
+      device.ipAddress,
+      device.agentKey,
+      password
+    )
+
+    if (result.success) {
+      // Обновляем все события Hardware_Change_Detected для этого устройства
+      await services.data.event.confirmHardwareChangeEvents(deviceId)
+    }
+
+    return result
+  } catch (error) {
+    console.error('[CONFIRM_HARDWARE_CHANGE_ACTION_ERROR]', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
+}

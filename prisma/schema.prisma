@@ -40,6 +40,9 @@ model Event {
   userId    String
   user      User          @relation(fields: [userId], references: [id])
 
+  deviceId  String?
+  hardwareChangeConfirmed Boolean @default(false)
+  device    Device?       @relation(fields: [deviceId], references: [id])
   @@index([userId])
   @@index([type])
   @@index([createdAt])
@@ -113,6 +116,7 @@ model Device {
   department     Department?    @relation("DepartmentDevices", fields: [departmentId], references: [id])
   employee       Employee?    @relation(fields: [employeeId], references: [id]) 
   inventoryItems InventoryItem[]
+  events         Event[]
 
   @@index([status])
   @@index([agentKey])

@@ -772,7 +772,8 @@
 					"cpu_temperature": "Температура процессора",
 					"cpu_usage": "Загрузка процессора",
 					"disk_usage_percent": "Занятое место на диске %",
-					"Hardware_Change_Detected": "Контроль оборудования"
+					"Hardware_Change_Detected": "Контроль оборудования",
+					"network_errors": "Ошибки сети"
 				},
 				"operators": {
 					"greater_than": "больше",
