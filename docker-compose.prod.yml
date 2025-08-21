@@ -16,34 +16,34 @@ services:
             - .env.prod
 
     db-migrate:
-      image: deymonster/hw-monitor:latest
-      container_name: db-migrate
-      command: npx prisma migrate deploy
-      depends_on:
-        - postgres
-      env_file:
-        - .env.prod
-      networks:
-        - hw-network
-      restart: "no"
+        image: deymonster/hw-monitor:latest
+        container_name: db-migrate
+        command: npx prisma migrate deploy
+        depends_on:
+            - postgres
+        env_file:
+            - .env.prod
+        networks:
+            - hw-network
+        restart: 'no'
 
     nextjs:
-      image: deymonster/hw-monitor:latest
-      container_name: nextjs_app
-      ports:
-        - "0.0.0.0:3000:3000"
-      depends_on:
-        - postgres
-        - redis
-        - db-migrate
-      env_file:
-        - .env.prod
-      networks:
-        - hw-network
-      restart: unless-stopped
-      volumes:
-        - ./storage/logs:/app/storage/logs
-        - ./storage/uploads:/app/storage/uploads
+        image: deymonster/hw-monitor:latest
+        container_name: nextjs_app
+        ports:
+            - '0.0.0.0:3000:3000'
+        depends_on:
+            - postgres
+            - redis
+            - db-migrate
+        env_file:
+            - .env.prod
+        networks:
+            - hw-network
+        restart: unless-stopped
+        volumes:
+            - ./storage/logs:/app/storage/logs
+            - ./storage/uploads:/app/storage/uploads
 
     prometheus:
         image: prom/prometheus:v2.36.0
@@ -84,7 +84,7 @@ services:
         image: deymonster/hw-monitor-nginx-combined:latest
         container_name: nginx_combined
         ports:
-            - '0.0.0.0:80:80'   # Основной порт для monitoring.local
+            - '0.0.0.0:80:80' # Основной порт для monitoring.local
             - '0.0.0.0:8080:8080' # Для обратной совместимости с Prometheus
         volumes:
             - ./nginx_combined/conf.d:/etc/nginx/conf.d

@@ -199,7 +199,9 @@ export class AlertProcessorService {
 			severity: eventSeverity,
 			title: `${alert.labels?.alertname || 'Unknown Alert'} - ${alert.status?.toUpperCase() || 'UNKNOWN'}`,
 			message: message,
-			isRead: false
+			isRead: false,
+			deviceId: null, 
+			hardwareChangeConfirmed: false 
 		})
 	}
 

@@ -5,6 +5,8 @@ import crypto from 'crypto'
 import { TypeCreateAccountSchema } from '@/schemas/auth/create-account.schema'
 
 import { BaseRepository } from './base.service'
+import { LoggerService, LogLevel } from './logger/logger.interface'
+import { Logger } from './logger/logger.service'
 import {
 	IUserCreateInput,
 	IUserFindManyArgs,
@@ -14,8 +16,6 @@ import {
 
 import { AUTH_ERRORS } from '@/libs/auth/constants'
 import { sendMail } from '@/libs/send-mail'
-import { Logger } from './logger/logger.service'
-import { LoggerService, LogLevel } from './logger/logger.interface'
 
 export class UserService
 	extends BaseRepository<

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+
 import { ProcessListInfo } from '@/services/prometheus/prometheus.interfaces'
 
 export interface ProcessListData extends ProcessListInfo {}
@@ -134,36 +135,36 @@ export function useProcessMetrics(deviceId: string) {
 			// Обработчик получения данных
 			ws.onmessage = event => {
 				try {
-					const data = JSON.parse(event.data);
+					const data = JSON.parse(event.data)
 					if (data.error) {
 						setState(prev => ({
 							...prev,
 							error: data.error,
 							isLoading: false
-						}));
-						clearWebSocketUrl(deviceId);
-						return;
+						}))
+						clearWebSocketUrl(deviceId)
+						return
 					}
-					
+
 					// Проверяем, что data содержит processes и это массив
 					if (!data.processes || !Array.isArray(data.processes)) {
-						data.processes = [];
+						data.processes = []
 					}
-					
+
 					setState(prev => ({
 						...prev,
 						data,
 						lastUpdated: Date.now(),
 						isLoading: false,
 						error: null
-					}));
+					}))
 				} catch (error) {
-					console.error('Error parsing WebSocket message:', error);
+					console.error('Error parsing WebSocket message:', error)
 					setState(prev => ({
 						...prev,
 						error: 'Invalid data received',
 						isLoading: false
-					}));
+					}))
 				}
 			}
 

@@ -10,14 +10,14 @@ import {
 
 /**
  * Сервис для управления устройствами в системе мониторинга
- * 
+ *
  * Предоставляет методы для:
  * - CRUD операций с устройствами
  * - Управления статусами устройств
  * - Поиска и фильтрации устройств
  * - Получения статистики
  * - Взаимодействия с агентами мониторинга
- * 
+ *
  * @extends BaseRepository
  * @implements IDeviceRepository
  */
@@ -33,7 +33,7 @@ export class DeviceService
 {
 	/**
 	 * Конструктор сервиса устройств
-	 * 
+	 *
 	 * @param prisma - Экземпляр Prisma клиента для работы с базой данных
 	 */
 	constructor(prisma: PrismaClient) {
@@ -42,10 +42,10 @@ export class DeviceService
 
 	/**
 	 * Поиск устройства по уникальному ключу агента
-	 * 
+	 *
 	 * @param agentKey - Уникальный ключ агента мониторинга
 	 * @returns Promise<Device | null> - Найденное устройство или null
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const device = await deviceService.findByAgentKey('agent-123')
@@ -62,14 +62,14 @@ export class DeviceService
 
 	/**
 	 * Получение всех устройств с возможностью фильтрации
-	 * 
+	 *
 	 * @param options - Опции фильтрации и сортировки
 	 * @param options.status - Массив статусов для фильтрации
 	 * @param options.type - Тип устройства для фильтрации
 	 * @param options.departmentId - ID отдела для фильтрации
 	 * @param options.orderBy - Параметры сортировки
 	 * @returns Promise<Device[]> - Массив устройств
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * // Получить все активные Windows устройства
@@ -101,15 +101,15 @@ export class DeviceService
 
 	/**
 	 * Получение статистики по устройствам
-	 * 
+	 *
 	 * Возвращает общее количество устройств и их распределение
 	 * по статусам и типам
-	 * 
+	 *
 	 * @returns Promise<Object> - Объект со статистикой
 	 * @returns Promise<Object>.total - Общее количество устройств
 	 * @returns Promise<Object>.byStatus - Распределение по статусам
 	 * @returns Promise<Object>.byType - Распределение по типам
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const stats = await deviceService.getDeviceStats()
@@ -144,15 +144,15 @@ export class DeviceService
 
 	/**
 	 * Обновление IP-адреса устройства
-	 * 
+	 *
 	 * Автоматически обновляет время последнего изменения
-	 * 
+	 *
 	 * @param id - Уникальный идентификатор устройства
 	 * @param ipAddress - Новый IP-адрес
 	 * @returns Promise<Device> - Обновленное устройство
-	 * 
+	 *
 	 * @throws {Error} Если устройство не найдено
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const updatedDevice = await deviceService.updateIpAddress(
@@ -173,10 +173,10 @@ export class DeviceService
 
 	/**
 	 * Поиск устройства по IP-адресу
-	 * 
+	 *
 	 * @param ipAddress - IP-адрес для поиска
 	 * @returns Promise<Device | null> - Найденное устройство или null
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const device = await deviceService.findByIpAddress('192.168.1.100')
@@ -193,10 +193,10 @@ export class DeviceService
 
 	/**
 	 * Получение всех устройств определенного отдела
-	 * 
+	 *
 	 * @param departmentId - Идентификатор отдела
 	 * @returns Promise<Device[]> - Массив устройств отдела, отсортированный по имени
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const departmentDevices = await deviceService.findByLocation('dept-123')
@@ -212,12 +212,12 @@ export class DeviceService
 
 	/**
 	 * Получение всех активных устройств
-	 * 
+	 *
 	 * Возвращает только устройства со статусом 'ACTIVE',
 	 * отсортированные по времени последнего обновления
-	 * 
+	 *
 	 * @returns Promise<Device[]> - Массив активных устройств
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const activeDevices = await deviceService.findActiveDevices()
@@ -233,15 +233,15 @@ export class DeviceService
 
 	/**
 	 * Обновление статуса устройства
-	 * 
+	 *
 	 * Автоматически обновляет время последнего изменения
-	 * 
+	 *
 	 * @param id - Уникальный идентификатор устройства
 	 * @param status - Новый статус устройства
 	 * @returns Promise<Device> - Обновленное устройство
-	 * 
+	 *
 	 * @throws {Error} Если устройство не найдено
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * await deviceService.updateStatus('device-id', 'INACTIVE')
@@ -259,15 +259,15 @@ export class DeviceService
 
 	/**
 	 * Обновление времени последней активности устройства
-	 * 
+	 *
 	 * Используется для отслеживания онлайн-статуса устройств.
 	 * Обновляет как lastSeen, так и lastUpdate
-	 * 
+	 *
 	 * @param id - Уникальный идентификатор устройства
 	 * @returns Promise<Device> - Обновленное устройство
-	 * 
+	 *
 	 * @throws {Error} Если устройство не найдено
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * // Отметить устройство как активное
@@ -286,15 +286,15 @@ export class DeviceService
 
 	/**
 	 * Создание нового устройства
-	 * 
+	 *
 	 * Переопределяет базовый метод create для автоматического
 	 * добавления временных меток lastUpdate и lastSeen
-	 * 
+	 *
 	 * @param data - Данные для создания устройства
 	 * @returns Promise<Device> - Созданное устройство
-	 * 
+	 *
 	 * @throws {Error} Если данные невалидны или agentKey уже существует
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const newDevice = await deviceService.create({
@@ -317,14 +317,14 @@ export class DeviceService
 
 	/**
 	 * Удаление устройства
-	 * 
+	 *
 	 * Выполняет проверку существования устройства перед удалением
-	 * 
+	 *
 	 * @param id - Уникальный идентификатор устройства
 	 * @returns Promise<Device> - Удаленное устройство
-	 * 
+	 *
 	 * @throws {Error} Если устройство не найдено
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * try {
@@ -351,19 +351,19 @@ export class DeviceService
 
 	/**
 	 * Получение статуса устройства
-	 * 
+	 *
 	 * Определяет онлайн-статус на основе времени последней активности.
 	 * Устройство считается онлайн, если последняя активность была
 	 * менее 5 минут назад.
-	 * 
+	 *
 	 * @param id - Уникальный идентификатор устройства
 	 * @returns Promise<Object> - Объект со статусом устройства
 	 * @returns Promise<Object>.isOnline - Онлайн ли устройство
 	 * @returns Promise<Object>.lastSeen - Время последней активности
 	 * @returns Promise<Object>.status - Текущий статус устройства
-	 * 
+	 *
 	 * @throws {Error} Если устройство не найдено
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const status = await deviceService.getDeviceStatus('device-id')
@@ -404,14 +404,14 @@ export class DeviceService
 
 	/**
 	 * Массовое обновление устройств отдела
-	 * 
+	 *
 	 * Сначала сбрасывает все существующие связи устройств с отделом,
 	 * затем устанавливает новые связи для указанных устройств.
-	 * 
+	 *
 	 * @param departmentId - Идентификатор отдела
 	 * @param deviceIds - Массив идентификаторов устройств для привязки
 	 * @returns Promise<void>
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * // Привязать устройства к отделу
@@ -442,18 +442,18 @@ export class DeviceService
 
 	/**
 	 * Подтверждение смены оборудования на агенте
-	 * 
+	 *
 	 * Отправляет запрос на агент мониторинга для подтверждения
 	 * изменений в конфигурации оборудования. Использует базовую
 	 * аутентификацию с паролем администратора.
-	 * 
+	 *
 	 * @param ipAddress - IP-адрес устройства с агентом
 	 * @param agentKey - Уникальный ключ агента для обновления
 	 * @param password - Пароль администратора для аутентификации
 	 * @returns Promise<Object> - Результат операции
 	 * @returns Promise<Object>.success - Успешность операции
 	 * @returns Promise<Object>.error - Описание ошибки (если есть)
-	 * 
+	 *
 	 * @example
 	 * ```typescript
 	 * const result = await deviceService.confirmHardwareChange(
@@ -461,7 +461,7 @@ export class DeviceService
 	 *   'agent-key-123',
 	 *   'admin-password'
 	 * )
-	 * 
+	 *
 	 * if (result.success) {
 	 *   console.log('Изменения подтверждены')
 	 * } else {
@@ -470,34 +470,39 @@ export class DeviceService
 	 * ```
 	 */
 	async confirmHardwareChange(
-		ipAddress: string, 
-		agentKey: string, 
+		ipAddress: string,
+		agentKey: string,
 		password: string
 	): Promise<{ success: boolean; error?: string }> {
 		try {
 			// Отправляем HTTPS запрос на агент для обновления UUID
-			const response = await fetch(`https://${ipAddress}:9183/api/update-uuid`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					// Базовая аутентификация с логином 'agent' и паролем администратора
-					'Authorization': `Basic ${Buffer.from(`agent:${password}`).toString('base64')}`
-				},
-				body: JSON.stringify({
-					uuid: agentKey
-				})
-			})
+			const response = await fetch(
+				`https://${ipAddress}:9183/api/update-uuid`,
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						// Базовая аутентификация с логином 'agent' и паролем администратора
+						Authorization: `Basic ${Buffer.from(`agent:${password}`).toString('base64')}`
+					},
+					body: JSON.stringify({
+						uuid: agentKey
+					})
+				}
+			)
 
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+				throw new Error(
+					`HTTP ${response.status}: ${response.statusText}`
+				)
 			}
 
 			return { success: true }
 		} catch (error) {
 			console.error('[CONFIRM_HARDWARE_CHANGE_ERROR]', error)
-			return { 
-				success: false, 
-				error: error instanceof Error ? error.message : 'Unknown error' 
+			return {
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error'
 			}
 		}
 	}

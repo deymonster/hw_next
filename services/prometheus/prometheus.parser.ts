@@ -122,7 +122,6 @@ export class PrometheusParser {
 		return mappedResults
 	}
 
-
 	/**
 	 * Получает числовое значение метрики с учетом лейблов
 	 * @param name Имя метрики
@@ -697,8 +696,8 @@ export class PrometheusParser {
 		)
 		// В конце метода getProcessList()
 		return {
-		    total: processes?.length || 0,
-		    processes: processes || []
+			total: processes?.length || 0,
+			processes: processes || []
 		}
 	}
 

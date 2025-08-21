@@ -72,11 +72,16 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 					})
 
 					// Добавляем устройство в список обработанных
-					setProcessedDeviceIds(prev => new Set([...prev, item.deviceId]))
+					setProcessedDeviceIds(
+						prev => new Set([...prev, item.deviceId])
+					)
 					// Обновляем индекс текущего элемента для прогресс-бара
 					setCurrentItemIndex(i + 1)
 				} catch (error) {
-					console.error(`Ошибка при добавлении устройства ${item.deviceName}:`, error)
+					console.error(
+						`Ошибка при добавлении устройства ${item.deviceName}:`,
+						error
+					)
 					toast.error(`${t('errorAddingItem')}: ${item.deviceName}`)
 					// Продолжаем с следующим устройством даже при ошибке
 					setCurrentItemIndex(i + 1)
@@ -96,7 +101,10 @@ export function FinalStep({ onFinish, onBack }: FinalStepProps) {
 				onFinish()
 			}, 1500)
 		} catch (error) {
-			console.error('Ошибка при добавлении элементов инвентаризации:', error)
+			console.error(
+				'Ошибка при добавлении элементов инвентаризации:',
+				error
+			)
 			toast.error(t('errorAddingItems'))
 			setIsSubmitting(false)
 		}

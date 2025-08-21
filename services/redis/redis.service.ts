@@ -1,10 +1,10 @@
 import Redis from 'ioredis'
 
+import { LoggerService, LogLevel } from '../logger/logger.interface'
+import { Logger } from '../logger/logger.service'
 import redis from './client'
 import { KEY_PREFIXES, TTL } from './constants'
 import type { UserSession } from './types'
-import { Logger } from '../logger/logger.service'
-import { LoggerService, LogLevel } from '../logger/logger.interface'
 
 export class RedisService {
 	private readonly client: Redis
@@ -297,7 +297,9 @@ export class RedisService {
 		const exists = await this.client.exists(sessionKey)
 
 		if (!exists) {
-			await this.log('info', '[SESSION_TOKEN_NOT_FOUND]', { sessionToken })
+			await this.log('info', '[SESSION_TOKEN_NOT_FOUND]', {
+				sessionToken
+			})
 			return null
 		}
 
@@ -317,7 +319,10 @@ export class RedisService {
 				userId: session.userId
 			}
 		} catch (error) {
-			await this.log('error', '[SESSION_PARSE_ERROR]', { sessionToken, error })
+			await this.log('error', '[SESSION_PARSE_ERROR]', {
+				sessionToken,
+				error
+			})
 			return null
 		}
 	}

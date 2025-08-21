@@ -1,64 +1,64 @@
 groups:
-  - name: hardware_change_alerts
-    rules:
-      - alert: Контроль оборудования
-        expr: Hardware_Change_Detected == 1
-        for: 0s
-        labels:
-          severity: critical
-          category: hardware_change
-        annotations:
-          summary: Конфигурация оборудования была изменена на {{ $labels.instance }}
-          description: >-
-            Рабочее место: {{ $labels.instance }}
+    - name: hardware_change_alerts
+      rules:
+          - alert: Контроль оборудования
+            expr: Hardware_Change_Detected == 1
+            for: 0s
+            labels:
+                severity: critical
+                category: hardware_change
+            annotations:
+                summary: Конфигурация оборудования была изменена на {{ $labels.instance }}
+                description: >-
+                    Рабочее место: {{ $labels.instance }}
 
-            Конфигурация оборудования была изменена с момента последнего
-            запуска.
-  - name: cpu_monitoring_alerts
-    rules:
-      - alert: температура процессора
-        expr: cpu_temperature > 80
-        for: 5m
-        labels:
-          severity: warning
-          category: cpu_monitoring
-        annotations:
-          summary: ''
-          description: |-
-            Рабочее место: {{ $labels.instance }}
-            Текущее значение: {{ $value }}
-            Пороговое значение: 80
-            Текущее значение: {{ $value }}
-            Пороговое значение: 80
-  - name: disk_monitoring_alerts
-    rules:
-      - alert: Контроль свободного места
-        expr: disk_usage_percent > 90
-        for: 5m
-        labels:
-          severity: info
-          category: disk_monitoring
-        annotations:
-          summary: ''
-          description: |-
-            Рабочее место: {{ $labels.instance }}
-            Текущее значение: {{ $value }}
-            Пороговое значение: 90
-            Текущее значение: {{ $value }}
-            Пороговое значение: 90
-  - name: network_monitoring_alerts
-    rules:
-      - alert: контроль сети ошибки
-        expr: network_errors > 10
-        for: 5m
-        labels:
-          severity: warning
-          category: network_monitoring
-        annotations:
-          summary: ''
-          description: |-
-            Рабочее место: {{ $labels.instance }}
-            Текущее значение: {{ $value }}
-            Пороговое значение: 10
-            Текущее значение: {{ $value }}
-            Пороговое значение: 10
+                    Конфигурация оборудования была изменена с момента последнего
+                    запуска.
+    - name: cpu_monitoring_alerts
+      rules:
+          - alert: температура процессора
+            expr: cpu_temperature > 80
+            for: 5m
+            labels:
+                severity: warning
+                category: cpu_monitoring
+            annotations:
+                summary: ''
+                description: |-
+                    Рабочее место: {{ $labels.instance }}
+                    Текущее значение: {{ $value }}
+                    Пороговое значение: 80
+                    Текущее значение: {{ $value }}
+                    Пороговое значение: 80
+    - name: disk_monitoring_alerts
+      rules:
+          - alert: Контроль свободного места
+            expr: disk_usage_percent > 90
+            for: 5m
+            labels:
+                severity: info
+                category: disk_monitoring
+            annotations:
+                summary: ''
+                description: |-
+                    Рабочее место: {{ $labels.instance }}
+                    Текущее значение: {{ $value }}
+                    Пороговое значение: 90
+                    Текущее значение: {{ $value }}
+                    Пороговое значение: 90
+    - name: network_monitoring_alerts
+      rules:
+          - alert: контроль сети ошибки
+            expr: network_errors > 10
+            for: 5m
+            labels:
+                severity: warning
+                category: network_monitoring
+            annotations:
+                summary: ''
+                description: |-
+                    Рабочее место: {{ $labels.instance }}
+                    Текущее значение: {{ $value }}
+                    Пороговое значение: 10
+                    Текущее значение: {{ $value }}
+                    Пороговое значение: 10

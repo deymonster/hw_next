@@ -1,9 +1,10 @@
 import crypto from 'crypto'
 import path from 'path'
 
-import fs from 'fs/promises'
-import { Logger } from '../logger/logger.service'
 import { LoggerService, LogLevel } from '../logger/logger.interface'
+import { Logger } from '../logger/logger.service'
+
+import fs from 'fs/promises'
 
 interface FileValidationOptions {
 	maxSize?: number // in bytes
@@ -51,13 +52,20 @@ export class StorageService {
 		const maxSize = options?.maxSize || this.maxFileSize
 
 		if (fileSize > maxSize) {
-			await this.log('warn', '[FILE_SIZE_EXCEEDED]', { fileSize, maxSize, fileType })
+			await this.log('warn', '[FILE_SIZE_EXCEEDED]', {
+				fileSize,
+				maxSize,
+				fileType
+			})
 			throw new Error(`File size exceeds limit of ${maxSize} bytes`)
 		}
 
 		const allowedTypes = options?.allowedTypes || this.allowedFileTypes
 		if (!allowedTypes.includes(fileType)) {
-			await this.log('warn', '[FILE_TYPE_NOT_ALLOWED]', { fileType, allowedTypes })
+			await this.log('warn', '[FILE_TYPE_NOT_ALLOWED]', {
+				fileType,
+				allowedTypes
+			})
 			throw new Error(
 				`File type ${fileType} not allowed. Allowed types: ${allowedTypes.join(', ')}`
 			)
@@ -78,12 +86,20 @@ export class StorageService {
 			const filePath = path.join(this.uploadDir, fileName)
 
 			await fs.writeFile(filePath, fileBuffer)
-			await this.log('info', '[FILE_UPLOADED]', { originalName, fileName, fileType })
+			await this.log('info', '[FILE_UPLOADED]', {
+				originalName,
+				fileName,
+				fileType
+			})
 
 			// Return full URL
 			return `/uploads/${fileName}`
 		} catch (error) {
-			await this.log('error', '[FILE_UPLOAD_ERROR]', { originalName, fileType, error })
+			await this.log('error', '[FILE_UPLOAD_ERROR]', {
+				originalName,
+				fileType,
+				error
+			})
 			throw error
 		}
 	}

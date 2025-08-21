@@ -14,24 +14,27 @@ const smtpConfigSchema = z.object({
 })
 
 // Переменная для хранения конфигурации
-let smtpConfigData: z.infer<typeof smtpConfigSchema> | null = null;
-let transporter: nodemailer.Transporter | null = null;
+let smtpConfigData: z.infer<typeof smtpConfigSchema> | null = null
+let transporter: nodemailer.Transporter | null = null
 
 // Функция для проверки и инициализации SMTP-конфигурации
 const initSmtpConfig = () => {
-	if (smtpConfigData) return true; // Если уже инициализировано, возвращаем true
+	if (smtpConfigData) return true // Если уже инициализировано, возвращаем true
 
 	// Проверка переменных окружения
 	const smtpConfig = smtpConfigSchema.safeParse(process.env)
 	console.log('SMTP_HOST:', process.env.SMTP_HOST)
 
 	if (!smtpConfig.success) {
-		console.error('❌ Invalid SMTP configuration:', smtpConfig.error.format())
-		return false;
+		console.error(
+			'❌ Invalid SMTP configuration:',
+			smtpConfig.error.format()
+		)
+		return false
 	}
 
 	// Сохраняем конфигурацию
-	smtpConfigData = smtpConfig.data;
+	smtpConfigData = smtpConfig.data
 
 	// Создание транспорта для отправки почты
 	transporter = nodemailer.createTransport({
@@ -42,10 +45,10 @@ const initSmtpConfig = () => {
 			user: smtpConfigData.SMTP_USER,
 			pass: smtpConfigData.SMTP_PASSWORD
 		}
-	});
+	})
 
-	return true;
-};
+	return true
+}
 
 // Функция отправки почты
 export async function sendMail({
@@ -63,7 +66,7 @@ export async function sendMail({
 }) {
 	// Инициализируем конфигурацию при первом вызове
 	if (!initSmtpConfig() || !smtpConfigData || !transporter) {
-		throw new Error('Invalid SMTP configuration. Fix your .env file.');
+		throw new Error('Invalid SMTP configuration. Fix your .env file.')
 	}
 
 	try {

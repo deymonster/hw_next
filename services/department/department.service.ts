@@ -1,8 +1,4 @@
-import {
-	Department,
-	Device,
-	PrismaClient
-} from '@prisma/client'
+import { Department, Device, PrismaClient } from '@prisma/client'
 
 import { BaseRepository } from '../base.service'
 import {

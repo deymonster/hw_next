@@ -16,24 +16,31 @@ export class EmailService extends BaseNotificationService {
 		super()
 
 		// Проверяем наличие переменных окружения, но не выбрасываем исключение
-		this.isConfigValid = !!process.env.SMTP_HOST && 
-			!!process.env.SMTP_PORT && 
-			!!process.env.SMTP_USER && 
-			!!process.env.SMTP_PASSWORD && 
+		this.isConfigValid =
+			!!process.env.SMTP_HOST &&
+			!!process.env.SMTP_PORT &&
+			!!process.env.SMTP_USER &&
+			!!process.env.SMTP_PASSWORD &&
 			!!process.env.SMTP_FROM_EMAIL
 
 		// Устанавливаем имя отправителя по умолчанию
-		this.fromName = process.env.SMTP_FROM_NAME || 'NITRINOnet Monitoring System'
+		this.fromName =
+			process.env.SMTP_FROM_NAME || 'NITRINOnet Monitoring System'
 	}
 
 	// Проверка конфигурации перед отправкой
 	private validateConfig(): void {
 		if (!this.isConfigValid) {
-			if (!process.env.SMTP_HOST) throw new Error('SMTP_HOST is not defined')
-			if (!process.env.SMTP_PORT) throw new Error('SMTP_PORT is not defined')
-			if (!process.env.SMTP_USER) throw new Error('SMTP_USER is not defined')
-			if (!process.env.SMTP_PASSWORD) throw new Error('SMTP_PASSWORD is not defined')
-			if (!process.env.SMTP_FROM_EMAIL) throw new Error('SMTP_FROM_EMAIL is not defined')
+			if (!process.env.SMTP_HOST)
+				throw new Error('SMTP_HOST is not defined')
+			if (!process.env.SMTP_PORT)
+				throw new Error('SMTP_PORT is not defined')
+			if (!process.env.SMTP_USER)
+				throw new Error('SMTP_USER is not defined')
+			if (!process.env.SMTP_PASSWORD)
+				throw new Error('SMTP_PASSWORD is not defined')
+			if (!process.env.SMTP_FROM_EMAIL)
+				throw new Error('SMTP_FROM_EMAIL is not defined')
 		}
 	}
 
