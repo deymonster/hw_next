@@ -8,7 +8,7 @@ RUN apk add --no-cache libc6-compat
 # Копируем файлы зависимостей
 COPY package.json yarn.lock* .yarnrc* ./
 
-# Устанавливаем зависимости
+# Устанавливаем ВСЕ зависимости (включая dev)
 RUN yarn install --frozen-lockfile --network-timeout 600000
 
 # Этап сборки
@@ -32,6 +32,9 @@ RUN yarn format
 # Собираем приложение
 RUN yarn build
 
+# Устанавливаем только production зависимости в отдельной папке
+RUN yarn install --production --frozen-lockfile --network-timeout 600000 --modules-folder ./node_modules_prod
+
 # Этап для production
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -49,9 +52,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Устанавливаем только production зависимости
-COPY --from=builder /app/package.json /app/yarn.lock* ./
-RUN yarn install --production --frozen-lockfile --network-timeout 600000
+# Копируем production зависимости вместо их повторной установки
+COPY --from=builder /app/node_modules_prod ./node_modules
 
 # Переключаемся на пользователя nextjs
 USER nextjs
