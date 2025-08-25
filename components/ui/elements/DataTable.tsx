@@ -182,7 +182,8 @@ export function DataTable<TData, TValue>({
 										<div className='flex items-center justify-center gap-2'>
 											<Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
 											<span className='text-muted-foreground'>
-												{loadingMessage || 'Загрузка...'}
+												{loadingMessage ||
+													'Загрузка...'}
 											</span>
 										</div>
 									) : (

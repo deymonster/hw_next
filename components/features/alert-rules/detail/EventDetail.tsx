@@ -8,7 +8,8 @@ import {
 	CheckCheck,
 	Info,
 	MessageSquare,
-	Monitor, // Добавляем новую иконку
+	Monitor,
+	// Добавляем новую иконку
 	Shield,
 	Tag
 } from 'lucide-react'
