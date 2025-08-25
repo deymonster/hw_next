@@ -73,6 +73,9 @@ export function ScanTable({
 				enableRowSelection={true}
 				onRowSelectionChange={handleSelectionChange}
 				rowSelection={rowSelection}
+				isLoading={_isLoading}
+				loadingMessage="Поиск устройств в сети..."
+				emptyMessage="Устройства не найдены"
 			/>
 		</div>
 	)

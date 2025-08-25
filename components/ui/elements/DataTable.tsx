@@ -13,7 +13,7 @@ import {
 	SortingState,
 	useReactTable
 } from '@tanstack/react-table'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
@@ -47,6 +47,9 @@ interface DataTableProps<TData, TValue> {
 	onRowSelectionChange?: OnChangeFn<RowSelectionState>
 	onRowClick?: (data: TData) => void
 	rowSelection?: RowSelectionState
+	isLoading?: boolean
+	loadingMessage?: string
+	emptyMessage?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -66,7 +69,10 @@ export function DataTable<TData, TValue>({
 	enableRowSelection,
 	onRowSelectionChange,
 	onRowClick,
-	rowSelection
+	rowSelection,
+	isLoading = false,
+	loadingMessage,
+	emptyMessage
 }: DataTableProps<TData, TValue>) {
 	const [sorting, setSorting] = useState<SortingState>([])
 	const t = useTranslations('components.dataTable')
@@ -172,7 +178,16 @@ export function DataTable<TData, TValue>({
 									colSpan={columns.length}
 									className='h-24 text-center'
 								>
-									{t('notFound')}
+									{isLoading ? (
+										<div className='flex items-center justify-center gap-2'>
+											<Loader2 className='h-5 w-5 animate-spin text-muted-foreground' />
+											<span className='text-muted-foreground'>
+												{loadingMessage || 'Загрузка...'}
+											</span>
+										</div>
+									) : (
+										emptyMessage || t('notFound')
+									)}
 								</TableCell>
 							</TableRow>
 						)}

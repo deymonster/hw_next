@@ -1,8 +1,11 @@
 [
-	{
-		"targets": [],
-		"labels": {
-			"job": "windows-agents"
-		}
-	}
+  {
+    "targets": [
+      "192.168.13.107:9182",
+      "192.168.13.138:9182"
+    ],
+    "labels": {
+      "job": "windows-agents"
+    }
+  }
 ]
