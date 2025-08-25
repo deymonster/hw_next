@@ -41,6 +41,25 @@ export async function getCurrentSubnet(): Promise<string> {
 	return services.infrastructure.network_scanner.getCurrentSubnet()
 }
 
+export async function getAgentKeyByIp(
+	ipAddress: string
+): Promise<string | null> {
+	try {
+		const agent =
+			await services.infrastructure.network_scanner.checkAndGetAgent(
+				ipAddress,
+				{ timeout: 5000, agentPort: 9182 }
+			)
+		return agent?.agentKey || null
+	} catch (error) {
+		console.error(
+			`[GET_AGENT_KEY] Failed to get agent key for ${ipAddress}:`,
+			error
+		)
+		return null
+	}
+}
+
 export async function cancelScan(): Promise<void> {
 	services.infrastructure.network_scanner.cancelScan()
 }

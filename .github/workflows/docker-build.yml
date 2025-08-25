@@ -10,8 +10,49 @@ on:
     workflow_dispatch:
 
 jobs:
+    code-quality:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: '20'
+                  cache: 'yarn'
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Check code formatting
+              run: |
+                  echo "🔍 Проверяем форматирование кода..."
+                  if ! yarn prettier --check .; then
+                    echo "❌ ОШИБКА: Код не отформатирован правильно!"
+                    echo "📝 Для исправления выполните локально:"
+                    echo "   yarn format"
+                    echo "   git add ."
+                    echo "   git commit -m 'fix: format code'"
+                    echo "   git push"
+                    exit 1
+                  else
+                    echo "✅ Форматирование кода корректно"
+                  fi
+
+            - name: Type checking
+              run: |
+                  echo "🔍 Проверяем типы TypeScript..."
+                  yarn tsc --noEmit
+
+            - name: Linting
+              run: |
+                  echo "🔍 Проверяем код линтером..."
+                  yarn lint
+
     build-and-push:
         runs-on: ubuntu-latest
+        needs: code-quality
         steps:
             - name: Checkout code
               uses: actions/checkout@v3

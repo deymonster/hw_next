@@ -337,15 +337,39 @@ export class DeviceService
 	 */
 	async deleteDevice(id: string): Promise<Device> {
 		const device = await this.model.findUnique({
-			where: { id }
+			where: { id },
+			include: {
+				inventoryItems: true,
+				events: true
+			}
 		})
 
 		if (!device) {
 			throw new Error('Device not found')
 		}
 
-		return await this.model.delete({
-			where: { id }
+		// Используем существующий this.prisma из BaseRepository
+		return await this.prisma.$transaction(async tx => {
+			// 1. Удаляем связанные записи инвентаризации
+			if (device.inventoryItems.length > 0) {
+				await tx.inventoryItem.deleteMany({
+					where: { deviceId: id }
+				})
+			}
+
+			// 2. Обнуляем deviceId в событиях (сохраняем историю)
+			if (device.events.length > 0) {
+				await tx.event.updateMany({
+					where: { deviceId: id },
+					data: { deviceId: null }
+				})
+			}
+
+			// 3. Удаляем устройство
+			// Связи с Employee и Department автоматически обнулятся (ON DELETE SET NULL)
+			return await tx.device.delete({
+				where: { id }
+			})
 		})
 	}
 
@@ -475,34 +499,150 @@ export class DeviceService
 		password: string
 	): Promise<{ success: boolean; error?: string }> {
 		try {
-			// Отправляем HTTPS запрос на агент для обновления UUID
-			const response = await fetch(
-				`https://${ipAddress}:9183/api/update-uuid`,
-				{
+			console.log('[CONFIRM_HARDWARE_CHANGE] Начало запроса:', {
+				ipAddress,
+				agentKey,
+				passwordLength: password.length,
+				url: `https://${ipAddress}:9183/api/update-uuid`
+			})
+
+			// Временно отключаем проверку SSL сертификатов
+			const originalRejectUnauthorized =
+				process.env.NODE_TLS_REJECT_UNAUTHORIZED
+			process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+
+			try {
+				// Создаем базовую аутентификацию (как в Postman)
+				const authString = `${agentKey}:${password}`
+				const authHeader = `Basic ${Buffer.from(authString).toString('base64')}`
+
+				console.log(
+					'[CONFIRM_HARDWARE_CHANGE] Детали аутентификации:',
+					{
+						authString: authString,
+						authHeader: authHeader,
+						base64Decoded: Buffer.from(
+							authHeader.replace('Basic ', ''),
+							'base64'
+						).toString()
+					}
+				)
+
+				const requestOptions = {
 					method: 'POST',
 					headers: {
-						'Content-Type': 'application/json',
-						// Базовая аутентификация с логином 'agent' и паролем администратора
-						Authorization: `Basic ${Buffer.from(`agent:${password}`).toString('base64')}`
-					},
-					body: JSON.stringify({
-						uuid: agentKey
-					})
+						Authorization: authHeader
+					}
 				}
-			)
 
-			if (!response.ok) {
-				throw new Error(
-					`HTTP ${response.status}: ${response.statusText}`
+				console.log('[CONFIRM_HARDWARE_CHANGE] Параметры запроса:', {
+					url: `https://${ipAddress}:9183/api/update-uuid`,
+					method: requestOptions.method,
+					headers: requestOptions.headers,
+					hasBody: false
+				})
+
+				// Отправляем HTTPS запрос на агент для обновления UUID
+				const response = await fetch(
+					`https://${ipAddress}:9183/api/update-uuid`,
+					requestOptions
 				)
+
+				console.log('[CONFIRM_HARDWARE_CHANGE] Ответ получен:', {
+					status: response.status,
+					statusText: response.statusText,
+					ok: response.ok,
+					headers: Object.fromEntries(response.headers.entries())
+				})
+
+				// Попытаемся прочитать тело ответа для дополнительной информации
+				let responseBody = ''
+				try {
+					responseBody = await response.text()
+					console.log(
+						'[CONFIRM_HARDWARE_CHANGE] Тело ответа:',
+						responseBody
+					)
+				} catch (bodyError) {
+					console.log(
+						'[CONFIRM_HARDWARE_CHANGE] Не удалось прочитать тело ответа:',
+						bodyError
+					)
+				}
+
+				if (!response.ok) {
+					console.log('[CONFIRM_HARDWARE_CHANGE] Ошибка HTTP:', {
+						status: response.status,
+						statusText: response.statusText,
+						responseBody
+					})
+
+					// Специальная обработка ошибки неверного пароля
+					if (response.status === 401 || response.status === 403) {
+						console.log(
+							'[CONFIRM_HARDWARE_CHANGE] Ошибка аутентификации - неверный пароль'
+						)
+						return {
+							success: false,
+							error: 'Неверный пароль агента. Проверьте правильность введенного пароля.'
+						}
+					}
+
+					// Обработка других HTTP ошибок
+					if (response.status === 404) {
+						return {
+							success: false,
+							error: 'Агент мониторинга недоступен. Проверьте подключение к устройству.'
+						}
+					}
+
+					if (response.status >= 500) {
+						return {
+							success: false,
+							error: 'Внутренняя ошибка агента. Попробуйте позже или обратитесь к администратору.'
+						}
+					}
+
+					// Общая обработка других ошибок
+					return {
+						success: false,
+						error: `Ошибка связи с агентом (HTTP ${response.status}). Проверьте доступность устройства.`
+					}
+				}
+
+				console.log(
+					'[CONFIRM_HARDWARE_CHANGE] Успешное выполнение запроса'
+				)
+				return { success: true }
+			} finally {
+				// Обязательно восстанавливаем исходное значение
+				process.env.NODE_TLS_REJECT_UNAUTHORIZED =
+					originalRejectUnauthorized
+			}
+		} catch (error) {
+			console.error('[CONFIRM_HARDWARE_CHANGE_ERROR] Общая ошибка:', {
+				error,
+				message:
+					error instanceof Error ? error.message : 'Unknown error',
+				stack: error instanceof Error ? error.stack : undefined,
+				ipAddress,
+				agentKey
+			})
+
+			// Обработка сетевых ошибок
+			if (error instanceof TypeError && error.message.includes('fetch')) {
+				return {
+					success: false,
+					error: 'Не удается подключиться к агенту мониторинга. Проверьте сетевое подключение и доступность устройства.'
+				}
 			}
 
-			return { success: true }
-		} catch (error) {
-			console.error('[CONFIRM_HARDWARE_CHANGE_ERROR]', error)
 			return {
 				success: false,
-				error: error instanceof Error ? error.message : 'Unknown error'
+				error:
+					error instanceof Error
+						? error.message
+						: 'Неизвестная ошибка при подтверждении изменений'
 			}
 		}
 	}

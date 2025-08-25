@@ -34,4 +34,13 @@ export interface IEventRepository {
 	delete(id: string): Promise<Event>
 	deleteMany(userId: string): Promise<Prisma.BatchPayload>
 	confirmHardwareChangeEvents(deviceId: string): Promise<{ count: number }>
+	findUnconfirmedHardwareChangeEvents(deviceId: string): Promise<Event[]>
+}
+
+export interface EventWithDevice extends Event {
+	device?: {
+		id: string
+		name: string
+		ipAddress: string
+	} | null
 }

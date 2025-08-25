@@ -182,6 +182,24 @@ export class AlertProcessorService {
 			alert.labels.severity
 		)
 
+		// Извлекаем IP-адрес из поля instance
+		let deviceId: string | null = null
+		if (alert.labels.instance) {
+			// Удаляем порт из IP-адреса если он есть (например, "192.168.1.100:9100" -> "192.168.1.100")
+			const ipAddress = alert.labels.instance.split(':')[0]
+
+			try {
+				// Ищем устройство по IP-адресу
+				const device =
+					await services.data.device.findByIpAddress(ipAddress)
+				if (device) {
+					deviceId = device.id
+				}
+			} catch (error) {
+				console.warn(`Failed to find device by IP ${ipAddress}:`, error)
+			}
+		}
+
 		// Получаем исходное сообщение
 		let message =
 			alert.annotations?.description ||
@@ -200,8 +218,8 @@ export class AlertProcessorService {
 			title: `${alert.labels?.alertname || 'Unknown Alert'} - ${alert.status?.toUpperCase() || 'UNKNOWN'}`,
 			message: message,
 			isRead: false,
-			deviceId: null, 
-			hardwareChangeConfirmed: false 
+			deviceId: deviceId, // Теперь используем найденный deviceId вместо null
+			hardwareChangeConfirmed: false
 		})
 	}
 

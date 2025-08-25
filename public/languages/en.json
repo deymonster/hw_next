@@ -397,6 +397,26 @@
 				"deleteError": "Error deleting device",
 				"deleteConfirmTitle": "Deliting device",
 				"deleteConfirmMessage": "Are you sure that you want to delete device \"{name}\"? This action cannot be undone"
+			},
+			"hardwareChange": {
+				"modal": {
+					"title": "Hardware Change Confirmation",
+					"description": "Hardware configuration changes detected. Enter administrator password to confirm.",
+					"deviceLabel": "Device:",
+					"ipAddressLabel": "IP Address:",
+					"changesDetected": "Changes detected:",
+					"changesDescription": "Hardware configuration has been changed since the last monitoring system startup.",
+					"passwordLabel": "Administrator Password",
+					"passwordPlaceholder": "Enter password",
+					"passwordRequired": "Password is required",
+					"cancelButton": "Cancel",
+					"confirmButton": "Confirm",
+					"confirmingButton": "Confirming...",
+					"successMessage": "Hardware changes confirmed",
+					"errorMessage": "Confirmation error",
+					"generalError": "An error occurred during confirmation",
+					"unexpectedError": "An unexpected error occurred during confirmation"
+				}
 			}
 		},
 		"departments": {
@@ -856,7 +876,8 @@
 				"createdAt": "Creation Date",
 				"detail": {
 					"info": "Event Details",
-					"id": "Id"
+					"id": "Id",
+					"device": "Device"
 				},
 				"message": "Message",
 				"severity": "Priority",

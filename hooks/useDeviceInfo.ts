@@ -2,6 +2,7 @@ import { DeviceType } from '@prisma/client'
 import { useState } from 'react'
 
 import { createDevice } from '@/app/actions/device'
+import { getAgentKeyByIp } from '@/app/actions/network-scanner'
 import {
 	addDeviceTarget,
 	getAgentStatuses,
@@ -119,24 +120,20 @@ export const useDeviceInfo = () => {
 						console.log(
 							`[DEVICE_INFO_HOOK] Getting agent key for ${ipAddress}...`
 						)
-						const agent = await fetch(
-							`/dashboard/devices/scan?ip=${ipAddress}`,
-							{
-								method: 'POST'
-							}
-						)
-							.then(res => res.json())
-							.catch(() => null)
+						const agentKey = await getAgentKeyByIp(ipAddress)
 						console.log(
 							`[DEVICE_INFO_HOOK] Agent key result for ${ipAddress}:`,
-							agent
+							agentKey
 						)
 
-						const agentKey =
-							agent?.agentKey ||
-							`temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+						// Если не удалось получить agentKey, пропускаем это устройство
+						if (!agentKey) {
+							errors[ipAddress] =
+								'Failed to get agent key from device'
+							continue
+						}
 
-						// Создаем устройство с временными данными
+						// Создаем устройство с полученным agentKey
 						console.log(
 							`[DEVICE_INFO_HOOK] Creating device in database for ${ipAddress}...`
 						)

@@ -60,7 +60,16 @@ export class EventService
 				userId,
 				isRead: false
 			},
-			orderBy: { createdAt: 'desc' }
+			orderBy: { createdAt: 'desc' },
+			include: {
+				device: {
+					select: {
+						id: true,
+						name: true,
+						ipAddress: true
+					}
+				}
+			}
 		})
 	}
 
@@ -107,7 +116,16 @@ export class EventService
 			where: { userId },
 			orderBy: { [orderBy]: orderDir },
 			take,
-			skip
+			skip,
+			include: {
+				device: {
+					select: {
+						id: true,
+						name: true,
+						ipAddress: true
+					}
+				}
+			}
 		})
 	}
 
@@ -361,6 +379,72 @@ export class EventService
 		} catch (error) {
 			console.error(`[CONFIRM_HARDWARE_CHANGE_EVENTS_ERROR]`, error)
 			throw new Error('Failed to confirm hardware change events')
+		}
+	}
+
+	/**
+	 * Получает все неподтвержденные события об изменении оборудования для указанного устройства.
+	 * Возвращает события типа "Hardware_Change_Detected" с флагом hardwareChangeConfirmed = false.
+	 *
+	 * @param {string} deviceId - Уникальный идентификатор устройства
+	 * @returns {Promise<Event[]>} Массив неподтвержденных событий об изменении оборудования
+	 * @throws {Error} Если произошла ошибка при получении событий
+	 *
+	 * @example
+	 * ```typescript
+	 * try {
+	 *   const events = await eventService.findUnconfirmedHardwareChangeEvents('device-123');
+	 *   console.log(`Найдено ${events.length} неподтвержденных событий об изменении оборудования`);
+	 * } catch (error) {
+	 *   console.error('Ошибка при получении событий:', error.message);
+	 * }
+	 * ```
+	 */
+	async findUnconfirmedHardwareChangeEvents(
+		deviceId: string
+	): Promise<Event[]> {
+		try {
+			// Добавляем логирование для диагностики
+			console.log(
+				`[FIND_UNCONFIRMED_HARDWARE_EVENTS] Searching for deviceId: ${deviceId}`
+			)
+
+			// Сначала найдем все события для этого устройства
+			const allEvents = await this.model.findMany({
+				where: { deviceId: deviceId },
+				orderBy: { createdAt: 'desc' }
+			})
+
+			console.log(
+				`[FIND_UNCONFIRMED_HARDWARE_EVENTS] Found ${allEvents.length} total events for device`
+			)
+			allEvents.forEach(event => {
+				console.log(
+					`Event: ${event.id}, title: "${event.title}", hardwareChangeConfirmed: ${event.hardwareChangeConfirmed}`
+				)
+			})
+
+			// Теперь найдем события с Hardware_Change_Detected
+			const hardwareEvents = await this.model.findMany({
+				where: {
+					deviceId: deviceId,
+					title: { contains: 'Hardware_Change_Detected' },
+					hardwareChangeConfirmed: false
+				},
+				orderBy: { createdAt: 'desc' }
+			})
+
+			console.log(
+				`[FIND_UNCONFIRMED_HARDWARE_EVENTS] Found ${hardwareEvents.length} unconfirmed hardware change events`
+			)
+
+			return hardwareEvents
+		} catch (error) {
+			console.error(
+				`[FIND_UNCONFIRMED_HARDWARE_CHANGE_EVENTS_ERROR]`,
+				error
+			)
+			throw new Error('Failed to find unconfirmed hardware change events')
 		}
 	}
 }

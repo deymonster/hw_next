@@ -4,9 +4,9 @@ const testAlertManagerPayload = {
 		{
 			status: 'firing',
 			labels: {
-				alertname: 'Замена оборудования',
+				alertname: 'Hardware_Change_Detected',
 				severity: 'critical',
-				instance: '192.168.1.107:9182',
+				instance: '192.168.13.107:9182',
 				job: 'windows-exporter'
 			},
 			annotations: {
@@ -23,7 +23,7 @@ const testAlertManagerPayload = {
 // Функция для тестирования
 export async function testAlertEndpoint() {
 	try {
-		const response = await fetch('http://localhost:3000/api/alerts', {
+		const response = await fetch('http://127.0.0.1:3000/api/alerts', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'

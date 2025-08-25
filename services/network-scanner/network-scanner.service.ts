@@ -124,7 +124,7 @@ export class NetworkScannerService {
 		return agent !== null
 	}
 
-	private async checkAndGetAgent(
+	async checkAndGetAgent(
 		ip: string,
 		options: NetworkScannerOptions
 	): Promise<NetworkDiscoveredAgent | null> {

@@ -98,3 +98,25 @@ export async function findAllEvents(
 		return { error: 'Failed to get events' }
 	}
 }
+
+export async function getUnconfirmedHardwareChangeEvents(
+	deviceId: string
+): Promise<{
+	events?: Event[]
+	error?: string
+}> {
+	if (!deviceId) {
+		return { error: 'Device ID is required' }
+	}
+
+	try {
+		const events =
+			await services.data.event.findUnconfirmedHardwareChangeEvents(
+				deviceId
+			)
+		return { events }
+	} catch (error) {
+		console.error(`[GET_UNCONFIRMED_HARDWARE_CHANGE_EVENTS_ERROR]`, error)
+		return { error: 'Failed to get unconfirmed hardware change events' }
+	}
+}

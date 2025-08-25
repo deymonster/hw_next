@@ -8,6 +8,7 @@ import {
 	CheckCheck,
 	Info,
 	MessageSquare,
+	Monitor, // Добавляем новую иконку
 	Shield,
 	Tag
 } from 'lucide-react'
@@ -22,7 +23,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useEvents } from '@/hooks/useEvents'
 
 interface EventDetailProps {
-	event: Event
+	event: Event & {
+		device?: {
+			id: string
+			name: string
+			ipAddress: string
+		} | null
+	}
 	onBack: () => void
 }
 
@@ -164,6 +171,26 @@ export function EventDetail({ event, onBack }: EventDetailProps) {
 											: t('status.unread')}
 									</p>
 								</div>
+
+								{/* Новая секция для информации об устройстве */}
+								{event.device && (
+									<div className='rounded-lg bg-secondary/20 p-4'>
+										<div className='mb-2 flex items-center space-x-2'>
+											<Monitor className='h-4 w-4 text-muted-foreground' />
+											<h3 className='font-medium'>
+												{t('detail.device')}
+											</h3>
+										</div>
+										<div className='pl-6 text-sm text-muted-foreground'>
+											<p className='font-medium'>
+												{event.device.name}
+											</p>
+											<p className='text-xs'>
+												IP: {event.device.ipAddress}
+											</p>
+										</div>
+									</div>
+								)}
 
 								<div className='rounded-lg bg-secondary/20 p-4'>
 									<div className='mb-2 flex items-center space-x-2'>
