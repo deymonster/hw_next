@@ -10,8 +10,6 @@ export async function POST(request: Request) {
 		const redis = getRedisService()
 		const session = await redis.getSession(sessionId)
 
-		console.log('[Session Check] Redis response:', session)
-
 		if (!session || !session.isActive) {
 			console.log('[Session Check] Session invalid:', {
 				exists: !!session,

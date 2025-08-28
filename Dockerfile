@@ -19,6 +19,10 @@ WORKDIR /app
 ARG ENCRYPTION_KEY
 ENV ENCRYPTION_KEY=${ENCRYPTION_KEY}
 
+# Добавляем build-arg для обфускации
+ARG ENABLE_OBFUSCATION=false
+ENV ENABLE_OBFUSCATION=${ENABLE_OBFUSCATION}
+
 # Копируем зависимости из предыдущего этапа
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

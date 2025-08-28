@@ -20,7 +20,6 @@ import { UserAvatar } from '@/components/ui/elements/UserAvatar'
 import { Form, FormField } from '@/components/ui/form'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUser } from '@/hooks/useUser'
-import { getMediaSource } from '@/utils/get-media-source'
 
 export function ChangeAvatarForm() {
 	const t = useTranslations('dashboard.settings.profile.avatar')
@@ -82,7 +81,7 @@ export function ChangeAvatarForm() {
 								<UserAvatar
 									profile={{
 										name: user?.name || '',
-										image: getMediaSource(user?.image || '')
+										image: user?.image || null
 									}}
 									size='xl'
 									isLive={true}

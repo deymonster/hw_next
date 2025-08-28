@@ -12,11 +12,8 @@ export function getMediaSource(path: string | null): string | undefined {
 		return path
 	}
 
-	// Используем относительный путь вместо абсолютного URL
-	const baseUrl = '/uploads'
+	// Используем относительный путь, который будет проксироваться через rewrites
+	const normalizedPath = path.startsWith('/') ? path.slice(1) : path
 
-	// Убираем лишний слеш если он есть в начале пути
-	const normalizedPath = path.startsWith('/') ? path : `/${path}`
-
-	return `${baseUrl}${normalizedPath}`
+	return `/uploads/${normalizedPath}`
 }

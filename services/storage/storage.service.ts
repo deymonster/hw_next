@@ -92,8 +92,8 @@ export class StorageService {
 				fileType
 			})
 
-			// Return full URL
-			return `/uploads/${fileName}`
+			// Return only filename, getMediaSource will add /uploads/ prefix
+			return fileName
 		} catch (error) {
 			await this.log('error', '[FILE_UPLOAD_ERROR]', {
 				originalName,
@@ -122,7 +122,8 @@ export class StorageService {
 	async listFiles(): Promise<string[]> {
 		try {
 			const files = await fs.readdir(this.uploadDir)
-			const fileUrls = files.map(file => `/uploads/${file}`)
+			// Return only filenames, getMediaSource will add /uploads/ prefix
+			const fileUrls = files.map(file => file)
 			await this.log('info', '[FILES_LISTED]', { count: files.length })
 			return fileUrls
 		} catch (error) {

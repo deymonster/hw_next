@@ -89,6 +89,7 @@ jobs:
                   labels: ${{ steps.meta.outputs.labels }}
                   build-args: |
                       ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+                      ENABLE_OBFUSCATION=true
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 

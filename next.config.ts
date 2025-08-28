@@ -1,5 +1,7 @@
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
+// Убираем импорт WebpackObfuscator
+// import WebpackObfuscator from 'webpack-obfuscator'
 
 const withNextIntl = createNextIntlPlugin('./libs/i18n/request.ts')
 
@@ -8,22 +10,30 @@ const serverIp = process.env.NEXT_PUBLIC_SERVER_IP || '192.168.1.227'
 
 const nextConfig: NextConfig = {
 	reactStrictMode: true,
-	output: 'standalone', // Добавлено для оптимизации Docker-образа
-	poweredByHeader: false, // Отключение заголовка X-Powered-By для безопасности
+	output: 'standalone',
+	poweredByHeader: false,
 	images: {
 		remotePatterns: [
 			{
 				protocol: 'http',
 				hostname: 'localhost',
-				port: '8081',
+				port: '3000',
 				pathname: '/uploads/**'
 			},
-			// Используем переменную окружения для IP-адреса
 			{
 				protocol: 'http',
 				hostname: serverIp,
-				port: '8081',
+				port: '3000',
 				pathname: '/uploads/**'
+			}
+		]
+	},
+	// Добавляем rewrites для проксирования запросов к uploads
+	async rewrites() {
+		return [
+			{
+				source: '/uploads/:path*',
+				destination: 'http://localhost:8081/uploads/:path*'
 			}
 		]
 	},
@@ -37,7 +47,7 @@ const nextConfig: NextConfig = {
 					{
 						key: 'Access-Control-Allow-Origin',
 						value: `http://${serverIp}`
-					}, // Используем IP-адрес сервера
+					},
 					{
 						key: 'Access-Control-Allow-Methods',
 						value: 'GET,DELETE,PATCH,POST,PUT,OPTIONS'
@@ -59,7 +69,7 @@ const nextConfig: NextConfig = {
 	turbopack: {
 		// Здесь можно добавить специфические настройки Turbopack при необходимости
 	},
-	webpack: (config, { isServer }) => {
+	webpack: (config, { isServer, dev }) => {
 		if (!isServer) {
 			config.resolve.fallback = {
 				...config.resolve.fallback,
@@ -68,6 +78,8 @@ const nextConfig: NextConfig = {
 				dns: false
 			}
 		}
+
+		// Обфускация полностью удалена для совместимости с Server Actions
 
 		return config
 	}
