@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import createNextIntlPlugin from 'next-intl/plugin'
+
 // Убираем импорт WebpackObfuscator
 // import WebpackObfuscator from 'webpack-obfuscator'
 
