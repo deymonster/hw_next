@@ -176,13 +176,13 @@ export async function deleteDeviceById(id: string) {
 
 		// Remove from Prometheus targets first
 		try {
-			await services.infrastructure.prometheus.removeTarget(
-				device.ipAddress
+			await services.infrastructure.prometheus.removeDeviceFromMonitoring(
+				device.id
 			)
 			await logAction(
 				LoggerService.DEVICE_SERVICE,
 				'info',
-				`[DELETE_DEVICE] Removed from Prometheus targets: ${device.ipAddress}`
+				`[DELETE_DEVICE] Removed from Prometheus monitoring: ${device.ipAddress}`
 			)
 		} catch (promError) {
 			await logAction(
