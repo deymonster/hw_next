@@ -28,22 +28,6 @@ export async function getDeviceInfo(ipAddress: string) {
 	}
 }
 
-export async function addDeviceTarget(ipAddress: string | string[]) {
-	try {
-		console.log('PROMETHEUS ACTION - ipAddress', ipAddress)
-		await prometheus.addTarget(ipAddress)
-		return {
-			success: true
-		}
-	} catch (error) {
-		console.error('Failed to add target:', error)
-		return {
-			success: false,
-			error: 'Failed to add target'
-		}
-	}
-}
-
 export async function getAgentStatuses(ipAddresses: string[]): Promise<{
 	success: boolean
 	data?: { [ip: string]: AgentStatus }

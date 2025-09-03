@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events'
-import path from 'path'
 
 import { LoggerService, LogLevel } from '../logger/logger.interface'
 import { Logger } from '../logger/logger.service'
@@ -9,13 +8,10 @@ import {
 	MetricTimeSeries,
 	PrometheusApiResponse,
 	PrometheusServiceConfig,
-	PrometheusTarget,
 	TimeRange,
 	TimeRangeParams
 } from './prometheus.interfaces'
 import { PrometheusParser } from './prometheus.parser'
-
-import fs from 'fs/promises'
 
 // import { STATIC, DYNAMIC, PROCESS } from '@/mocks/prometheus.mock';
 
@@ -355,7 +351,7 @@ export class PrometheusService {
 	/**
 	 * Перезагружает конфигурацию Prometheus
 	 */
-	private async reloadPrometheusConfig(): Promise<void> {
+	public async reloadPrometheusConfig(): Promise<void> {
 		try {
 			this.log('info', `Reloading Prometheus configuration...`)
 			const response = await fetch(
@@ -377,18 +373,6 @@ export class PrometheusService {
 		} catch (error) {
 			throw new Error(`Failed to reload prometheus config: ${error}`)
 		}
-	}
-
-	/**
-	 * Ожидает указанное время после перезагрузки конфигурации
-	 * @param ms Время ожидания в миллисекундах
-	 */
-	private async waitAfterReload(ms: number = 1000): Promise<void> {
-		this.log(
-			'info',
-			`Waiting ${ms}ms for Prometheus to apply configuration...`
-		)
-		return new Promise(resolve => setTimeout(resolve, ms))
 	}
 
 	/**
@@ -568,171 +552,6 @@ export class PrometheusService {
 			`Failed to get metrics after ${maxAttempts} attempts for ${ipAddress}`
 		)
 		return false
-	}
-
-	/**
-	 * Добавляет цель мониторинга
-	 * @param ipAddress IP-адрес устройства или массив адресов
-	 * @param waitForMetrics Ожидать ли доступности метрик
-	 * @returns Результат добавления цели
-	 * @throws Error если targetsPath не указан в конфигурации
-	 */
-	async addTarget(
-		ipAddress: string | string[],
-		waitForMetrics = true
-	): Promise<boolean | { [ip: string]: boolean }> {
-		if (!this.config.targetsPath) {
-			throw new Error(
-				'targetsPath не указан в конфигурации. Управление целями недоступно.'
-			)
-		}
-
-		// Если передан массив IP-адресов
-		if (Array.isArray(ipAddress)) {
-			this.log(
-				'info',
-				`Adding multiple targets: ${ipAddress.join(', ')}...`
-			)
-			const results: { [ip: string]: boolean } = {}
-
-			try {
-				const targetsPath = path.resolve(this.config.targetsPath)
-				let targets: PrometheusTarget[] = []
-
-				try {
-					const content = await fs.readFile(targetsPath, 'utf-8')
-					targets = JSON.parse(content)
-				} catch (error) {
-					this.log('warn', `Failed to read targets file:`, error)
-					targets = []
-				}
-
-				// Создаем структуру, если она пуста
-				if (targets.length === 0) {
-					targets.push({
-						targets: [],
-						labels: { job: 'windows-agents' }
-					})
-				}
-
-				// Добавляем все новые цели
-				let addedCount = 0
-				for (const ip of ipAddress) {
-					if (!targets[0].targets.includes(`${ip}:9182`)) {
-						targets[0].targets.push(`${ip}:9182`)
-						addedCount++
-					}
-				}
-
-				if (addedCount > 0) {
-					await fs.writeFile(
-						targetsPath,
-						JSON.stringify(targets, null, 2)
-					)
-					await this.reloadPrometheusConfig()
-
-					// Ждем после перезагрузки конфигурации
-					await this.waitAfterReload(1500)
-				} else {
-					this.log('info', `No new targets to add, all already exist`)
-				}
-
-				// Проверяем доступность метрик для каждого IP
-				if (waitForMetrics) {
-					for (const ip of ipAddress) {
-						results[ip] = await this.waitForMetricsAvailability(ip)
-					}
-				} else {
-					for (const ip of ipAddress) {
-						results[ip] = true
-					}
-				}
-
-				return results
-			} catch (error) {
-				this.log('error', `Failed to add multiple targets:`, error)
-				// Заполняем результаты ошибками для всех IP
-				for (const ip of ipAddress) {
-					results[ip] = false
-				}
-				return results
-			}
-		}
-
-		// Оригинальная логика для одного IP-адреса
-		try {
-			const targetsPath = path.resolve(this.config.targetsPath)
-			let targets: PrometheusTarget[] = []
-
-			try {
-				const content = await fs.readFile(targetsPath, 'utf-8')
-				targets = JSON.parse(content)
-			} catch (error) {
-				this.log('warn', `Failed to read targets file:`, error)
-				targets = []
-			}
-
-			// add new target
-			if (targets.length === 0) {
-				targets.push({
-					targets: [`${ipAddress}:9182`],
-					labels: { job: 'windows-agents' }
-				})
-			} else {
-				// Add to existing targets array
-				if (!targets[0].targets.includes(`${ipAddress}:9182`)) {
-					targets[0].targets.push(`${ipAddress}:9182`)
-				}
-			}
-
-			await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2))
-			await this.reloadPrometheusConfig()
-
-			await this.waitAfterReload(1500)
-
-			if (waitForMetrics) {
-				return await this.waitForMetricsAvailability(ipAddress)
-			}
-			return true
-		} catch (error) {
-			this.log('error', `Failed to add target:`, error)
-			throw new Error(`Failed to add target: ${error}`)
-		}
-	}
-
-	/**
-	 * Удаляет цель мониторинга
-	 * @param ipAddress IP-адрес устройства
-	 * @throws Error если targetsPath не указан в конфигурации
-	 */
-	async removeTarget(ipAddress: string): Promise<void> {
-		if (!this.config.targetsPath) {
-			throw new Error(
-				'targetsPath не указан в конфигурации. Управление целями недоступно.'
-			)
-		}
-
-		try {
-			const targetsPath = path.resolve(this.config.targetsPath)
-			let targets: PrometheusTarget[] = []
-			try {
-				const content = await fs.readFile(targetsPath, 'utf-8')
-				targets = JSON.parse(content)
-			} catch (error) {
-				console.warn(`Failed to read targets file: ${error}`)
-				targets = []
-			}
-
-			if (targets.length > 0) {
-				targets[0].targets = targets[0].targets.filter(
-					target => target !== `${ipAddress}:9182`
-				)
-			}
-			await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2))
-			await this.reloadPrometheusConfig()
-		} catch (error) {
-			throw new Error(`Failed to remove target: ${error}`)
-		}
 	}
 
 	/**
@@ -999,7 +818,7 @@ export class PrometheusService {
 	async getHardwareInfo(ipAddress: string) {
 		try {
 			const parser = await this.getParser(ipAddress)
-			const info = await parser.getSystemInfo()
+			const info = await parser.getHardwareInfo()
 
 			return info
 		} catch (error) {

@@ -1,10 +1,3 @@
-// export const CONFIG = {
-//     METRICS_PORT: Number(process.env.METRICS_PORT) || 9182,
-//     HANDSHAKE_KEY: process.env.AGENT_HANDSHAKE_KEY || 'VERY_SECRET_KEY',
-//     PROMETHEUS_TARGETS_PATH:
-//       '/Users/deymonster/My projects/HW monitor NextJS/hw-monitor/prometheus/targets/windows_targets.json',
-//     PROMETHEUS_RELOAD_URL: 'http://localhost:9090/-/reload',
-//   };
 import { Device, DeviceStatus, DeviceType } from '@prisma/client'
 
 export interface DeviceFilterOptions {
@@ -41,6 +34,13 @@ export interface IDeviceFindManyArgs {
 	skip?: number
 }
 
+/** Данные для записи активации устройства */
+export interface DeviceActivationUpdateInput {
+	activationSig: string
+	activationKeyVer: number
+	activatedAt: Date | string
+}
+
 export interface IDeviceRepository {
 	// Базовые операции наследуются из IBaseRepository
 
@@ -51,6 +51,14 @@ export interface IDeviceRepository {
 	findActiveDevices(): Promise<Device[]>
 	updateStatus(id: string, status: DeviceStatus): Promise<Device>
 	updateLastSeen(id: string): Promise<Device>
+	updateActivation(
+		id: string,
+		data: DeviceActivationUpdateInput
+	): Promise<Device>
+	updateActivation(
+		id: string,
+		data: DeviceActivationUpdateInput
+	): Promise<Device>
 	updateDepartmentDevices(
 		departmentId: string,
 		deviceIds: string[]

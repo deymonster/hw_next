@@ -2,6 +2,7 @@ import { Device, DeviceStatus, DeviceType, PrismaClient } from '@prisma/client'
 
 import { BaseRepository } from '../base.service'
 import {
+	DeviceActivationUpdateInput,
 	DeviceFilterOptions,
 	IDeviceCreateInput,
 	IDeviceFindManyArgs,
@@ -645,5 +646,85 @@ export class DeviceService
 						: 'Неизвестная ошибка при подтверждении изменений'
 			}
 		}
+	}
+
+	/**
+	 * Обновляет данные активации устройства
+	 *
+	 * Записывает информацию об активации устройства, включая подпись активации,
+	 * версию ключа активации и время активации. Используется для подтверждения
+	 * того, что устройство было успешно активировано в системе мониторинга.
+	 *
+	 * @param id - Уникальный идентификатор устройства
+	 * @param data - Данные активации устройства
+	 * @param data.activationSig - Подпись активации (строка или null)
+	 * @param data.activationKeyVer - Версия ключа активации (число или null)
+	 * @param data.activatedAt - Время активации (Date, строка или null)
+	 * @returns Promise<Device> - Обновленное устройство с данными активации
+	 *
+	 * @throws {Error} Если устройство с указанным ID не найдено
+	 *
+	 * @example
+	 * ```typescript
+	 * // Активация устройства с подписью и версией ключа
+	 * const activatedDevice = await deviceService.updateActivation('device-123', {
+	 *   activationSig: 'signature-hash-abc123',
+	 *   activationKeyVer: 1,
+	 *   activatedAt: new Date()
+	 * })
+	 *
+	 * console.log(`Устройство ${activatedDevice.name} активировано`)
+	 * ```
+	 */
+	async updateActivation(
+		id: string,
+		data: DeviceActivationUpdateInput
+	): Promise<Device> {
+		const { activationSig, activationKeyVer, activatedAt } = data
+		return await this.model.update({
+			where: { id },
+			data: {
+				activationSig,
+				activationKeyVer,
+				activatedAt:
+					activatedAt instanceof Date
+						? activatedAt
+						: new Date(activatedAt)
+			}
+		})
+	}
+
+	/**
+	 * Сбрасывает данные активации устройства
+	 *
+	 * Очищает все поля, связанные с активацией устройства, устанавливая их в null.
+	 * Используется при деактивации устройства или при необходимости повторной активации.
+	 * После выполнения этого метода устройство считается неактивированным.
+	 *
+	 * @param id - Уникальный идентификатор устройства
+	 * @returns Promise<Device> - Обновленное устройство с очищенными данными активации
+	 *
+	 * @throws {Error} Если устройство с указанным ID не найдено
+	 *
+	 * @example
+	 * ```typescript
+	 * // Сброс активации устройства
+	 * const deactivatedDevice = await deviceService.clearActivation('device-123')
+	 *
+	 * console.log(`Активация устройства ${deactivatedDevice.name} сброшена`)
+	 * console.log('Подпись активации:', deactivatedDevice.activationSig) // null
+	 * console.log('Версия ключа:', deactivatedDevice.activationKeyVer) // null
+	 * console.log('Время активации:', deactivatedDevice.activatedAt) // null
+	 * ```
+	 */
+	async clearActivation(id: string): Promise<Device> {
+		return await this.model.update({
+			where: { id },
+			data: {
+				activationSig: null,
+				activationKeyVer: null,
+				activatedAt: null
+			}
+		})
 	}
 }

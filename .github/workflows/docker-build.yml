@@ -2,11 +2,10 @@ name: Build and Push Docker Images
 
 on:
     push:
-        branches: [main, master]
+        branches: [main, master, feature/licensing-system]
         tags: ['v*']
     pull_request:
-        branches: [main, master]
-    # Ручной запуск
+        branches: [main, master, feature/licensing-system]
     workflow_dispatch:
 
 jobs:
@@ -66,18 +65,22 @@ jobs:
                   username: ${{ secrets.DOCKERHUB_USERNAME }}
                   password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            - name: Extract metadata for Docker
-              id: meta
-              uses: docker/metadata-action@v4
-              with:
-                  images: ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor
-                  tags: |
-                      type=ref,event=branch
-                      type=ref,event=pr
-                      type=semver,pattern={{version}}
-                      type=semver,pattern={{major}}.{{minor}}
-                      type=sha
-                      type=raw,value=latest,enable={{is_default_branch}}
+            - name: Determine Docker tags
+              id: tags
+              run: |
+                  if [[ "${{ github.ref }}" == "refs/heads/feature/licensing-system" ]]; then
+                    echo "MAIN_TAG=licensing-dev" >> $GITHUB_OUTPUT
+                    echo "NGINX_TAG=licensing-dev" >> $GITHUB_OUTPUT
+                    echo "VERSION_TAG=licensing-v$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+                  elif [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+                    echo "MAIN_TAG=latest" >> $GITHUB_OUTPUT
+                    echo "NGINX_TAG=latest" >> $GITHUB_OUTPUT
+                    echo "VERSION_TAG=v$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+                  else
+                    echo "MAIN_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+                    echo "NGINX_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+                    echo "VERSION_TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+                  fi
 
             - name: Build and push NextJS app
               uses: docker/build-push-action@v4
@@ -85,8 +88,9 @@ jobs:
                   context: .
                   file: ./Dockerfile
                   push: ${{ github.event_name != 'pull_request' }}
-                  tags: ${{ steps.meta.outputs.tags }}
-                  labels: ${{ steps.meta.outputs.labels }}
+                  tags: |
+                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor:${{ steps.tags.outputs.MAIN_TAG }}
+                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor:${{ steps.tags.outputs.VERSION_TAG }}
                   build-args: |
                       ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
                       ENABLE_OBFUSCATION=true
@@ -99,6 +103,8 @@ jobs:
                   context: .
                   file: ./Dockerfile.nginx-combined
                   push: ${{ github.event_name != 'pull_request' }}
-                  tags: ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:${{ github.sha }},${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:latest
+                  tags: |
+                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:${{ steps.tags.outputs.NGINX_TAG }}
+                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:${{ steps.tags.outputs.VERSION_TAG }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max

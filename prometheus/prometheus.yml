@@ -19,9 +19,9 @@ scrape_configs:
       metrics_path: '/metrics'
       scheme: 'http'
 
-      file_sd_configs:
-          - files:
-                - /etc/prometheus/targets/windows_targets.json
+      http_sd_configs:
+          - url: 'http://licd:8081/sd/targets'
+            refresh_interval: 30s
 
       # Переписываем адреса агентов для перенаправления на Nginx
       relabel_configs:
