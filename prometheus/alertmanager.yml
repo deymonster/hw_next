@@ -1,20 +1,19 @@
 global:
-  resolve_timeout: 5m
-  
+    resolve_timeout: 5m
 
 route:
-  group_by: ['alertname', 'hostname']
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 3h
-  receiver: 'api-webhook'
+    group_by: ['alertname', 'hostname']
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 3h
+    receiver: 'api-webhook'
 
 receivers:
-- name: 'api-webhook'
-  webhook_configs:
-    - url: 'http://localhost:3000/api/alerts'
-      send_resolved: true
-      http_config:
-        basic_auth:
-          username: ''
-          password: ''
+    - name: 'api-webhook'
+      webhook_configs:
+          - url: 'http://localhost:3000/api/alerts'
+            send_resolved: true
+            http_config:
+                basic_auth:
+                    username: ''
+                    password: ''
