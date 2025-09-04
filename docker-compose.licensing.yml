@@ -36,7 +36,7 @@ services:
             - postgres
             - redis
             - db-migrate
-            - licd
+            # - licd  # убрать эту строку
         env_file:
             - .env.prod
         networks:
@@ -46,21 +46,22 @@ services:
             - ./storage/logs:/app/storage/logs
             - ./storage/uploads:/app/storage/uploads
 
-    licd:
-        build:
-            context: ./licd
-            dockerfile: Dockerfile
-        container_name: licd
-        ports:
-            - '8082:8081'
-        expose:
-            - '8081'
-        networks:
-            - hw-network
-        restart: unless-stopped
-        environment:
-            - MAX_AGENTS=50
-            - JOB_NAME=windows-agents
+    #licd:
+        # licd:
+        #     build:
+        #         context: ./licd
+        #         dockerfile: Dockerfile
+        #     container_name: licd
+        #     ports:
+        #         - '8082:8081'
+        #     expose:
+        #         - '8081'
+        #     networks:
+        #         - hw-network
+        #     restart: unless-stopped
+        #     environment:
+        #         - MAX_AGENTS=50
+        #         - JOB_NAME=windows-agents
 
     prometheus:
         image: prom/prometheus:v2.36.0

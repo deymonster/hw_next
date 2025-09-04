@@ -20,7 +20,7 @@ scrape_configs:
       scheme: 'http'
 
       http_sd_configs:
-          - url: 'http://licd:8081/sd/targets'
+          - url: 'http://host.docker.internal:8081/sd/targets'
             refresh_interval: 30s
 
       # Переписываем адреса агентов для перенаправления на Nginx
