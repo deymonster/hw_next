@@ -49,6 +49,7 @@ services:
     prometheus-config-init:
         image: deymonster/hw-monitor:latest
         container_name: prometheus_config_init
+        user: root
         command: >
             sh -c "cp -r /app/prometheus/* /shared-config/ && 
                    chown -R 65534:65534 /shared-config"
