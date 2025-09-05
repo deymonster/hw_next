@@ -102,7 +102,7 @@ services:
             - '0.0.0.0:80:80' # Основной порт для monitoring.local
             - '0.0.0.0:8080:8080' # Для обратной совместимости с Prometheus
         volumes:
-            - ./nginx_combined/conf.d:/etc/nginx/conf.d
+            # Убираем эту строку: - ./nginx_combined/conf.d:/etc/nginx/conf.d
             - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
             - ./storage/uploads:/usr/share/nginx/html/uploads
         networks:
