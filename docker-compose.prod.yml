@@ -51,8 +51,11 @@ services:
         container_name: prometheus_config_init
         user: root
         command: >
-            sh -c "cp -r /app/prometheus/* /shared-config/ && 
-                   chown -R 65534:65534 /shared-config"
+            sh -c "mkdir -p /shared-config && 
+                   chmod 777 /shared-config &&
+                   cp -r /app/prometheus/* /shared-config/ && 
+                   chown -R 65534:65534 /shared-config &&
+                   chmod -R 755 /shared-config"
         volumes:
             - nextjs_prometheus_config:/shared-config
         restart: 'no'
