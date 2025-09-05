@@ -30,7 +30,7 @@ services:
     nextjs:
         image: deymonster/hw-monitor:latest
         container_name: nextjs_app
-        user: "1001:65533"
+        user: '1001:65533'
         ports:
             - '0.0.0.0:3000:3000'
         depends_on:
