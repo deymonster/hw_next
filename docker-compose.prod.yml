@@ -44,6 +44,7 @@ services:
         volumes:
             - ./storage/logs:/app/storage/logs
             - ./storage/uploads:/app/storage/uploads
+            - nextjs_prometheus_config:/shared-config
 
     prometheus-config-init:
         image: deymonster/hw-monitor:latest
