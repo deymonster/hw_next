@@ -355,41 +355,41 @@ export class PrometheusService {
 	/**
 	 * Перезагружает конфигурацию Prometheus
 	 */
-	private async reloadPrometheusConfig(): Promise<void> {
-		try {
-			this.log('info', `Reloading Prometheus configuration...`)
-			const response = await fetch(
-				`${this.config.url}/prometheus/-/reload`,
-				{
-					method: 'POST',
-					headers: {
-						Authorization: this.getAuthHeader(),
-						'Content-Type': 'application/json'
-					}
-				}
-			)
-			if (!response.ok) {
-				throw new Error(
-					`Failed to reload prometheus config: ${response.statusText}`
-				)
-			}
-			this.log('info', `Prometheus configuration reloaded successfully`)
-		} catch (error) {
-			throw new Error(`Failed to reload prometheus config: ${error}`)
-		}
-	}
+	// private async reloadPrometheusConfig(): Promise<void> {
+	// 	try {
+	// 		this.log('info', `Reloading Prometheus configuration...`)
+	// 		const response = await fetch(
+	// 			`${this.config.url}/prometheus/-/reload`,
+	// 			{
+	// 				method: 'POST',
+	// 				headers: {
+	// 					Authorization: this.getAuthHeader(),
+	// 					'Content-Type': 'application/json'
+	// 				}
+	// 			}
+	// 		)
+	// 		if (!response.ok) {
+	// 			throw new Error(
+	// 				`Failed to reload prometheus config: ${response.statusText}`
+	// 			)
+	// 		}
+	// 		this.log('info', `Prometheus configuration reloaded successfully`)
+	// 	} catch (error) {
+	// 		throw new Error(`Failed to reload prometheus config: ${error}`)
+	// 	}
+	// }
 
 	/**
 	 * Ожидает указанное время после перезагрузки конфигурации
 	 * @param ms Время ожидания в миллисекундах
 	 */
-	private async waitAfterReload(ms: number = 1000): Promise<void> {
-		this.log(
-			'info',
-			`Waiting ${ms}ms for Prometheus to apply configuration...`
-		)
-		return new Promise(resolve => setTimeout(resolve, ms))
-	}
+	// private async waitAfterReload(ms: number = 1000): Promise<void> {
+	// 	this.log(
+	// 		'info',
+	// 		`Waiting ${ms}ms for Prometheus to apply configuration...`
+	// 	)
+	// 	return new Promise(resolve => setTimeout(resolve, ms))
+	// }
 
 	/**
 	 * Получает статус агента Prometheus
@@ -571,167 +571,121 @@ export class PrometheusService {
 	}
 
 	/**
-	 * Добавляет цель мониторинга
+	 * Добавляет цель мониторинга через API синхронизации
 	 * @param ipAddress IP-адрес устройства или массив адресов
 	 * @param waitForMetrics Ожидать ли доступности метрик
 	 * @returns Результат добавления цели
-	 * @throws Error если targetsPath не указан в конфигурации
 	 */
 	async addTarget(
 		ipAddress: string | string[],
 		waitForMetrics = true
 	): Promise<boolean | { [ip: string]: boolean }> {
-		if (!this.config.targetsPath) {
-			throw new Error(
-				'targetsPath не указан в конфигурации. Управление целями недоступно.'
-			)
-		}
-
-		// Если передан массив IP-адресов
-		if (Array.isArray(ipAddress)) {
-			this.log(
-				'info',
-				`Adding multiple targets: ${ipAddress.join(', ')}...`
-			)
-			const results: { [ip: string]: boolean } = {}
-
-			try {
-				const targetsPath = path.resolve(this.config.targetsPath)
-				let targets: PrometheusTarget[] = []
-
-				try {
-					const content = await fs.readFile(targetsPath, 'utf-8')
-					targets = JSON.parse(content)
-				} catch (error) {
-					this.log('warn', `Failed to read targets file:`, error)
-					targets = []
-				}
-
-				// Создаем структуру, если она пуста
-				if (targets.length === 0) {
-					targets.push({
-						targets: [],
-						labels: { job: 'windows-agents' }
-					})
-				}
-
-				// Добавляем все новые цели
-				let addedCount = 0
-				for (const ip of ipAddress) {
-					if (!targets[0].targets.includes(`${ip}:9182`)) {
-						targets[0].targets.push(`${ip}:9182`)
-						addedCount++
-					}
-				}
-
-				if (addedCount > 0) {
-					await fs.writeFile(
-						targetsPath,
-						JSON.stringify(targets, null, 2)
-					)
-					await this.reloadPrometheusConfig()
-
-					// Ждем после перезагрузки конфигурации
-					await this.waitAfterReload(1500)
-				} else {
-					this.log('info', `No new targets to add, all already exist`)
-				}
-
-				// Проверяем доступность метрик для каждого IP
-				if (waitForMetrics) {
-					for (const ip of ipAddress) {
-						results[ip] = await this.waitForMetricsAvailability(ip)
-					}
-				} else {
-					for (const ip of ipAddress) {
-						results[ip] = true
-					}
-				}
-
-				return results
-			} catch (error) {
-				this.log('error', `Failed to add multiple targets:`, error)
-				// Заполняем результаты ошибками для всех IP
-				for (const ip of ipAddress) {
-					results[ip] = false
-				}
-				return results
-			}
-		}
-
-		// Оригинальная логика для одного IP-адреса
 		try {
-			const targetsPath = path.resolve(this.config.targetsPath)
+			// Читаем текущие targets из shared volume
+			const sharedConfigPath =
+				process.env.PROMETHEUS_SHARED_CONFIG_PATH || '/shared-config'
+			const targetsPath = path.join(
+				sharedConfigPath,
+				'targets',
+				'windows_targets.json'
+			)
+
 			let targets: PrometheusTarget[] = []
 
 			try {
 				const content = await fs.readFile(targetsPath, 'utf-8')
 				targets = JSON.parse(content)
 			} catch (error) {
-				this.log('warn', `Failed to read targets file:`, error)
-				targets = []
+				targets = [{ targets: [], labels: { job: 'windows-agents' } }]
 			}
 
-			// add new target
-			if (targets.length === 0) {
-				targets.push({
-					targets: [`${ipAddress}:9182`],
-					labels: { job: 'windows-agents' }
-				})
-			} else {
-				// Add to existing targets array
-				if (!targets[0].targets.includes(`${ipAddress}:9182`)) {
-					targets[0].targets.push(`${ipAddress}:9182`)
+			// Добавляем новые targets
+			const ips = Array.isArray(ipAddress) ? ipAddress : [ipAddress]
+			const existingTargets = targets[0]?.targets || []
+
+			for (const ip of ips) {
+				const target = `${ip}:9182`
+				if (!existingTargets.includes(target)) {
+					existingTargets.push(target)
 				}
 			}
 
-			await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2))
-			await this.reloadPrometheusConfig()
-
-			await this.waitAfterReload(1500)
-
-			if (waitForMetrics) {
-				return await this.waitForMetricsAvailability(ipAddress)
+			targets[0] = {
+				targets: existingTargets,
+				labels: { job: 'windows-agents' }
 			}
-			return true
+
+			// Синхронизация через API
+			const response = await fetch('/api/prometheus/sync-config', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					type: 'targets',
+					data: targets
+				})
+			})
+
+			if (!response.ok) {
+				throw new Error('Failed to sync targets configuration')
+			}
+
+			return Array.isArray(ipAddress)
+				? ips.reduce((acc, ip) => ({ ...acc, [ip]: true }), {})
+				: true
 		} catch (error) {
-			this.log('error', `Failed to add target:`, error)
-			throw new Error(`Failed to add target: ${error}`)
+			this.log('error', 'Failed to add target:', error)
+			return Array.isArray(ipAddress)
+				? ipAddress.reduce((acc, ip) => ({ ...acc, [ip]: false }), {})
+				: false
 		}
 	}
 
 	/**
-	 * Удаляет цель мониторинга
+	 * Удаляет цель мониторинга через API синхронизации
 	 * @param ipAddress IP-адрес устройства
-	 * @throws Error если targetsPath не указан в конфигурации
+	 * @returns Результат удаления цели
 	 */
-	async removeTarget(ipAddress: string): Promise<void> {
-		if (!this.config.targetsPath) {
-			throw new Error(
-				'targetsPath не указан в конфигурации. Управление целями недоступно.'
-			)
-		}
-
+	async removeTarget(ipAddress: string): Promise<boolean> {
 		try {
-			const targetsPath = path.resolve(this.config.targetsPath)
+			const sharedConfigPath =
+				process.env.PROMETHEUS_SHARED_CONFIG_PATH || '/shared-config'
+			const targetsPath = path.join(
+				sharedConfigPath,
+				'targets',
+				'windows_targets.json'
+			)
+
 			let targets: PrometheusTarget[] = []
+
 			try {
 				const content = await fs.readFile(targetsPath, 'utf-8')
 				targets = JSON.parse(content)
 			} catch (error) {
-				console.warn(`Failed to read targets file: ${error}`)
-				targets = []
+				return false
 			}
 
-			if (targets.length > 0) {
+			// Удаляем target
+			const targetToRemove = `${ipAddress}:9182`
+			if (targets[0]?.targets) {
 				targets[0].targets = targets[0].targets.filter(
-					target => target !== `${ipAddress}:9182`
+					t => t !== targetToRemove
 				)
 			}
-			await fs.writeFile(targetsPath, JSON.stringify(targets, null, 2))
-			await this.reloadPrometheusConfig()
+
+			// Синхронизация через API
+			const response = await fetch('/api/prometheus/sync-config', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					type: 'targets',
+					data: targets
+				})
+			})
+
+			return response.ok
 		} catch (error) {
-			throw new Error(`Failed to remove target: ${error}`)
+			this.log('error', 'Failed to remove target:', error)
+			return false
 		}
 	}
 

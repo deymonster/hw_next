@@ -325,20 +325,35 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 	 *
 	 * @throws {Error} Если произошла ошибка записи файла
 	 */
+	/**
+	 * Сохраняет правила в файл через API синхронизации
+	 */
 	async saveRulesToFile(
 		rules: AlertRuleConfig[],
-		filename: string
+		filename: string = 'generated.rules.yml'
 	): Promise<void> {
-		const yamlContent = await this.exportToYaml(rules)
-		const filePath = path.join(this.config.rulesPath, filename)
-
 		try {
-			await this.fileSystem.writeFile(filePath, yamlContent)
+			const yamlContent = await this.exportToYaml(rules)
+
+			// Синхронизация через API
+			const response = await fetch('/api/prometheus/sync-config', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					type: 'alerts',
+					data: {
+						filename,
+						content: yamlContent
+					}
+				})
+			})
+
+			if (!response.ok) {
+				throw new Error('Failed to sync alert rules configuration')
+			}
 		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : 'Unknown error'
 			throw new Error(
-				`Ошибка сохранения файла ${filename}: ${errorMessage}`
+				`Ошибка сохранения правил: ${error instanceof Error ? error.message : String(error)}`
 			)
 		}
 	}
@@ -395,31 +410,47 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 
 	/**
 	 * Валидирует PromQL выражение на базовом уровне
-	 *
-	 * @param expression - PromQL выражение для проверки
+	 * @param expression PromQL выражение для валидации
 	 * @returns true, если выражение валидно, иначе false
 	 */
 	validateExpression(expression: string): boolean {
+		if (!expression || typeof expression !== 'string') {
+			return false
+		}
+
+		// Базовая валидация PromQL выражения
+		const trimmed = expression.trim()
+		if (trimmed.length === 0) {
+			return false
+		}
+
+		// Проверяем на наличие базовых PromQL элементов
 		const promqlPattern = /^[a-zA-Z_:][a-zA-Z0-9_:]*.*$/
-		return promqlPattern.test(expression.trim())
+		return promqlPattern.test(trimmed)
 	}
 
 	/**
-	 * Конвертирует оператор сравнения в PromQL формат
-	 * Преобразует enum ComparisonOperator в строковый оператор PromQL
-	 * @param operator Оператор сравнения из enum
-	 * @returns Строковое представление оператора для PromQL
+	 * Конвертирует оператор сравнения в PromQL синтаксис
+	 * @param operator Оператор сравнения
+	 * @returns PromQL оператор
 	 */
 	convertOperatorToPromQL(operator: ComparisonOperator): string {
-		const operatorMap = {
-			[ComparisonOperator.GREATER_THAN]: '>',
-			[ComparisonOperator.LESS_THAN]: '<',
-			[ComparisonOperator.GREATER_EQUAL]: '>=',
-			[ComparisonOperator.LESS_EQUAL]: '<=',
-			[ComparisonOperator.EQUAL]: '==',
-			[ComparisonOperator.NOT_EQUAL]: '!='
+		switch (operator) {
+			case ComparisonOperator.GREATER_THAN:
+				return '>'
+			case ComparisonOperator.LESS_THAN:
+				return '<'
+			case ComparisonOperator.GREATER_EQUAL:
+				return '>='
+			case ComparisonOperator.LESS_EQUAL:
+				return '<='
+			case ComparisonOperator.EQUAL:
+				return '=='
+			case ComparisonOperator.NOT_EQUAL:
+				return '!='
+			default:
+				return '>'
 		}
-		return operatorMap[operator] || '>'
 	}
 
 	// ==================== Приватные методы преобразования форматов ====================
