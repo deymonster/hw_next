@@ -1,4 +1,5 @@
 import { Device } from '@prisma/client'
+import { useTranslations } from 'next-intl'
 
 import { WarrantyEditor } from '../warranty/WarrantyEditor'
 
@@ -11,23 +12,23 @@ interface SystemSectionProps {
 }
 
 export function SystemSection({ systemInfo, device }: SystemSectionProps) {
+	const t = useTranslations('dashboard.devices.detail.system')
+
 	if (!systemInfo) return null
 
 	const systemDetails = [
-		{ label: 'Имя устройства', value: systemInfo.model },
-		{ label: 'Производитель', value: systemInfo.manufacturer },
-		{ label: 'Архитектура ОС', value: systemInfo.osArchitecture },
-		{ label: 'Версия ОС', value: systemInfo.osVersion },
-		{ label: 'Серийный номер', value: systemInfo.serialNumber }
+		{ label: t('deviceName'), value: systemInfo.model },
+		{ label: t('manufacturer'), value: systemInfo.manufacturer },
+		{ label: t('osArchitecture'), value: systemInfo.osArchitecture },
+		{ label: t('osVersion'), value: systemInfo.osVersion },
+		{ label: t('serialNumber'), value: systemInfo.serialNumber }
 	]
 
 	return (
 		<div className='space-y-4'>
 			<Card>
 				<CardContent className='pt-6'>
-					<h3 className='mb-4 text-lg font-semibold'>
-						Информация о системе
-					</h3>
+					<h3 className='mb-4 text-lg font-semibold'>{t('title')}</h3>
 
 					<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
 						{systemDetails.map(({ label, value }) => (
@@ -47,11 +48,10 @@ export function SystemSection({ systemInfo, device }: SystemSectionProps) {
 				</CardContent>
 			</Card>
 
-			{/* Warranty Management Section */}
 			<Card>
 				<CardContent className='pt-6'>
 					<h3 className='mb-4 text-lg font-semibold'>
-						Информация о гарантии
+						{t('warranty.title')}
 					</h3>
 					<WarrantyEditor
 						deviceId={device.id}

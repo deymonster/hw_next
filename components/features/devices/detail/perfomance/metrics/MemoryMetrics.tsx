@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl'
+
 import { Progress } from '@/components/ui/progress'
 import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces'
 
@@ -6,7 +8,9 @@ interface MemoryMetricsProps {
 }
 
 export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
-	if (!metrics) return <div>No memory data available</div>
+	const t = useTranslations('dashboard.devices.detail.performance')
+
+	if (!metrics) return <div>{t('noDataAvailable')}</div>
 
 	const usagePercent = (metrics.used / metrics.total) * 100
 
@@ -21,7 +25,7 @@ export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
 		<div className='space-y-4'>
 			<div className='flex items-center justify-between'>
 				<div className='space-y-1'>
-					<p className='text-sm font-medium'>Memory Used</p>
+					<p className='text-sm font-medium'>{t('memoryUsed')}</p>
 					<p className='text-2xl font-bold'>
 						{usagePercent.toFixed(1)}%
 					</p>
@@ -32,7 +36,7 @@ export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
 			<div className='grid grid-cols-2 gap-4 pt-4'>
 				<div className='space-y-1'>
 					<p className='text-sm font-medium text-muted-foreground'>
-						Used
+						{t('used')}
 					</p>
 					<p className='text-lg font-medium'>
 						{formatMemory(metrics.used)}
@@ -40,7 +44,7 @@ export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
 				</div>
 				<div className='space-y-1'>
 					<p className='text-sm font-medium text-muted-foreground'>
-						Total
+						{t('total')}
 					</p>
 					<p className='text-lg font-medium'>
 						{formatMemory(metrics.total)}

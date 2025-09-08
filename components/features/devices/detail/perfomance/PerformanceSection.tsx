@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl'
+
 import { CpuMetrics } from './metrics/CpuMetrics'
 import { DiskMetrics } from './metrics/DiskMetrics'
 import { MemoryMetrics } from './metrics/MemoryMetrics'
@@ -13,66 +15,54 @@ interface PerformanceSectionProps {
 	networkMetrics: DeviceMetrics['networkMetrics'] | null
 }
 
-// Адаптер для преобразования DeviceMetrics['networkMetrics'] в NetworkInterface[]
-const adaptNetworkMetrics = (metrics: DeviceMetrics['networkMetrics']) => {
-	if (!metrics) return null
-	return metrics.map(metric => ({
-		name: metric.name,
-		status: metric.status,
-		performance: {
-			rx: { value: metric.performance.rx, unit: 'MB/s' },
-			tx: { value: metric.performance.tx, unit: 'MB/s' }
-		},
-		errors: metric.errors,
-		droppedPackets: metric.droppedPackets
-	}))
-}
-
 export function PerformanceSection({
 	processorMetrics,
 	memoryMetrics,
 	diskMetrics,
 	networkMetrics
 }: PerformanceSectionProps) {
-	const adaptedNetworkMetrics = networkMetrics
-		? adaptNetworkMetrics(networkMetrics)
-		: null
+	const t = useTranslations('dashboard.devices.detail.performance')
+
 	return (
 		<div className='grid gap-4 md:grid-cols-2 lg:grid-cols-2'>
 			<Card className='h-[300px]'>
 				<CardContent className='h-full pt-6'>
-					<h3 className='mb-4 text-lg font-semibold'>CPU Usage</h3>
+					<h3 className='mb-4 text-lg font-semibold'>
+						{t('cpuUsage')}
+					</h3>
 					<CpuMetrics metrics={processorMetrics} />
 				</CardContent>
 			</Card>
 
 			<Card className='h-[300px]'>
 				<CardContent className='h-full pt-6'>
-					<h3 className='mb-4 text-lg font-semibold'>Memory Usage</h3>
+					<h3 className='mb-4 text-lg font-semibold'>
+						{t('memoryUsage')}
+					</h3>
 					{memoryMetrics && <MemoryMetrics metrics={memoryMetrics} />}
-					{!memoryMetrics && <div>No memory data available</div>}
+					{!memoryMetrics && <div>{t('noDataAvailable')}</div>}
 				</CardContent>
 			</Card>
 
 			<Card className='h-[300px]'>
 				<CardContent className='h-full overflow-y-auto pt-6'>
-					<h3 className='mb-4 text-lg font-semibold'>Disk Usage</h3>
+					<h3 className='mb-4 text-lg font-semibold'>
+						{t('diskUsage')}
+					</h3>
 					{diskMetrics && <DiskMetrics metrics={diskMetrics} />}
-					{!diskMetrics && <div>No disk data available</div>}
+					{!diskMetrics && <div>{t('noDataAvailable')}</div>}
 				</CardContent>
 			</Card>
 
 			<Card className='h-[300px]'>
 				<CardContent className='h-full pt-6'>
 					<h3 className='mb-4 text-lg font-semibold'>
-						Network Usage
+						{t('networkUsage')}
 					</h3>
-					{adaptedNetworkMetrics && (
-						<NetworkMetrics metrics={adaptedNetworkMetrics} />
+					{networkMetrics && (
+						<NetworkMetrics metrics={networkMetrics} />
 					)}
-					{!adaptedNetworkMetrics && (
-						<div>No network data available</div>
-					)}
+					{!networkMetrics && <div>{t('noDataAvailable')}</div>}
 				</CardContent>
 			</Card>
 		</div>

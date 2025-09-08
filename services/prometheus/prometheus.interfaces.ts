@@ -472,8 +472,8 @@ export interface DeviceMetrics {
 		name: string
 		status: string
 		performance: {
-			rx: number
-			tx: number
+			rx: { value: number; unit: string }
+			tx: { value: number; unit: string }
 		}
 		errors: number
 		droppedPackets: number

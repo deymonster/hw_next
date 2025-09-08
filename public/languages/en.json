@@ -417,6 +417,122 @@
 					"generalError": "An error occurred during confirmation",
 					"unexpectedError": "An unexpected error occurred during confirmation"
 				}
+			},
+			"detail": {
+				"tabs": {
+					"system": "System",
+					"hardware": "Hardware",
+					"performance": "Performance",
+					"processes": "Processes"
+				},
+				"system": {
+					"title": "System Information",
+					"deviceName": "Device Name",
+					"manufacturer": "Manufacturer",
+					"osArchitecture": "OS Architecture",
+					"osVersion": "OS Version",
+					"serialNumber": "Serial Number",
+					"warranty": {
+						"title": "Warranty Information"
+					}
+				},
+				"hardware": {
+					"storage": "Storage",
+					"graphics": "Graphics",
+					"graphicsMemory": "Memory",
+					"processor": "Processor",
+					"motherboard": "Motherboard",
+					"memory": "Memory",
+					"networkAdapters": "Network Adapters",
+					"model": "Model",
+					"type": "Type",
+					"health": "Health",
+					"version": "Version",
+					"date": "Date"
+				},
+				"performance": {
+					"cpuUsage": "CPU Usage",
+					"cpuLoad": "CPU Load",
+					"temperature": "Temperature",
+					"memoryUsage": "Memory Usage",
+					"memoryUsed": "Memory Used",
+					"used": "Used",
+					"total": "Total",
+					"diskUsage": "Disk Usage",
+					"usedSpace": "Used Space",
+					"diskC": "Disk C:",
+					"readSpeed": "Read Speed",
+					"writeSpeed": "Write Speed",
+					"networkUsage": "Network Usage",
+					"free": "Free",
+					"noDataAvailable": "No data available"
+				},
+				"processes": {
+					"runningProcesses": "Running Processes",
+					"updated": "Updated",
+					"showAllProcesses": "Show all processes",
+					"totalProcesses": "Total processes",
+					"live": "Live",
+					"disconnected": "Disconnected",
+					"noProcessesFound": "No processes found"
+				},
+				"errors": {
+					"connectionFailed": "Connection failed",
+					"dataUnavailable": "Data unavailable"
+				},
+				"status": {
+					"connected": "Connected",
+					"disconnected": "Disconnected"
+				},
+				"hardwareChanges": {
+					"confirmButton": "Confirm Hardware Changes"
+				}
+			},
+			"errors": {
+				"connectionFailed": "Unable to connect to the device. Please check if the device is online.",
+				"tryAgain": "Try Again"
+			},
+			"status": {
+				"connecting": "Connecting to device...",
+				"loadingProcesses": "Loading process data..."
+			},
+			"hardwareChanges": {
+				"detected": "Hardware configuration changes detected",
+				"confirmButton": "Confirm changes"
+			},
+			"hardware": {
+				"storage": "Storage",
+				"graphicsMemory": "Graphics Memory"
+			},
+			"performance": {
+				"cpuUsage": "CPU Usage",
+				"cpuLoad": "CPU Load",
+				"temperature": "Temperature",
+				"memoryUsage": "Memory Usage",
+				"memoryUsed": "Memory Used",
+				"used": "Used",
+				"total": "Total",
+				"diskUsage": "Disk Usage",
+				"usedSpace": "Used Space",
+				"readSpeed": "Read Speed",
+				"writeSpeed": "Write Speed",
+				"networkUsage": "Network Usage",
+				"download": "Download",
+				"upload": "Upload",
+				"noCpuData": "No CPU data available",
+				"noMemoryData": "No memory data available",
+				"noDiskData": "No disk data available",
+				"noNetworkData": "No network data available",
+				"invalidNetworkData": "Invalid network data format",
+				"noNetworkInterfaces": "No network interfaces found"
+			},
+			"processes": {
+				"runningProcesses": "Running Processes",
+				"updated": "Updated",
+				"showAllProcesses": "Show all processes",
+				"totalProcesses": "Total processes",
+				"live": "Live",
+				"disconnected": "Disconnected"
 			}
 		},
 		"departments": {

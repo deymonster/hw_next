@@ -1,4 +1,5 @@
 import { CircuitBoard, Cpu, HardDrive, MonitorSmartphone } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces'
@@ -8,6 +9,8 @@ interface HardwareSectionProps {
 }
 
 export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
+	const t = useTranslations('dashboard.devices.detail.hardware')
+
 	if (!hardwareInfo) return null
 
 	const formatSize = (size: string): string => {
@@ -20,7 +23,6 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 
 	return (
 		<div className='grid gap-4 md:grid-cols-2'>
-			{/* Системные компоненты */}
 			<Card>
 				<CardContent className='pt-6'>
 					<div className='space-y-6'>
@@ -32,8 +34,9 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 								<div className='text-sm text-muted-foreground'>
 									<p>{hardwareInfo.bios.manufacturer}</p>
 									<p className='text-xs opacity-75'>
-										Версия: {hardwareInfo.bios.version} •
-										Дата: {hardwareInfo.bios.date}
+										{t('version')}:{' '}
+										{hardwareInfo.bios.version} •{t('date')}
+										: {hardwareInfo.bios.date}
 									</p>
 								</div>
 							</div>
@@ -43,7 +46,9 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 						<div className='flex items-start space-x-3'>
 							<Cpu className='mt-1 h-5 w-5 text-muted-foreground' />
 							<div>
-								<h4 className='font-medium'>Процессор</h4>
+								<h4 className='font-medium'>
+									{t('processor')}
+								</h4>
 								<p className='text-sm text-muted-foreground'>
 									{hardwareInfo.cpu.model}
 								</p>
@@ -55,7 +60,7 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 							<CircuitBoard className='mt-1 h-5 w-5 text-muted-foreground' />
 							<div>
 								<h4 className='font-medium'>
-									Материнская плата
+									{t('motherboard')}
 								</h4>
 								<div className='text-sm text-muted-foreground'>
 									<p>
@@ -63,7 +68,7 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 										{hardwareInfo.motherboard.product}
 									</p>
 									<p className='text-xs opacity-75'>
-										Версия:{' '}
+										{t('version')}:{' '}
 										{hardwareInfo.motherboard.version} •
 										S/N:{' '}
 										{hardwareInfo.motherboard.serialNumber}
@@ -76,7 +81,7 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 						<div className='flex items-start space-x-3'>
 							<Cpu className='mt-1 h-5 w-5 text-muted-foreground' />
 							<div>
-								<h4 className='font-medium'>Memory</h4>
+								<h4 className='font-medium'>{t('memory')}</h4>
 								<div className='space-y-2'>
 									{hardwareInfo.memory.modules.map(
 										(module, index) => (
@@ -99,7 +104,6 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 				</CardContent>
 			</Card>
 
-			{/* Хранилище, GPU и сеть */}
 			<Card>
 				<CardContent className='pt-6'>
 					<div className='space-y-6'>
@@ -107,18 +111,18 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 						<div className='flex items-start space-x-3'>
 							<HardDrive className='mt-1 h-5 w-5 text-muted-foreground' />
 							<div>
-								<h4 className='font-medium'>Storage</h4>
+								<h4 className='font-medium'>{t('storage')}</h4>
 								<div className='space-y-2'>
 									{hardwareInfo.disks.map((disk, index) => (
 										<div
 											key={index}
 											className='text-sm text-muted-foreground'
 										>
-											Модель: {disk.model}
+											{t('model')}: {disk.model}
 											<div className='text-xs opacity-75'>
-												{formatSize(disk.size)} • Тип:{' '}
-												{disk.type} • Состояние:{' '}
-												{disk.health}
+												{formatSize(disk.size)} •{' '}
+												{t('type')}: {disk.type} •{' '}
+												{t('health')}: {disk.health}
 											</div>
 										</div>
 									))}
@@ -130,7 +134,7 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 						<div className='flex items-start space-x-3'>
 							<MonitorSmartphone className='mt-1 h-5 w-5 text-muted-foreground' />
 							<div>
-								<h4 className='font-medium'>Graphics</h4>
+								<h4 className='font-medium'>{t('graphics')}</h4>
 								<div className='space-y-2'>
 									{hardwareInfo.gpus.map((gpu, index) => (
 										<div
@@ -139,7 +143,8 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 										>
 											{gpu.name}
 											<div className='text-xs opacity-75'>
-												Память: {gpu.memory.total} Мб
+												{t('graphicsMemory')}:{' '}
+												{gpu.memory.total} Мб
 											</div>
 										</div>
 									))}
@@ -152,7 +157,7 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 							<MonitorSmartphone className='mt-1 h-5 w-5 text-muted-foreground' />
 							<div>
 								<h4 className='font-medium'>
-									Сетевые адаптеры
+									{t('networkAdapters')}
 								</h4>
 								<div className='space-y-2'>
 									{hardwareInfo.network.map(

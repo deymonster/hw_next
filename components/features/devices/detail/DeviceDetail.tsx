@@ -2,6 +2,7 @@
 
 import { Device } from '@prisma/client'
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useState } from 'react'
 
 import { HardwareChangeConfirmModal } from '../hardware-change/HardwareChangeConfirmModal'
@@ -22,6 +23,8 @@ interface DeviceDetailProps {
 }
 
 export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
+	const t = useTranslations('dashboard.devices.detail')
+
 	// Используем тот же хук для получения метрик
 	const {
 		metrics: {
@@ -51,7 +54,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 		if (!error) return ''
 		if (error instanceof Error) {
 			if (error.message.includes('Failed to fetch')) {
-				return 'Unable to connect to the device. Please check if the device is online.'
+				return t('errors.connectionFailed')
 			}
 			return error.message
 		}
@@ -90,7 +93,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 								size='icon'
 								onClick={handleRetry}
 							>
-								Try Again
+								{t('errors.tryAgain')}
 							</Button>
 						</div>
 					</CardContent>
@@ -103,7 +106,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 					<CardContent className='pt-6'>
 						<div className='flex items-center space-x-2'>
 							<RefreshCw className='h-4 w-4 animate-spin' />
-							<span>Connecting to device...</span>
+							<span>{t('status.connecting')}</span>
 						</div>
 					</CardContent>
 				</Card>
@@ -117,8 +120,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 							<div className='flex items-center gap-2'>
 								<AlertCircle className='h-5 w-5 text-amber-600 dark:text-amber-400' />
 								<span className='font-medium text-amber-800 dark:text-amber-200'>
-									Обнаружены изменения в конфигурации
-									оборудования
+									{t('hardwareChanges.detected')}
 								</span>
 							</div>
 							<Button
@@ -126,7 +128,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 								variant='outline'
 								className='border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/20'
 							>
-								Подтвердить изменения
+								{t('hardwareChanges.confirmButton')}
 							</Button>
 						</div>
 					</CardContent>
@@ -137,12 +139,18 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 			{!sseError && (
 				<Tabs defaultValue='system'>
 					<TabsList className='grid w-full grid-cols-4'>
-						<TabsTrigger value='system'>System</TabsTrigger>
-						<TabsTrigger value='hardware'>Hardware</TabsTrigger>
-						<TabsTrigger value='performance'>
-							Performance
+						<TabsTrigger value='system'>
+							{t('tabs.system')}
 						</TabsTrigger>
-						<TabsTrigger value='processes'>Processes</TabsTrigger>
+						<TabsTrigger value='hardware'>
+							{t('tabs.hardware')}
+						</TabsTrigger>
+						<TabsTrigger value='performance'>
+							{t('tabs.performance')}
+						</TabsTrigger>
+						<TabsTrigger value='processes'>
+							{t('tabs.processes')}
+						</TabsTrigger>
 					</TabsList>
 
 					<TabsContent value='system'>
@@ -168,7 +176,9 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 								<CardContent className='pt-6'>
 									<div className='flex items-center space-x-2'>
 										<RefreshCw className='h-4 w-4 animate-spin' />
-										<span>Loading process data...</span>
+										<span>
+											{t('status.loadingProcesses')}
+										</span>
 									</div>
 								</CardContent>
 							</Card>
