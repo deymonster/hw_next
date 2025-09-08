@@ -39,12 +39,16 @@ export function BulkWarrantyUpdate({
 
 	return (
 		<div className='space-y-4'>
-			<h3 className='text-lg font-semibold'>
-				Массовое обновление гарантии ({selectedDeviceIds.length}{' '}
-				устройств)
-			</h3>
+			<div className='text-center'>
+				<h3 className='text-lg font-semibold'>
+					Массовое обновление гарантии
+				</h3>
+				<p className='text-sm text-muted-foreground'>
+					Выбрано устройств: {selectedDeviceIds.length}
+				</p>
+			</div>
 
-			<div>
+			<div className='space-y-2'>
 				<Label htmlFor='bulk-warranty-date'>
 					Дата окончания гарантии
 				</Label>
@@ -54,13 +58,18 @@ export function BulkWarrantyUpdate({
 					value={warrantyDate}
 					onChange={e => setWarrantyDate(e.target.value)}
 					disabled={isLoading}
+					className='w-full'
 				/>
+				<p className='text-xs text-muted-foreground'>
+					Оставьте пустым для удаления гарантии
+				</p>
 			</div>
 
-			<div className='flex gap-2'>
+			<div className='flex gap-2 pt-2'>
 				<Button
 					onClick={handleSubmit}
-					disabled={isLoading || !warrantyDate}
+					disabled={isLoading}
+					className='flex-1'
 				>
 					{isLoading ? 'Обновление...' : 'Обновить все'}
 				</Button>
@@ -68,6 +77,7 @@ export function BulkWarrantyUpdate({
 					variant='outline'
 					onClick={onClose}
 					disabled={isLoading}
+					className='flex-1'
 				>
 					Отмена
 				</Button>

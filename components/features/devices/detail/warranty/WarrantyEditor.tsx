@@ -14,6 +14,29 @@ interface WarrantyEditorProps {
 	onUpdate?: () => void
 }
 
+// Функция для форматирования даты в формате "месяц год"
+function formatWarrantyDate(dateString: string | null): string {
+	if (!dateString) return ''
+
+	const date = new Date(dateString)
+	const months = [
+		'январь',
+		'февраль',
+		'март',
+		'апрель',
+		'май',
+		'июнь',
+		'июль',
+		'август',
+		'сентябрь',
+		'октябрь',
+		'ноябрь',
+		'декабрь'
+	]
+
+	return `${months[date.getMonth()]} ${date.getFullYear()} г.`
+}
+
 export function WarrantyEditor({
 	deviceId,
 	currentWarrantyStatus,
@@ -44,24 +67,26 @@ export function WarrantyEditor({
 
 	return (
 		<div className='space-y-4'>
-			<div>
+			<div className='flex flex-col space-y-2'>
 				<Label htmlFor='warranty-date'>Дата окончания гарантии</Label>
-				<Input
-					id='warranty-date'
-					type='date'
-					value={warrantyDate}
-					onChange={e => setWarrantyDate(e.target.value)}
-					disabled={isLoading}
-				/>
-			</div>
-
-			{monthsLeft !== null && (
-				<div className='text-sm text-muted-foreground'>
-					{monthsLeft > 0
-						? `Осталось: ${monthsLeft} мес.`
-						: 'Гарантия истекла'}
+				<div className='flex items-center gap-4'>
+					<Input
+						id='warranty-date'
+						type='date'
+						value={warrantyDate}
+						onChange={e => setWarrantyDate(e.target.value)}
+						disabled={isLoading}
+						className='w-auto'
+					/>
+					{monthsLeft !== null && (
+						<div className='whitespace-nowrap text-sm text-muted-foreground'>
+							{monthsLeft > 0
+								? `${monthsLeft} мес., дата окончания гарантии: ${formatWarrantyDate(currentWarrantyStatus)}`
+								: 'Гарантия истекла'}
+						</div>
+					)}
 				</div>
-			)}
+			</div>
 
 			<Button onClick={handleSubmit} disabled={isLoading} size='default'>
 				{isLoading ? 'Сохранение...' : 'Сохранить'}

@@ -146,7 +146,7 @@ export function DeviceDetail({ device, onBack }: DeviceDetailProps) {
 					</TabsList>
 
 					<TabsContent value='system'>
-						<SystemSection systemInfo={system} />
+						<SystemSection systemInfo={system} device={device} />
 					</TabsContent>
 
 					<TabsContent value='hardware'>

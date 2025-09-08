@@ -8,6 +8,7 @@ import { DeviceActions } from './DeviceActions'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { SelectFilter } from '@/components/ui/elements/Select-filter'
 
 const statusTranslations: Record<DeviceStatus, string> = {
@@ -33,9 +34,41 @@ const getStatusBadge = (status: DeviceStatus) => {
 }
 
 export function createDeviceColumns(
-	t: (key: string) => string
+	t: (key: string) => string,
+	enableSelection = false
 ): ColumnDef<Device>[] {
-	const columns: ColumnDef<Device>[] = [
+	const columns: ColumnDef<Device>[] = []
+
+	// Добавляем колонку выделения если включена
+	if (enableSelection) {
+		columns.push({
+			id: 'select',
+			header: ({ table }) => (
+				<Checkbox
+					checked={
+						table.getIsAllPageRowsSelected() ||
+						(table.getIsSomePageRowsSelected() && 'indeterminate')
+					}
+					onCheckedChange={value =>
+						table.toggleAllPageRowsSelected(!!value)
+					}
+					aria-label='Select all'
+				/>
+			),
+			cell: ({ row }) => (
+				<Checkbox
+					checked={row.getIsSelected()}
+					onCheckedChange={value => row.toggleSelected(!!value)}
+					aria-label='Select row'
+					onClick={e => e.stopPropagation()}
+				/>
+			),
+			enableSorting: false,
+			enableHiding: false
+		})
+	}
+
+	columns.push(
 		{
 			accessorKey: 'name',
 			header: ({ column }) => {
@@ -105,7 +138,7 @@ export function createDeviceColumns(
 			id: 'actions',
 			cell: ({ row }) => <DeviceActions device={row.original} />
 		}
-	]
+	)
 
 	return columns
 }

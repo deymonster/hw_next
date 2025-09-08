@@ -50,9 +50,7 @@ export function LoginForm() {
 
 			// Получаем маршрут откуда пришел пользователь
 			const from = searchParams.get('from') || undefined
-			console.log('Authenticating...')
 			const result = await login(data.email, data.password, from)
-			console.log('Authentication result:', result)
 
 			if (result.error) {
 				toast.error(errors(result.error))
@@ -105,7 +103,6 @@ export function LoginForm() {
 								<FormControl>
 									<Input
 										{...field}
-										type='email'
 										placeholder='email@example.com'
 										disabled={isLoadingLogin}
 									/>

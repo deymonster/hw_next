@@ -1,19 +1,24 @@
+import { Device } from '@prisma/client'
+
+import { WarrantyEditor } from '../warranty/WarrantyEditor'
+
 import { Card, CardContent } from '@/components/ui/card'
 import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces'
 
 interface SystemSectionProps {
 	systemInfo: DeviceMetrics['systemInfo'] | undefined
+	device: Device
 }
 
-export function SystemSection({ systemInfo }: SystemSectionProps) {
+export function SystemSection({ systemInfo, device }: SystemSectionProps) {
 	if (!systemInfo) return null
 
 	const systemDetails = [
-		{ label: 'Device Name', value: systemInfo.model },
-		{ label: 'Manufacturer', value: systemInfo.manufacturer },
-		{ label: 'OS Architecture', value: systemInfo.osArchitecture },
-		{ label: 'OS Version', value: systemInfo.osVersion },
-		{ label: 'Serial Number', value: systemInfo.serialNumber }
+		{ label: 'Имя устройства', value: systemInfo.model },
+		{ label: 'Производитель', value: systemInfo.manufacturer },
+		{ label: 'Архитектура ОС', value: systemInfo.osArchitecture },
+		{ label: 'Версия ОС', value: systemInfo.osVersion },
+		{ label: 'Серийный номер', value: systemInfo.serialNumber }
 	]
 
 	return (
@@ -21,7 +26,7 @@ export function SystemSection({ systemInfo }: SystemSectionProps) {
 			<Card>
 				<CardContent className='pt-6'>
 					<h3 className='mb-4 text-lg font-semibold'>
-						System Information
+						Информация о системе
 					</h3>
 
 					<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
@@ -39,6 +44,21 @@ export function SystemSection({ systemInfo }: SystemSectionProps) {
 							</div>
 						))}
 					</div>
+				</CardContent>
+			</Card>
+
+			{/* Warranty Management Section */}
+			<Card>
+				<CardContent className='pt-6'>
+					<h3 className='mb-4 text-lg font-semibold'>
+						Информация о гарантии
+					</h3>
+					<WarrantyEditor
+						deviceId={device.id}
+						currentWarrantyStatus={
+							device.warrantyStatus?.toISOString() || null
+						}
+					/>
 				</CardContent>
 			</Card>
 		</div>

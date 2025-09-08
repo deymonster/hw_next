@@ -2,20 +2,23 @@
 
 import { Device } from '@prisma/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { RowSelectionState } from '@tanstack/react-table'
 import { useTranslations } from 'next-intl'
 import { useMemo, useState } from 'react'
 import { createContext, useContext } from 'react'
 
 import { DeviceDetail } from '../detail/DeviceDetail'
+import { BulkWarrantyUpdate } from '../detail/warranty/BulkWarrantyUpdate'
 import { createDeviceColumns } from './DeviceColumns'
 
 import { getAgentStatuses } from '@/app/actions/prometheus.actions'
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink
-} from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle
+} from '@/components/ui/dialog'
 import { DataTable } from '@/components/ui/elements/DataTable'
 import { useDevices } from '@/hooks/useDevices'
 
@@ -40,6 +43,10 @@ export const useDeviceSelection = () => {
 
 export function DevicesTable() {
 	const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
+	const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+	const [isSelectionMode, setIsSelectionMode] = useState(false)
+	const [isBulkWarrantyModalOpen, setIsBulkWarrantyModalOpen] =
+		useState(false)
 	const t = useTranslations('dashboard.devices')
 	const { fetchDevices, fetchStats } = useDevices()
 	const queryClient = useQueryClient()
@@ -91,9 +98,27 @@ export function DevicesTable() {
 		setSelectedDevice(device)
 	}
 
+	// Получаем выделенные устройства
+	const selectedDevices = useMemo(() => {
+		return devices.filter((_, index) => rowSelection[index])
+	}, [devices, rowSelection])
+
+	const selectedDeviceIds = selectedDevices.map(device => device.id)
+
+	const handleToggleSelectionMode = () => {
+		setIsSelectionMode(!isSelectionMode)
+		setRowSelection({}) // Сбрасываем выделение
+	}
+
+	const handleBulkWarrantyUpdate = () => {
+		if (selectedDeviceIds.length > 0) {
+			setIsBulkWarrantyModalOpen(true)
+		}
+	}
+
 	const columns = useMemo(
-		() => createDeviceColumns((key: string) => t(key)),
-		[t]
+		() => createDeviceColumns((key: string) => t(key), isSelectionMode),
+		[t, isSelectionMode]
 	)
 
 	// Обработка состояния загрузки
@@ -122,24 +147,6 @@ export function DevicesTable() {
 			value={{ selectedDevice, setSelectedDevice }}
 		>
 			<div className='lg:px-10'>
-				<Breadcrumb className='mt-5 flex items-center space-x-1 text-sm text-muted-foreground'>
-					<BreadcrumbItem>
-						<BreadcrumbLink
-							onClick={() => setSelectedDevice(null)}
-							className='font-medium'
-						>
-							devices
-						</BreadcrumbLink>
-					</BreadcrumbItem>
-					{selectedDevice && (
-						<>
-							<BreadcrumbItem>
-								<span>{selectedDevice.name}</span>
-							</BreadcrumbItem>
-						</>
-					)}
-				</Breadcrumb>
-
 				<div className='mt-5'>
 					{selectedDevice ? (
 						<DeviceDetail
@@ -147,24 +154,91 @@ export function DevicesTable() {
 							onBack={() => setSelectedDevice(null)}
 						/>
 					) : (
-						<DataTable
-							columns={columns}
-							data={devices}
-							onRowClick={handleRowClick}
-							pagination={{
-								enabled: true,
-								pageSize: 10,
-								showPageSize: true,
-								showPageNumber: true
-							}}
-							filtering={{
-								enabled: true,
-								column: 'deviceTag',
-								placeholder: 'Search by tag...'
-							}}
-						/>
+						<>
+							{/* Панель управления выделением */}
+							<div className='mb-4 flex items-center justify-between'>
+								<div className='flex items-center gap-2'>
+									<Button
+										variant={
+											isSelectionMode
+												? 'default'
+												: 'outline'
+										}
+										onClick={handleToggleSelectionMode}
+									>
+										{isSelectionMode
+											? 'Отменить выделение'
+											: 'Выделить устройства'}
+									</Button>
+
+									{isSelectionMode &&
+										selectedDeviceIds.length > 0 && (
+											<div className='flex items-center gap-2'>
+												<span className='text-sm text-muted-foreground'>
+													Выбрано:{' '}
+													{selectedDeviceIds.length}
+												</span>
+												<Button
+													variant='secondary'
+													onClick={
+														handleBulkWarrantyUpdate
+													}
+												>
+													Изменить гарантию
+												</Button>
+											</div>
+										)}
+								</div>
+							</div>
+
+							<DataTable
+								columns={columns}
+								data={devices}
+								onRowClick={
+									isSelectionMode ? undefined : handleRowClick
+								}
+								enableRowSelection={isSelectionMode}
+								onRowSelectionChange={setRowSelection}
+								rowSelection={rowSelection}
+								pagination={{
+									enabled: true,
+									pageSize: 10,
+									showPageSize: true,
+									showPageNumber: true
+								}}
+								filtering={{
+									enabled: true,
+									column: 'deviceTag',
+									placeholder: 'Search by tag...'
+								}}
+							/>
+						</>
 					)}
 				</div>
+
+				{/* Модальное окно массового обновления гарантии */}
+				<Dialog
+					open={isBulkWarrantyModalOpen}
+					onOpenChange={setIsBulkWarrantyModalOpen}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>
+								Массовое обновление гарантии
+							</DialogTitle>
+						</DialogHeader>
+						<BulkWarrantyUpdate
+							selectedDeviceIds={selectedDeviceIds}
+							onUpdate={() => {
+								// Обновляем данные после успешного изменения
+								refreshDevices()
+								setRowSelection({})
+								setIsSelectionMode(false)
+							}}
+							onClose={() => setIsBulkWarrantyModalOpen(false)}
+						/>
+					</DialogContent>
+				</Dialog>
 			</div>
 		</DeviceSelectionContext.Provider>
 	)

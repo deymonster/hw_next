@@ -89,8 +89,8 @@
 		"login": {
 			"heading": "Login to NITRINOnet Monitoring",
 			"backButtonLabel": "Don't have an account? Sign up!",
-			"loginLabel": "Login",
-			"loginDescription": "Your username or email that you used during registration.",
+			"loginLabel": "Email",
+			"loginDescription": "Your email address that you used during registration.",
 			"passwordLabel": "Password",
 			"passwordDescription": "The password you used during registration.",
 			"pinLabel": "6-digit code",
