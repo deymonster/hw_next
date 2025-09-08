@@ -8,6 +8,8 @@ import {
 	IDeviceRepository
 } from './device.interfaces'
 
+import { services } from '@/services'
+
 /**
  * Сервис для управления устройствами в системе мониторинга
  *
@@ -644,6 +646,54 @@ export class DeviceService
 						? error.message
 						: 'Неизвестная ошибка при подтверждении изменений'
 			}
+		}
+	}
+
+	/**
+	 * Обновление статуса гарантии устройства с созданием события
+	 *
+	 * @param id - ID устройства
+	 * @param warrantyStatus - Новый статус гарантии
+	 * @param userId - ID пользователя, выполняющего операцию
+	 * @returns Promise<Device> - Обновленное устройство
+	 */
+	async updateWarrantyStatus(
+		id: string,
+		warrantyStatus: string,
+		userId: string
+	): Promise<Device> {
+		try {
+			// Получаем текущее устройство
+			const currentDevice = await this.findById(id)
+			if (!currentDevice) {
+				throw new Error('Устройство не найдено')
+			}
+
+			// Обновляем статус гарантии
+			const updatedDevice = await this.model.update({
+				where: { id },
+				data: { warrantyStatus },
+				include: {
+					department: true
+				}
+			})
+
+			// Создаем событие об изменении статуса гарантии
+			await services.data.event.create({
+				userId,
+				type: 'DEVICE',
+				severity: 'LOW',
+				title: 'Изменен статус гарантии',
+				message: `Статус гарантии устройства "${currentDevice.name}" изменен с "${currentDevice.warrantyStatus}" на "${warrantyStatus}"`,
+				isRead: false,
+				deviceId: id,
+				hardwareChangeConfirmed: false
+			})
+
+			return updatedDevice
+		} catch (error) {
+			console.error('[UPDATE_WARRANTY_STATUS_ERROR]:', error)
+			throw error
 		}
 	}
 }
