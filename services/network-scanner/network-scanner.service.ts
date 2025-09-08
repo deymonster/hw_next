@@ -24,6 +24,19 @@ export class NetworkScannerService {
 	}
 
 	async getCurrentSubnet(): Promise<string> {
+		// В production используем переменную окружения или определяем по серверному IP
+		if (
+			process.env.NODE_ENV === 'production' &&
+			process.env.NEXT_PUBLIC_SERVER_IP
+		) {
+			const serverIp = process.env.NEXT_PUBLIC_SERVER_IP
+			const parts = serverIp.split('.')
+			if (parts.length === 4) {
+				return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`
+			}
+		}
+
+		// Fallback для development или если переменная не задана
 		const interfaces = networkInterfaces()
 		for (const [, addrs] of Object.entries(interfaces)) {
 			for (const addr of addrs || []) {
