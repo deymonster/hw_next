@@ -8,10 +8,7 @@ import {
 	getLicenseStatus
 } from '@/app/actions/licd.actions'
 import { getAgentKeyByIp } from '@/app/actions/network-scanner'
-import {
-	getAgentStatuses,
-	getDeviceInfo
-} from '@/app/actions/prometheus.actions'
+import { getDeviceInfo } from '@/app/actions/prometheus.actions'
 
 // Данный хук используется только для получения данных в окне сканирования
 export const useDeviceInfo = () => {
