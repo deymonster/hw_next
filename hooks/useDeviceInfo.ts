@@ -189,17 +189,17 @@ export const useDeviceInfo = () => {
 				)
 			}
 
-			// 2) Получаем статусы агентов
-			console.log('[DEVICE_INFO_HOOK] Getting agent statuses...')
-			const statusResults = await getAgentStatuses(ipAddresses).catch(
-				(e: any) => {
-					console.warn(
-						'[DEVICE_INFO_HOOK] getAgentStatuses failed:',
-						e
-					)
-					return { success: false } as any
-				}
-			)
+			// // 2) Получаем статусы агентов
+			// console.log('[DEVICE_INFO_HOOK] Getting agent statuses...')
+			// const statusResults = await getAgentStatuses(ipAddresses).catch(
+			// 	(e: any) => {
+			// 		console.warn(
+			// 			'[DEVICE_INFO_HOOK] getAgentStatuses failed:',
+			// 			e
+			// 		)
+			// 		return { success: false } as any
+			// 	}
+			// )
 
 			const errors: { [ip: string]: string } = {}
 			let addedCount = 0
