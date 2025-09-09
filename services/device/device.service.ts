@@ -9,6 +9,8 @@ import {
 	IDeviceRepository
 } from './device.interfaces'
 
+import { services } from '@/services'
+
 /**
  * Сервис для управления устройствами в системе мониторинга
  *
@@ -645,6 +647,81 @@ export class DeviceService
 						? error.message
 						: 'Неизвестная ошибка при подтверждении изменений'
 			}
+		}
+	}
+
+	/**
+	 * Обновление статуса гарантии устройства с созданием события
+	 *
+	 * @param id - ID устройства
+	 * @param warrantyStatus - Новый статус гарантии
+	 * @param userId - ID пользователя, выполняющего операцию
+	 * @returns Promise<Device> - Обновленное устройство
+	 */
+	async updateWarrantyStatus(
+		id: string,
+		warrantyStatus: string,
+		userId: string
+	): Promise<Device> {
+		try {
+			// Получаем текущее устройство
+			const currentDevice = await this.findById(id)
+			if (!currentDevice) {
+				throw new Error('Устройство не найдено')
+			}
+
+			// Обновляем статус гарантии
+			const updatedDevice = await this.model.update({
+				where: { id },
+				data: { warrantyStatus },
+				include: {
+					department: true
+				}
+			})
+
+			// Функция для форматирования даты в формате "месяц год"
+			const formatWarrantyDate = (dateString: string | null): string => {
+				if (!dateString) return 'не установлена'
+
+				const date = new Date(dateString)
+				const months = [
+					'январь',
+					'февраль',
+					'март',
+					'апрель',
+					'май',
+					'июнь',
+					'июль',
+					'август',
+					'сентябрь',
+					'октябрь',
+					'ноябрь',
+					'декабрь'
+				]
+
+				return `${months[date.getMonth()]} ${date.getFullYear()}`
+			}
+
+			// Создаем событие об изменении статуса гарантии
+			const warrantyEndDate = warrantyStatus
+				? formatWarrantyDate(warrantyStatus)
+				: 'не установлена'
+
+			await services.data.event.create({
+				userId,
+				type: 'DEVICE',
+				severity: 'LOW',
+				title: 'Изменен статус гарантии',
+				message: `Статус гарантии устройства "${currentDevice.name}" изменен, окончание гарантии ${warrantyEndDate}`,
+				isRead: false,
+				deviceId: id,
+				hardwareChangeConfirmed: false
+			})
+
+			return updatedDevice
+		} catch (error) {
+			console.error('[UPDATE_WARRANTY_STATUS_ERROR]:', error)
+			throw error
 		}
 	}
 

@@ -81,8 +81,6 @@ export class Logger implements ILoggerService {
 		message: string,
 		...meta: any[]
 	): Promise<void> {
-		await this.rotateLogIfNeeded()
-
 		const timestamp = new Date().toISOString()
 		const logMessage = `[${level.toUpperCase()}][${service}][${timestamp}] ${message} ${meta.length ? JSON.stringify(meta) : ''}\n`
 
@@ -94,10 +92,20 @@ export class Logger implements ILoggerService {
 			return
 		}
 
+		// В production используем stdout вместо файлов
+		if (process.env.NODE_ENV === 'production') {
+			console.log(logMessage)
+			return
+		}
+
+		// Только в development пишем в файлы
 		try {
+			await this.rotateLogIfNeeded()
 			await fs.appendFile(this.logFile, logMessage)
 		} catch (err) {
 			console.error('Failed to write to log file:', err)
+			// Fallback to console
+			console.log(logMessage)
 		}
 	}
 

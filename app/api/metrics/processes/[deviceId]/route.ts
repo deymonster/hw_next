@@ -302,13 +302,17 @@ export async function GET(
 		initWebSocketServer()
 	}
 
-	const host = request.headers.get('host') || 'localhost:3000'
-	const serverHost = host.split(':')[0]
+	// Используем переменную окружения для определения внешнего IP
+	const serverHost =
+		process.env.NEXT_PUBLIC_SERVER_IP ||
+		process.env.NEXT_PUBLIC_BASE_URL?.replace(/^https?:\/\//, '') ||
+		'localhost'
+	const wsHost = serverHost.split(':')[0] // Убираем порт если есть
 
 	return new Response(
 		JSON.stringify({
 			message: 'WebSocket server is running',
-			connection: `ws://${serverHost}:3001/api/metrics/processes/${deviceId}`
+			connection: `ws://${wsHost}:3001/api/metrics/processes/${deviceId}`
 		}),
 		{
 			headers: { 'Content-Type': 'application/json' }

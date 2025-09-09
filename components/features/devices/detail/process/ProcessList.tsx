@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl'
 import React, { useState } from 'react'
 
 import { ProcessError } from './ProcessError'
@@ -29,6 +30,7 @@ export function ProcessList({
 	lastUpdated,
 	onReconnect
 }: ProcessListProps) {
+	const t = useTranslations('dashboard.devices.detail.processes')
 	const [sortField, setSortField] = useState<SortField>('cpu')
 	const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 	const [showAllProcesses, setShowAllProcesses] = useState(false)
@@ -76,7 +78,7 @@ export function ProcessList({
 					!isLoading &&
 					!error && (
 						<div className='flex items-center justify-center p-8 text-muted-foreground'>
-							No processes found
+							{t('noProcessesFound')}
 						</div>
 					)
 				)}

@@ -90,8 +90,8 @@
 		"login": {
 			"heading": "Войти в NITRINOnet Monitoring",
 			"backButtonLabel": "У вас нет учетной записи? Зарегистрируйтесь!",
-			"loginLabel": "Логин",
-			"loginDescription": "Ваше имя или почта, которые вы вводили при регистрации.",
+			"loginLabel": "Email",
+			"loginDescription": "Ваш email, который вы указывали при регистрации.",
 			"passwordLabel": "Пароль",
 			"passwordDescription": "Пароль, который вы вводили при регистрации.",
 			"pinLabel": "6-значный код",
@@ -178,12 +178,12 @@
 					"emailDescription": "Введите ваш новый адрес электронной почты. Убедитесь, что он действующий, так как на него будет отправлено подтверждение.",
 					"submitButton": "Сохранить",
 					"verificationSentMessage": "Код подверждения отправлен на текущий email",
-					"errorSendingVerification": "Не удалось отправить код подтверждения",
-					"codeVerifiedMessage": "Код успешно подтвержден",
-					"errorVerifyingCode": "Ошибка подтверждения кода",
-					"verificationCodeLabel": "Код подтверждения",
+					"errorSendingVerification": "Не удалось отправить код подверждения",
+					"codeVerifiedMessage": "Код успешно подвержден",
+					"errorVerifyingCode": "Ошибка подверждения кода",
+					"verificationCodeLabel": "Код подверждения",
 					"verificationCodePlaceholder": "Введите 6-значный код",
-					"verificationCodeDescription": "Введите код подтверждения, отправленный на текущий email",
+					"verificationCodeDescription": "Введите код подверждения, отправленный на текущий email",
 					"sendVerificationButton": "Отправить код",
 					"cancelButton": "Отмена",
 					"verifyCodeButton": "Проверить код",
@@ -417,6 +417,88 @@
 					"successMessage": "Изменения оборудования подтверждены",
 					"errorMessage": "Ошибка подтверждения",
 					"unexpectedError": "Произошла непредвиденная ошибка при подтверждении"
+				}
+			},
+			"detail": {
+				"tabs": {
+					"system": "Система",
+					"hardware": "Оборудование",
+					"performance": "Производительность",
+					"processes": "Процессы"
+				},
+				"errors": {
+					"connectionFailed": "Не удается подключиться к устройству. Проверьте, что устройство онлайн.",
+					"tryAgain": "Попробовать снова"
+				},
+				"status": {
+					"connecting": "Подключение к устройству...",
+					"loadingProcesses": "Загрузка данных процессов..."
+				},
+				"hardwareChanges": {
+					"detected": "Обнаружены изменения в конфигурации оборудования",
+					"confirmButton": "Подтвердить изменения"
+				},
+				"hardware": {
+					"storage": "Накопители",
+					"graphics": "Графика",
+					"graphicsMemory": "Память",
+					"processor": "Процессор",
+					"motherboard": "Материнская плата",
+					"memory": "Память",
+					"networkAdapters": "Сетевые адаптеры",
+					"model": "Модель",
+					"type": "Тип",
+					"health": "Состояние",
+					"version": "Версия",
+					"date": "Дата"
+				},
+				"performance": {
+					"cpuUsage": "Использование ЦП",
+					"cpuLoad": "Нагрузка ЦП",
+					"temperature": "Температура",
+					"memoryUsage": "Использование памяти",
+					"memoryUsed": "Использовано памяти",
+					"used": "Использовано",
+					"total": "Всего",
+					"diskUsage": "Использование диска",
+					"usedSpace": "Использовано места",
+					"diskC": "Диск C:",
+					"readSpeed": "Скорость чтения",
+					"writeSpeed": "Скорость записи",
+					"networkUsage": "Использование сети",
+					"free": "Свободно",
+					"noDataAvailable": "Данные недоступны"
+				},
+				"processes": {
+					"runningProcesses": "Запущенные процессы",
+					"updated": "Обновлено",
+					"showAllProcesses": "Показать все процессы",
+					"totalProcesses": "Всего процессов",
+					"live": "В реальном времени",
+					"disconnected": "Отключено",
+					"noProcessesFound": "Процессы не найдены"
+				},
+				"system": {
+					"title": "Информация о системе",
+					"deviceName": "Имя устройства",
+					"manufacturer": "Производитель",
+					"osArchitecture": "Архитектура ОС",
+					"osVersion": "Версия ОС",
+					"serialNumber": "Серийный номер",
+					"warranty": {
+						"title": "Информация о гарантии"
+					}
+				},
+				"errors": {
+					"connectionFailed": "Ошибка подключения",
+					"dataUnavailable": "Данные недоступны"
+				},
+				"status": {
+					"connected": "Подключено",
+					"disconnected": "Отключено"
+				},
+				"hardwareChanges": {
+					"confirmButton": "Подтвердить изменения оборудования"
 				}
 			}
 		},
@@ -815,7 +897,7 @@
 					"subcategory": "Подкатегория",
 					"triggerCondition": "Условие срабатывания",
 					"duration": "Продолжительность",
-					"severity": "Приоритет"
+					"severity": "Пrioритет"
 				},
 				"duplicate": "Дублировать",
 				"edit": "Редактировать",
@@ -829,7 +911,7 @@
 					"columns": {
 						"name": "Название",
 						"category": "Категория",
-						"severity": "Приоритет",
+						"severity": "Пrioритет",
 						"status": "Статус",
 						"metric": "Метрика",
 						"threshold": "Порог",
@@ -868,7 +950,7 @@
 					"columns": {
 						"title": "Название",
 						"type": "Тип",
-						"severity": "Приоритет",
+						"severity": "Пrioритет",
 						"status": "Статус",
 						"createdAt": "Дата создания",
 						"actions": "Действия"
@@ -915,7 +997,7 @@
 					"device": "Устройство"
 				},
 				"message": "Сообщение",
-				"severity": "Приоритет",
+				"severity": "Пrioритет",
 				"type": "Тип"
 			}
 		}

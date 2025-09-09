@@ -338,3 +338,52 @@ export async function confirmHardwareChange(
 		}
 	}
 }
+
+export async function updateDeviceWarrantyStatus(
+	deviceId: string,
+	warrantyExpiresAt: Date | null,
+	userId: string
+): Promise<{ success: boolean; device?: Device; error?: string }> {
+	try {
+		await logAction(
+			LoggerService.DEVICE_SERVICE,
+			'info',
+			`[UPDATE_WARRANTY_STATUS] Updating warranty status for device: ${deviceId}`
+		)
+
+		const warrantyStatusString = warrantyExpiresAt
+			? warrantyExpiresAt.toISOString()
+			: ''
+
+		const updatedDevice = await services.data.device.updateWarrantyStatus(
+			deviceId,
+			warrantyStatusString,
+			userId
+		)
+
+		await logAction(
+			LoggerService.DEVICE_SERVICE,
+			'info',
+			`[UPDATE_WARRANTY_STATUS] Warranty status updated for device: ${deviceId}`
+		)
+
+		return {
+			success: true,
+			device: updatedDevice
+		}
+	} catch (error) {
+		await logAction(
+			LoggerService.DEVICE_SERVICE,
+			'error',
+			`[UPDATE_WARRANTY_STATUS] Error updating warranty status for device ${deviceId}:`,
+			error
+		)
+		return {
+			success: false,
+			error:
+				error instanceof Error
+					? error.message
+					: 'Failed to update warranty status'
+		}
+	}
+}

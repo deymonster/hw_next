@@ -1,28 +1,34 @@
+import { Device } from '@prisma/client'
+import { useTranslations } from 'next-intl'
+
+import { WarrantyEditor } from '../warranty/WarrantyEditor'
+
 import { Card, CardContent } from '@/components/ui/card'
 import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces'
 
 interface SystemSectionProps {
 	systemInfo: DeviceMetrics['systemInfo'] | undefined
+	device: Device
 }
 
-export function SystemSection({ systemInfo }: SystemSectionProps) {
+export function SystemSection({ systemInfo, device }: SystemSectionProps) {
+	const t = useTranslations('dashboard.devices.detail.system')
+
 	if (!systemInfo) return null
 
 	const systemDetails = [
-		{ label: 'Device Name', value: systemInfo.model },
-		{ label: 'Manufacturer', value: systemInfo.manufacturer },
-		{ label: 'OS Architecture', value: systemInfo.osArchitecture },
-		{ label: 'OS Version', value: systemInfo.osVersion },
-		{ label: 'Serial Number', value: systemInfo.serialNumber }
+		{ label: t('deviceName'), value: systemInfo.model },
+		{ label: t('manufacturer'), value: systemInfo.manufacturer },
+		{ label: t('osArchitecture'), value: systemInfo.osArchitecture },
+		{ label: t('osVersion'), value: systemInfo.osVersion },
+		{ label: t('serialNumber'), value: systemInfo.serialNumber }
 	]
 
 	return (
 		<div className='space-y-4'>
 			<Card>
 				<CardContent className='pt-6'>
-					<h3 className='mb-4 text-lg font-semibold'>
-						System Information
-					</h3>
+					<h3 className='mb-4 text-lg font-semibold'>{t('title')}</h3>
 
 					<div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
 						{systemDetails.map(({ label, value }) => (
@@ -39,6 +45,20 @@ export function SystemSection({ systemInfo }: SystemSectionProps) {
 							</div>
 						))}
 					</div>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardContent className='pt-6'>
+					<h3 className='mb-4 text-lg font-semibold'>
+						{t('warranty.title')}
+					</h3>
+					<WarrantyEditor
+						deviceId={device.id}
+						currentWarrantyStatus={
+							device.warrantyStatus?.toISOString() || null
+						}
+					/>
 				</CardContent>
 			</Card>
 		</div>

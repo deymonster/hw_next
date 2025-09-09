@@ -30,8 +30,10 @@ services:
     nextjs:
         image: deymonster/hw-monitor:latest
         container_name: nextjs_app
+        user: '1001:65533'
         ports:
             - '0.0.0.0:3000:3000'
+            - '0.0.0.0:3001:3001' # Добавить эту строку для WebSocket
         depends_on:
             - postgres
             - redis
@@ -44,6 +46,21 @@ services:
         volumes:
             - ./storage/logs:/app/storage/logs
             - ./storage/uploads:/app/storage/uploads
+            - nextjs_prometheus_config:/shared-config
+
+    prometheus-config-init:
+        image: deymonster/hw-monitor:latest
+        container_name: prometheus_config_init
+        user: root
+        command: >
+            sh -c "mkdir -p /shared-config && 
+                   chmod 777 /shared-config &&
+                   cp -r /app/prometheus/* /shared-config/ && 
+                   chown -R 65534:65534 /shared-config &&
+                   chmod -R 755 /shared-config"
+        volumes:
+            - nextjs_prometheus_config:/shared-config
+        restart: 'no'
 
     prometheus:
         image: prom/prometheus:v2.36.0
@@ -53,9 +70,7 @@ services:
         networks:
             - hw-network
         volumes:
-            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-            - ./prometheus/targets:/etc/prometheus/targets:ro
-            - ./prometheus/alerts:/etc/prometheus/alerts:ro
+            - nextjs_prometheus_config:/etc/prometheus
         command:
             - '--config.file=/etc/prometheus/prometheus.yml'
             - '--storage.tsdb.path=/prometheus'
@@ -64,6 +79,8 @@ services:
             - '--web.enable-lifecycle'
         env_file:
             - .env.prod
+        depends_on:
+            - prometheus-config-init
 
     alertmanager:
         image: prom/alertmanager:v0.26.0
@@ -71,14 +88,14 @@ services:
         ports:
             - '9093:9093'
         volumes:
-            - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+            - nextjs_prometheus_config:/etc/alertmanager
         command:
             - '--config.file=/etc/alertmanager/alertmanager.yml'
             - '--storage.path=/alertmanager'
         networks:
             - hw-network
         depends_on:
-            - nextjs
+            - prometheus-config-init
 
     nginx-proxy:
         image: deymonster/hw-monitor-nginx-combined:latest
@@ -87,7 +104,7 @@ services:
             - '0.0.0.0:80:80' # Основной порт для monitoring.local
             - '0.0.0.0:8080:8080' # Для обратной совместимости с Prometheus
         volumes:
-            - ./nginx_combined/conf.d:/etc/nginx/conf.d
+            # Убираем эту строку: - ./nginx_combined/conf.d:/etc/nginx/conf.d
             - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
             - ./storage/uploads:/usr/share/nginx/html/uploads
         networks:
@@ -116,6 +133,8 @@ volumes:
     prom-data:
     prom-configs:
     uploads:
+        driver: local
+    nextjs_prometheus_config:
         driver: local
 
 networks:

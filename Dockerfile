@@ -55,9 +55,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/prometheus ./prometheus
 
 # Копируем production зависимости вместо их повторной установки
 COPY --from=builder /app/node_modules_prod ./node_modules
+
+# Добавляем команду для генерации Prisma клиента в production
+RUN npx prisma generate
 
 # Переключаемся на пользователя nextjs
 USER nextjs

@@ -1,4 +1,5 @@
 import { RefreshCw } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import React from 'react'
 
 import { Badge } from '@/components/ui/badge'
@@ -26,29 +27,33 @@ export function ProcessHeader({
 	setShowAllProcesses,
 	reconnect
 }: ProcessHeaderProps) {
+	const t = useTranslations('dashboard.devices.detail.processes')
+
 	return (
 		<CardHeader className='bg-muted/50 pb-3'>
 			<div className='flex items-center justify-between'>
-				<CardTitle className='text-lg'>Running Processes</CardTitle>
+				<CardTitle className='text-lg'>
+					{t('runningProcesses')}
+				</CardTitle>
 				<div className='flex items-center gap-2'>
 					{isConnected ? (
 						<Badge
 							variant='outline'
 							className='border-green-500/20 bg-green-500/10 px-2 py-0 text-xs text-green-500'
 						>
-							Live
+							{t('live')}
 						</Badge>
 					) : (
 						<Badge
 							variant='outline'
 							className='border-red-500/20 bg-red-500/10 px-2 py-0 text-xs text-red-500'
 						>
-							Disconnected
+							{t('disconnected')}
 						</Badge>
 					)}
 					{lastUpdated && (
 						<span className='text-xs text-muted-foreground'>
-							Updated:{' '}
+							{t('updated')}:{' '}
 							{new Date(lastUpdated).toLocaleTimeString()}
 						</span>
 					)}
@@ -68,7 +73,7 @@ export function ProcessHeader({
 
 			<div className='mt-2 flex items-center justify-between'>
 				<p className='text-sm text-muted-foreground'>
-					Total processes: {totalProcesses}
+					{t('totalProcesses')}: {totalProcesses}
 				</p>
 
 				<div className='flex items-center space-x-2'>
@@ -78,7 +83,7 @@ export function ProcessHeader({
 						onCheckedChange={setShowAllProcesses}
 					/>
 					<Label htmlFor='show-all-processes' className='text-xs'>
-						Show all processes
+						{t('showAllProcesses')}
 					</Label>
 				</div>
 			</div>
