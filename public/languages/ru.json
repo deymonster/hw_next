@@ -428,11 +428,14 @@
 				},
 				"errors": {
 					"connectionFailed": "Не удается подключиться к устройству. Проверьте, что устройство онлайн.",
-					"tryAgain": "Попробовать снова"
+					"tryAgain": "Попробовать снова",
+					"dataUnavailable": "Данные недоступны"
 				},
 				"status": {
 					"connecting": "Подключение к устройству...",
-					"loadingProcesses": "Загрузка данных процессов..."
+					"loadingProcesses": "Загрузка данных процессов...",
+					"connected": "Подключено",
+					"disconnected": "Отключено"
 				},
 				"hardwareChanges": {
 					"detected": "Обнаружены изменения в конфигурации оборудования",
@@ -488,17 +491,6 @@
 					"warranty": {
 						"title": "Информация о гарантии"
 					}
-				},
-				"errors": {
-					"connectionFailed": "Ошибка подключения",
-					"dataUnavailable": "Данные недоступны"
-				},
-				"status": {
-					"connected": "Подключено",
-					"disconnected": "Отключено"
-				},
-				"hardwareChanges": {
-					"confirmButton": "Подтвердить изменения оборудования"
 				}
 			}
 		},

@@ -232,3 +232,116 @@ export async function activateDevice(
  * - [LICD][STATUS] - для ошибок получения статуса
  * - [LICD][ACTIVATE] - для ошибок активации
  */
+
+/**
+ * Параметры для batch активации устройств
+ */
+interface BatchActivateDeviceParams {
+	devices: {
+		deviceId: string
+		agentKey: string
+		ipAddress: string
+		port?: number
+		tenantId?: string
+	}[]
+}
+
+/**
+ * Результат batch активации
+ */
+interface BatchActivateResult {
+	deviceId: string
+	ipAddress: string
+	success: boolean
+	device?: any
+	error?: string
+}
+
+/**
+ * Активирует несколько устройств одновременно в системе лицензирования LICD
+ */
+export async function activateBatchDevices(
+	params: BatchActivateDeviceParams
+): Promise<{
+	success: boolean
+	successCount: number
+	totalCount: number
+	results: BatchActivateResult[]
+	reason?: string
+}> {
+	try {
+		const requestBody = {
+			devices: params.devices.map(device => ({
+				deviceId: device.deviceId,
+				agentKey: device.agentKey,
+				ipAddress: device.ipAddress,
+				port: device.port ?? 9182,
+				tenantId: device.tenantId
+			}))
+		}
+
+		const r = await fetch(`${LICD_URL}/license/activate-batch`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			cache: 'no-store',
+			body: JSON.stringify(requestBody)
+		})
+
+		const body = await r.json().catch(() => ({}) as any)
+
+		if (!r.ok || !body?.ok) {
+			const reason: string =
+				body?.reason ||
+				(r.status === 409
+					? 'limit_reached'
+					: r.status === 403
+						? 'forbidden'
+						: `HTTP_${r.status}`)
+			return {
+				success: false,
+				successCount: 0,
+				totalCount: params.devices.length,
+				results: [],
+				reason
+			}
+		}
+
+		// Обновляем активацию для успешно активированных устройств
+		for (const result of body.results) {
+			if (result.success && result.device) {
+				try {
+					await deviceService.updateActivation(result.deviceId, {
+						activationSig: String(
+							result.device.activationSig || 'batch-activated'
+						),
+						activationKeyVer: Number(result.device.keyVer || 1),
+						activatedAt:
+							result.device.activatedAt ??
+							new Date().toISOString()
+					})
+				} catch (updateError) {
+					console.error(
+						`[LICD][BATCH] Failed to update device ${result.deviceId}:`,
+						updateError
+					)
+				}
+			}
+		}
+
+		return {
+			success: true,
+			successCount: body.success_count,
+			totalCount: body.total_count,
+			results: body.results
+		}
+	} catch (e) {
+		console.error('[LICD][BATCH] error:', e)
+		return {
+			success: false,
+			successCount: 0,
+			totalCount: params.devices.length,
+			results: [],
+			reason: 'licd_unreachable'
+		}
+	}
+}

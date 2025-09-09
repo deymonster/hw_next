@@ -1,0 +1,18 @@
+FROM golang:1.22-alpine AS builder
+WORKDIR /app
+RUN apk add --no-cache ca-certificates
+COPY go.mod ./
+RUN go mod download
+COPY . .
+ENV CGO_ENABLED=0
+RUN go build -ldflags="-s -w" -o /out/licd ./cmd/licd
+
+FROM alpine:3.19
+RUN apk add --no-cache ca-certificates wget
+USER 65532:65532
+WORKDIR /app
+COPY --from=builder /out/licd /usr/local/bin/licd
+EXPOSE 8081
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8081/healthz || exit 1
+ENTRYPOINT ["/usr/local/bin/licd"]
