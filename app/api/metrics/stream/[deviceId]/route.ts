@@ -63,7 +63,9 @@ export async function GET(
 				try {
 					console.log(
 						'[SSE] Requesting static data for device:',
-						deviceId
+						deviceId,
+						'Type of deviceId:',
+						typeof deviceId
 					)
 					const staticData =
 						await services.infrastructure.prometheus.getDeviceStaticData(
