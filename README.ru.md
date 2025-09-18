@@ -65,7 +65,7 @@
 
 ### Фронтенд
 
-- Next.js 14 (App Router)
+- Next.js 15 (App Router)
 - TypeScript
 - TailwindCSS
 - Next-Auth для аутентификации
