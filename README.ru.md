@@ -157,7 +157,7 @@ docker-compose --version
         - `TELEGRAM_BOT_TOKEN`: токен вашего Telegram бота (получите у @BotFather)
         - `TELEGRAM_CHAT_ID` и `ADMIN_TELEGRAM_CHAT_ID`: ID чата для получения уведомлений
         - `ADMIN_USERNAME`, `ADMIN_PASSWORD` и `ADMIN_EMAIL`: учетные данные администратора
-        - `HANDSHAKE_KEY`: секретный ключ для агентов (придумайте сложный)
+        - `AGENT_HANDSHAKE_KEY`: секретный ключ для агентов (придумайте сложный). При необходимости можно также задать `HANDSHAKE_KEY` для совместимости со старыми конфигурациями.
         - `PROMETHEUS_AUTH_PASSWORD`: пароль для доступа к Prometheus
         - Настройки SMTP для отправки email-уведомлений:
             - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
