@@ -1,6 +1,5 @@
 'use client'
 
-import { Event } from '@prisma/client'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'

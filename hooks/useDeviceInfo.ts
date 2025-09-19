@@ -316,9 +316,9 @@ export const useDeviceInfo = () => {
 					// Обрабатываем результаты
 					for (const result of batchResult.results) {
 						if (!result.success) {
-							notActivated.push(result.ipAddress)
-							errors[result.ipAddress] =
-								result.error || 'activation_failed'
+							const key = result.ipAddress ?? result.deviceId
+							notActivated.push(key)
+							errors[key] = result.error || 'activation_failed'
 						}
 					}
 				} else {

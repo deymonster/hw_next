@@ -153,6 +153,14 @@ interface ActivateDeviceParams {
  *
  * @note Все запросы используют `cache: 'no-store'` для получения актуальных данных
  */
+type ActivationResponse = {
+	ok?: boolean
+	reason?: string
+	activationSig?: string
+	keyVer?: number
+	activatedAt?: string
+}
+
 export async function activateDevice(
 	params: ActivateDeviceParams
 ): Promise<{ success: true } | { success: false; reason: string }> {
@@ -170,7 +178,7 @@ export async function activateDevice(
 			})
 		})
 
-		const body = await r.json().catch(() => ({}) as any)
+		const body = (await r.json().catch(() => ({}))) as ActivationResponse
 
 		if (!r.ok || !body?.ok) {
 			const reason: string =
@@ -246,14 +254,36 @@ interface BatchActivateDeviceParams {
 	}[]
 }
 
+// Тип payload-а устройства в ответах LICD при активации
+interface ActivationDevicePayload {
+	activationSig?: string
+	keyVer?: number
+	activatedAt?: string
+}
+
+// Тип ответа LICD для batch-активации
+type BatchActivateResponse = {
+	ok?: boolean
+	reason?: string
+	success_count: number
+	total_count: number
+	results: Array<{
+		deviceId: string
+		ipAddress?: string
+		success: boolean
+		device?: ActivationDevicePayload
+		error?: string
+	}>
+}
+
 /**
  * Результат batch активации
  */
 interface BatchActivateResult {
 	deviceId: string
-	ipAddress: string
+	ipAddress?: string
 	success: boolean
-	device?: any
+	device?: ActivationDevicePayload
 	error?: string
 }
 
@@ -287,7 +317,7 @@ export async function activateBatchDevices(
 			body: JSON.stringify(requestBody)
 		})
 
-		const body = await r.json().catch(() => ({}) as any)
+		const body = (await r.json().catch(() => ({}))) as BatchActivateResponse
 
 		if (!r.ok || !body?.ok) {
 			const reason: string =
@@ -307,7 +337,7 @@ export async function activateBatchDevices(
 		}
 
 		// Обновляем активацию для успешно активированных устройств
-		for (const result of body.results) {
+		for (const result of body.results || []) {
 			if (result.success && result.device) {
 				try {
 					await deviceService.updateActivation(result.deviceId, {
@@ -319,11 +349,8 @@ export async function activateBatchDevices(
 							result.device.activatedAt ??
 							new Date().toISOString()
 					})
-				} catch (updateError) {
-					console.error(
-						`[LICD][BATCH] Failed to update device ${result.deviceId}:`,
-						updateError
-					)
+				} catch {
+					// no-op
 				}
 			}
 		}

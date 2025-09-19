@@ -55,9 +55,12 @@ export function SystemSection({ systemInfo, device }: SystemSectionProps) {
 					</h3>
 					<WarrantyEditor
 						deviceId={device.id}
-						currentWarrantyStatus={
-							device.warrantyStatus?.toISOString() || null
+						initialPurchaseDate={
+							device.purchaseDate
+								? device.purchaseDate.toISOString()
+								: null
 						}
+						initialWarrantyPeriod={device.warrantyPeriod ?? null}
 					/>
 				</CardContent>
 			</Card>

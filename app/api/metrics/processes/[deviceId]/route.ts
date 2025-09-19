@@ -5,6 +5,7 @@ import { WebSocket, WebSocketServer } from 'ws'
 import { services } from '@/services'
 import { LoggerService } from '@/services/logger/logger.interface'
 import { MetricType } from '@/services/prometheus/metrics'
+import { ProcessListInfo } from '@/services/prometheus/prometheus.interfaces'
 import { PrometheusParser } from '@/services/prometheus/prometheus.parser'
 
 interface NodeError extends Error {
@@ -363,6 +364,9 @@ export async function GET(
 }
 
 // Простая in-memory кэшизация последних процессов по устройству
-const processesCache = new Map<string, { data: any; updatedAt: number }>()
+const processesCache = new Map<
+	string,
+	{ data: ProcessListInfo; updatedAt: number }
+>()
 // Флаг для предотвращения наложения выборок на одно устройство
 const fetchingFlag = new Map<string, boolean>()
