@@ -15,6 +15,7 @@ import {
 	TableRow
 } from '@/components/ui/table'
 import { useEvents } from '@/hooks/useEvents'
+import { EventWithDevice } from '@/services/event.interfaces'
 import { getNotificationIcon } from '@/utils/get-notification-icon'
 
 interface EventsTableProps {
@@ -23,7 +24,7 @@ interface EventsTableProps {
 }
 
 export function EventsTable({ take = 10, _skip = 0 }: EventsTableProps) {
-	const [events, setEvents] = useState<Event[]>([])
+	const [events, setEvents] = useState<EventWithDevice[]>([])
 	const [total, setTotal] = useState<number>(0)
 	const [currentPage, setCurrentPage] = useState<number>(1)
 	const [pageSize] = useState<number>(take)

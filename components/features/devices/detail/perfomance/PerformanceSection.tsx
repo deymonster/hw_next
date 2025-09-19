@@ -44,8 +44,9 @@ export function PerformanceSection({
 				</CardContent>
 			</Card>
 
-			<Card className='h-[300px]'>
-				<CardContent className='h-full overflow-y-auto pt-6'>
+			{/* Диски — убираем фикс. высоту и скролл */}
+			<Card>
+				<CardContent className='pt-6'>
 					<h3 className='mb-4 text-lg font-semibold'>
 						{t('diskUsage')}
 					</h3>
@@ -54,8 +55,9 @@ export function PerformanceSection({
 				</CardContent>
 			</Card>
 
-			<Card className='h-[300px]'>
-				<CardContent className='h-full pt-6'>
+			{/* Сеть — убираем фикс. высоту */}
+			<Card>
+				<CardContent className='pt-6'>
 					<h3 className='mb-4 text-lg font-semibold'>
 						{t('networkUsage')}
 					</h3>

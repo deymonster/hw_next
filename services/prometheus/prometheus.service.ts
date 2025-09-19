@@ -511,7 +511,11 @@ export class PrometheusService {
 
 				// Пробуем получить метрики независимо от статуса агента
 				try {
-					const response = await this.getMetricsByIp(ipAddress)
+					// Раньше здесь не передавался тип — это ломало проверку доступности
+					const response = await this.getMetricsByIp(
+						ipAddress,
+						MetricType.STATIC
+					)
 					if (
 						response &&
 						response.data &&

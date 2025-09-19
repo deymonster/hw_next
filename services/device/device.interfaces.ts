@@ -19,6 +19,8 @@ export interface IDeviceCreateInput {
 	type: DeviceType
 	deviceTag?: string
 	departmentId?: string
+	purchaseDate?: Date
+	warrantyPeriod?: number // 12, 24, 36, 48, 60 месяцев
 }
 
 export interface IDeviceFindManyArgs {
@@ -55,12 +57,24 @@ export interface IDeviceRepository {
 		id: string,
 		data: DeviceActivationUpdateInput
 	): Promise<Device>
-	updateActivation(
-		id: string,
-		data: DeviceActivationUpdateInput
-	): Promise<Device>
 	updateDepartmentDevices(
 		departmentId: string,
 		deviceIds: string[]
 	): Promise<void>
 }
+
+export interface IDeviceUpdateInput {
+	purchaseDate?: Date
+	warrantyPeriod?: number
+}
+
+// Добавляем константы для периодов гарантии
+export const WARRANTY_PERIODS = [
+	{ value: 12, label: '12 месяцев' },
+	{ value: 24, label: '24 месяца' },
+	{ value: 36, label: '36 месяцев' },
+	{ value: 48, label: '48 месяцев' },
+	{ value: 60, label: '60 месяцев' }
+] as const
+
+export type WarrantyPeriod = (typeof WARRANTY_PERIODS)[number]['value']

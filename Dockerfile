@@ -23,6 +23,15 @@ ENV ENCRYPTION_KEY=${ENCRYPTION_KEY}
 ARG ENABLE_OBFUSCATION=false
 ENV ENABLE_OBFUSCATION=${ENABLE_OBFUSCATION}
 
+# Версионирование (попадет в клиент и на сервер)
+ARG VERSION=0.0.0
+ARG COMMIT=dev
+ARG DATE=unknown
+ENV NEXT_PUBLIC_APP_VERSION=${VERSION}
+ENV NEXT_PUBLIC_GIT_COMMIT=${COMMIT
+}
+ENV NEXT_PUBLIC_BUILD_DATE=${DATE}
+
 # Копируем зависимости из предыдущего этапа
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -48,6 +57,20 @@ ENV NODE_ENV=production
 # Добавляем пользователя nextjs для безопасности
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# OCI labels + те же build-args, чтобы проставить метаданные
+ARG VERSION=0.0.0
+ARG COMMIT=dev
+ARG DATE=unknown
+LABEL org.opencontainers.image.title="hw-monitor-web" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${COMMIT}" \
+      org.opencontainers.image.created="${DATE}"
+
+# Эти ENV пригодятся и на серверной стороне (API routes)
+ENV NEXT_PUBLIC_APP_VERSION=${VERSION}
+ENV NEXT_PUBLIC_GIT_COMMIT=${COMMIT}
+ENV NEXT_PUBLIC_BUILD_DATE=${DATE}
 
 # Копируем необходимые файлы из этапа сборки
 COPY --from=builder /app/public ./public

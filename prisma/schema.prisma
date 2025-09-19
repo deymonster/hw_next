@@ -40,6 +40,8 @@ model Event {
   userId    String
   user      User          @relation(fields: [userId], references: [id])
 
+  metadata  Json?
+  
   deviceId  String?
   hardwareChangeConfirmed Boolean @default(false)
   device    Device?       @relation(fields: [deviceId], references: [id])
@@ -103,7 +105,8 @@ model Device {
   ipAddress         String   
   agentKey          String      @unique
   serialNumber      String?
-  warrantyStatus    DateTime?
+  purchaseDate      DateTime?    // Дата приобретения (переименованное поле)
+  warrantyPeriod    Int?         // Срок гарантии в месяцах (12, 24, 36, 48, 60)
   lastUpdate        DateTime     @updatedAt
   status            DeviceStatus @default(ACTIVE)
   type              DeviceType   @default(WINDOWS)

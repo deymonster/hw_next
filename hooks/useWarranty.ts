@@ -1,9 +1,15 @@
 'use client'
 
+import { Device } from '@prisma/client'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 
-import { updateDeviceWarrantyStatus } from '@/app/actions/device'
+import {
+	updateDeviceWarrantyInfo,
+	updateDeviceWarrantyStatus
+} from '@/app/actions/device'
 import { useDevicesContext } from '@/contexts/DeviceContext'
+import { useAuth } from '@/hooks/useAuth'
 
 interface UseWarrantyOptions {
 	onSuccess?: () => void
@@ -18,7 +24,8 @@ export function useWarranty(options?: UseWarrantyOptions) {
 	const updateWarranty = useCallback(
 		async (
 			deviceId: string,
-			warrantyExpiresAt: Date | null,
+			purchaseDate: Date | null,
+			warrantyPeriod: number | null,
 			userId: string
 		) => {
 			try {
@@ -27,14 +34,15 @@ export function useWarranty(options?: UseWarrantyOptions) {
 
 				const result = await updateDeviceWarrantyStatus(
 					deviceId,
-					warrantyExpiresAt,
+					purchaseDate,
+					warrantyPeriod,
 					userId
 				)
 
 				// Обновляем локальное состояние
 				const updatedDevices = devices.map(device => {
 					if (device.id === deviceId) {
-						return { ...device, warrantyStatus: warrantyExpiresAt }
+						return { ...device, purchaseDate, warrantyPeriod }
 					}
 					return device
 				})
@@ -79,7 +87,8 @@ export function useWarranty(options?: UseWarrantyOptions) {
 	const updateMultipleWarranties = useCallback(
 		async (
 			deviceIds: string[],
-			warrantyExpiresAt: Date | null,
+			purchaseDate: Date | null,
+			warrantyPeriod: number | null,
 			userId: string
 		) => {
 			try {
@@ -89,7 +98,8 @@ export function useWarranty(options?: UseWarrantyOptions) {
 				const promises = deviceIds.map(deviceId =>
 					updateDeviceWarrantyStatus(
 						deviceId,
-						warrantyExpiresAt,
+						purchaseDate,
+						warrantyPeriod,
 						userId
 					)
 				)
@@ -99,7 +109,7 @@ export function useWarranty(options?: UseWarrantyOptions) {
 				// Обновляем локальное состояние для успешно обновленных устройств
 				const updatedDevices = devices.map(device => {
 					if (deviceIds.includes(device.id)) {
-						return { ...device, warrantyStatus: warrantyExpiresAt }
+						return { ...device, purchaseDate, warrantyPeriod }
 					}
 					return device
 				})
@@ -132,11 +142,75 @@ export function useWarranty(options?: UseWarrantyOptions) {
 		[devices, setDevices, options]
 	)
 
+	const { user } = useAuth()
+	const queryClient = useQueryClient()
+	const updateWarrantyInfo = useCallback(
+		async (
+			deviceId: string,
+			purchaseDate: Date | null,
+			warrantyPeriod: number | null
+		) => {
+			if (!user?.id) return
+
+			setIsLoading(true)
+			setError(null)
+
+			try {
+				const result = await updateDeviceWarrantyInfo(
+					deviceId,
+					purchaseDate,
+					warrantyPeriod,
+					user.id
+				)
+				if (result.success) {
+					// Обновляем кэш устройств
+					queryClient.invalidateQueries({ queryKey: ['devices'] })
+					return result.device
+				} else {
+					throw new Error(
+						result.error || 'Failed to update warranty info'
+					)
+				}
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : 'Unknown error'
+				setError(errorMessage)
+				throw error
+			} finally {
+				setIsLoading(false)
+			}
+		},
+		[user?.id, queryClient]
+	)
+
+	// Функция для вычисления статуса гарантии
+	const getWarrantyStatus = useCallback((device: Device) => {
+		if (!device.purchaseDate || !device.warrantyPeriod) {
+			return { isActive: false, endDate: null, daysLeft: null }
+		}
+
+		const endDate = new Date(device.purchaseDate)
+		endDate.setMonth(endDate.getMonth() + device.warrantyPeriod)
+
+		const now = new Date()
+		const daysLeft = Math.ceil(
+			(endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+		)
+
+		return {
+			isActive: daysLeft > 0,
+			endDate,
+			daysLeft: daysLeft > 0 ? daysLeft : 0
+		}
+	}, [])
+
 	return {
 		isLoading,
 		error,
 		updateWarranty,
 		getWarrantyMonthsLeft,
-		updateMultipleWarranties
+		updateMultipleWarranties,
+		updateWarrantyInfo,
+		getWarrantyStatus
 	}
 }

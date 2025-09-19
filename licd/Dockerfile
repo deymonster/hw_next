@@ -5,7 +5,11 @@ COPY go.mod ./
 RUN go mod download
 COPY . .
 ENV CGO_ENABLED=0
-RUN go build -ldflags="-s -w" -o /out/licd ./cmd/licd
+
+ARG VERSION=dev
+ARG COMMIT=none
+ARG DATE=unknown
+RUN go build -ldflags="-s -w -X github.com/deymonster/licd/internal/version.Version=${VERSION} -X github.com/deymonster/licd/internal/version.Commit=${COMMIT} -X github.com/deymonster/licd/internal/version.Date=${DATE}" -o /out/licd ./cmd/licd
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates wget

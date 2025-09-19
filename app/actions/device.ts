@@ -341,30 +341,28 @@ export async function confirmHardwareChange(
 
 export async function updateDeviceWarrantyStatus(
 	deviceId: string,
-	warrantyExpiresAt: Date | null,
+	purchaseDate: Date | null,
+	warrantyPeriod: number | null,
 	userId: string
 ): Promise<{ success: boolean; device?: Device; error?: string }> {
 	try {
 		await logAction(
 			LoggerService.DEVICE_SERVICE,
 			'info',
-			`[UPDATE_WARRANTY_STATUS] Updating warranty status for device: ${deviceId}`
+			`[UPDATE_WARRANTY_STATUS] Updating warranty for device: ${deviceId}`
 		)
-
-		const warrantyStatusString = warrantyExpiresAt
-			? warrantyExpiresAt.toISOString()
-			: ''
 
 		const updatedDevice = await services.data.device.updateWarrantyStatus(
 			deviceId,
-			warrantyStatusString,
+			purchaseDate,
+			warrantyPeriod,
 			userId
 		)
 
 		await logAction(
 			LoggerService.DEVICE_SERVICE,
 			'info',
-			`[UPDATE_WARRANTY_STATUS] Warranty status updated for device: ${deviceId}`
+			`[UPDATE_WARRANTY_STATUS] Warranty updated for device: ${deviceId}`
 		)
 
 		return {
@@ -375,7 +373,7 @@ export async function updateDeviceWarrantyStatus(
 		await logAction(
 			LoggerService.DEVICE_SERVICE,
 			'error',
-			`[UPDATE_WARRANTY_STATUS] Error updating warranty status for device ${deviceId}:`,
+			`[UPDATE_WARRANTY_STATUS] Error updating warranty for device ${deviceId}:`,
 			error
 		)
 		return {
@@ -383,7 +381,54 @@ export async function updateDeviceWarrantyStatus(
 			error:
 				error instanceof Error
 					? error.message
-					: 'Failed to update warranty status'
+					: 'Failed to update warranty'
+		}
+	}
+}
+
+export async function updateDeviceWarrantyInfo(
+	deviceId: string,
+	purchaseDate: Date | null,
+	warrantyPeriod: number | null,
+	userId: string
+): Promise<{ success: boolean; device?: Device; error?: string }> {
+	try {
+		await logAction(
+			LoggerService.DEVICE_SERVICE,
+			'info',
+			`[UPDATE_WARRANTY_INFO] Updating warranty info for device: ${deviceId}`
+		)
+
+		const updatedDevice = await services.data.device.updateWarrantyInfo(
+			deviceId,
+			purchaseDate,
+			warrantyPeriod,
+			userId
+		)
+
+		await logAction(
+			LoggerService.DEVICE_SERVICE,
+			'info',
+			`[UPDATE_WARRANTY_INFO] Warranty info updated for device: ${deviceId}`
+		)
+
+		return {
+			success: true,
+			device: updatedDevice
+		}
+	} catch (error) {
+		await logAction(
+			LoggerService.DEVICE_SERVICE,
+			'error',
+			`[UPDATE_WARRANTY_INFO] Error updating warranty info for device ${deviceId}:`,
+			error
+		)
+		return {
+			success: false,
+			error:
+				error instanceof Error
+					? error.message
+					: 'Failed to update warranty info'
 		}
 	}
 }

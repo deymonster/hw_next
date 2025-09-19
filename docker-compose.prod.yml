@@ -81,6 +81,7 @@ services:
             - .env.prod
         depends_on:
             - prometheus-config-init
+            - licd
 
     alertmanager:
         image: prom/alertmanager:v0.26.0
@@ -126,6 +127,18 @@ services:
             - redis_data:/data
         networks:
             - hw-network
+
+    licd:
+        image: deymonster/hw-monitor-licd:latest
+        container_name: licd
+        environment:
+            - MAX_AGENTS=50
+            - JOB_NAME=windows-agents
+        expose:
+            - '8081'
+        networks:
+            - hw-network
+        restart: unless-stopped
 
 volumes:
     pg_data:

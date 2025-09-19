@@ -1,4 +1,3 @@
-import { Event } from '@prisma/client'
 import { useCallback, useEffect, useState } from 'react'
 
 import {
@@ -9,6 +8,7 @@ import {
 	markEventAsRead
 } from '@/app/actions/event'
 import { useCurrentSession } from '@/hooks/useCurrentSession'
+import { EventWithDevice } from '@/services/event.interfaces'
 
 interface CallbackOptions {
 	onSuccess?: () => void
@@ -23,7 +23,7 @@ interface EventsOptions {
 }
 
 interface EventsResult {
-	events: Event[]
+	events: EventWithDevice[]
 	total: number
 	error?: string
 }
@@ -55,7 +55,10 @@ export function useEvents() {
 
 	// Получение непрочитанных событий
 	const fetchUnreadEvents = useCallback(
-		async ({ onSuccess, onError }: CallbackOptions = {}) => {
+		async ({ onSuccess, onError }: CallbackOptions = {}): Promise<{
+			events: EventWithDevice[]
+			error?: string
+		}> => {
 			if (!user?.id)
 				return { events: [], error: 'User not authenticated' }
 
@@ -87,7 +90,11 @@ export function useEvents() {
 
 	// Получение и отметка всех событий как прочитанных
 	const fetchAndMarkAllAsRead = useCallback(
-		async ({ onSuccess, onError }: CallbackOptions = {}) => {
+		async ({ onSuccess, onError }: CallbackOptions = {}): Promise<{
+			events: EventWithDevice[]
+			unreadCount: number
+			error?: string
+		}> => {
 			if (!user?.id)
 				return {
 					events: [],

@@ -1,12 +1,12 @@
 'use client'
 
-import { Event } from '@prisma/client'
 import { Loader2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Fragment, useEffect, useState } from 'react'
 
 import { Separator } from '@/components/ui/separator'
 import { useEvents } from '@/hooks/useEvents'
+import { EventWithDevice } from '@/services/event.interfaces'
 import { getNotificationIcon } from '@/utils/get-notification-icon'
 
 interface EventsListProps {
@@ -14,7 +14,7 @@ interface EventsListProps {
 }
 
 export function EventsList({ onRead }: EventsListProps) {
-	const [events, setEvents] = useState<Event[]>([])
+	const [events, setEvents] = useState<EventWithDevice[]>([])
 	const { loading, error, fetchAndMarkAllAsRead } = useEvents()
 
 	const t = useTranslations(
