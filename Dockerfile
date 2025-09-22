@@ -3,7 +3,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 # Устанавливаем зависимости для сборки native модулей
-RUN apk add --no-cache libc6-compat
+RUN apk -U add --no-cache gcompat libstdc++
 
 # Копируем файлы зависимостей
 COPY package.json yarn.lock* .yarnrc* ./
