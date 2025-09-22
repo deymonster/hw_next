@@ -1,9 +1,9 @@
 FROM golang:1.23-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache ca-certificates
-COPY go.mod ./
+COPY licd/go.mod ./
 RUN go mod download
-COPY . .
+COPY licd/. .
 ENV CGO_ENABLED=0
 
 ARG VERSION=dev
