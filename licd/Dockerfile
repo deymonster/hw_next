@@ -1,21 +1,39 @@
+# syntax=docker/dockerfile:1.6
+
 FROM golang:1.23-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache ca-certificates
 
-# Было: COPY licd/go.mod ./
+# 1) Кешируем зависимости
 COPY go.mod ./
-# Если есть go.sum — тоже скопируйте
-# COPY go.sum ./
-RUN go mod download
+COPY go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download
 
-# Было: COPY licd/. .
+# 2) Копируем исходники
 COPY . .
+
 ENV CGO_ENABLED=0
 
+# 3) Аргументы версии
 ARG VERSION=dev
 ARG COMMIT=none
 ARG DATE=unknown
-RUN go build -ldflags="-s -w -X github.com/deymonster/licd/internal/version.Version=${VERSION} -X github.com/deymonster/licd/internal/version.Commit=${COMMIT} -X github.com/deymonster/licd/internal/version.Date=${DATE}" -o /out/licd ./cmd/licd
+
+# 4) Путь к main-пакету (у тебя cmd/licd)
+ARG PKG=./cmd/licd
+
+# !!! ВАЖНО: проверь, что ниже путь в -X совпадает с module path из go.mod
+#    например, если в go.mod "module github.com/deymonster/licd", то оставляй как есть.
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -trimpath -buildvcs=false \
+      -ldflags="-s -w \
+        -X github.com/deymonster/licd/internal/version.Version=${VERSION} \
+        -X github.com/deymonster/licd/internal/version.Commit=${COMMIT} \
+        -X github.com/deymonster/licd/internal/version.Date=${DATE}" \
+      -o /out/licd ${PKG}
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates wget
