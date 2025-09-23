@@ -22,10 +22,7 @@ jobs:
               with:
                   node-version: 20.17
 
-            - name: Install semantic-release plugins
-              run: npm install --no-save @semantic-release/changelog @semantic-release/git @semantic-release/github @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/npm
-
-            - name: Run semantic-release
+            - name: Run semantic-release with plugins (no local install)
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: npx semantic-release
+              run: npx -p semantic-release -p @semantic-release/changelog -p @semantic-release/git -p @semantic-release/github -p @semantic-release/commit-analyzer -p @semantic-release/release-notes-generator -p @semantic-release/npm semantic-release
