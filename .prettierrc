@@ -9,7 +9,7 @@
 	"importOrderSeparation": true,
 	"importOrderSortSpecifiers": true,
 	"importOrderCaseInsensitive": true,
-	"importOrderParsePlugins": [
+	"importOrderParserPlugins": [
 		"classProperties",
 		"decorators-legacy",
 		"typescript"

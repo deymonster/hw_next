@@ -47,7 +47,6 @@ next-env.d.ts
 # log files
 *.log
 
-# go files
-*.go
+
 
 
