@@ -12,6 +12,7 @@ on:
     workflow_run:
         workflows: ['Release']
         types: [completed]
+        branches: [main, master, feature/licensing-system]
     workflow_dispatch:
 
 jobs:
@@ -20,13 +21,15 @@ jobs:
         if: >
             github.event_name == 'release' ||
             (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-            github.event_name == 'workflow_run' ||
+            (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
             github.event_name == 'workflow_dispatch'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
+                  # При workflow_run нужно чекаутить правильную ветку
+                  ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
 
             - name: Setup Node.js
               uses: actions/setup-node@v3
@@ -68,13 +71,15 @@ jobs:
         if: >
             github.event_name == 'release' ||
             (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
-            github.event_name == 'workflow_run' ||
+            (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
             github.event_name == 'workflow_dispatch'
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
               with:
                   fetch-depth: 0
+                  # При workflow_run нужно чекаутить правильную ветку
+                  ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v2
@@ -124,7 +129,7 @@ jobs:
                       echo "NGINX_TAG=latest" >> $GITHUB_OUTPUT
                     fi
                     echo "VERSION_TAG=$VERSION" >> $GITHUB_OUTPUT
-                  elif [[ "${{ github.ref }}" == "refs/heads/feature/licensing-system" ]]; then
+                  elif [[ "${{ github.ref }}" == "refs/heads/feature/licensing-system" ]] || [[ "${{ github.event.workflow_run.head_branch }}" == "feature/licensing-system" ]]; then
                     echo "MAIN_TAG=licensing-dev" >> $GITHUB_OUTPUT
                     echo "NGINX_TAG=licensing-dev" >> $GITHUB_OUTPUT
                     echo "VERSION_TAG=licensing-v$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
