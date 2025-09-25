@@ -1,3 +1,10 @@
+# [1.0.0-alpha.3](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2025-09-25)
+
+
+### Bug Fixes
+
+* **ci:** improve workflow_run trigger for docker-build ([ab28691](https://github.com/deymonster/hw_next/commit/ab286912d11f2e0e383cb49bb9a1e3e5dde276c5))
+
 # [1.0.0-alpha.2](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2025-09-25)
 
 
