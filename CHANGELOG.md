@@ -1,3 +1,10 @@
+# [1.0.0-alpha.2](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2025-09-25)
+
+
+### Features
+
+* **docker:** add workflow_run trigger and version handling ([73da79b](https://github.com/deymonster/hw_next/commit/73da79b6329790fe3f0863658b565f8315797ba6))
+
 # 1.0.0-alpha.1 (2025-09-23)
 
 
