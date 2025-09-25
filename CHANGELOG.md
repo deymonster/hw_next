@@ -1,3 +1,10 @@
+# [1.0.0-alpha.5](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2025-09-25)
+
+
+### Bug Fixes
+
+* use proper release tags instead of date-based tags for Docker images ([8bfc780](https://github.com/deymonster/hw_next/commit/8bfc7806832625bf8c617eaae94e43f16b2a650d))
+
 # [1.0.0-alpha.4](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2025-09-25)
 
 
