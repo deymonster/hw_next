@@ -1,3 +1,10 @@
+# [1.0.0-alpha.4](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2025-09-25)
+
+
+### Bug Fixes
+
+* **ci:** exclude CHANGELOG.md from prettier formatting ([0a43eeb](https://github.com/deymonster/hw_next/commit/0a43eebd5ac04df3589b66eda76c30e3e0ab8f3c))
+
 # [1.0.0-alpha.3](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2025-09-25)
 
 ### Bug Fixes
