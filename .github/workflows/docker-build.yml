@@ -94,8 +94,8 @@ jobs:
                   if [[ "${{ github.event_name }}" == "release" ]]; then
                     VERSION="${{ github.event.release.tag_name }}"
                     if [[ "$VERSION" == *"-alpha."* ]]; then
-                      echo "MAIN_TAG=licensing-dev" >> $GITHUB_OUTPUT
-                      echo "NGINX_TAG=licensing-dev" >> $GITHUB_OUTPUT
+                      echo "MAIN_TAG=alpha" >> $GITHUB_OUTPUT
+                      echo "NGINX_TAG=alpha" >> $GITHUB_OUTPUT
                     else
                       echo "MAIN_TAG=latest" >> $GITHUB_OUTPUT
                       echo "NGINX_TAG=latest" >> $GITHUB_OUTPUT
@@ -104,8 +104,8 @@ jobs:
                   elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
                     VERSION="${GITHUB_REF_NAME}"
                     if [[ "$VERSION" == *"-alpha."* ]]; then
-                      echo "MAIN_TAG=licensing-dev" >> $GITHUB_OUTPUT
-                      echo "NGINX_TAG=licensing-dev" >> $GITHUB_OUTPUT
+                      echo "MAIN_TAG=alpha" >> $GITHUB_OUTPUT
+                      echo "NGINX_TAG=alpha" >> $GITHUB_OUTPUT
                     else
                       echo "MAIN_TAG=latest" >> $GITHUB_OUTPUT
                       echo "NGINX_TAG=latest" >> $GITHUB_OUTPUT
@@ -119,17 +119,23 @@ jobs:
                       VERSION="v0.0.0-${GITHUB_SHA::7}"
                     fi
                     if [[ "$VERSION" == *"-alpha."* ]]; then
-                      echo "MAIN_TAG=licensing-dev" >> $GITHUB_OUTPUT
-                      echo "NGINX_TAG=licensing-dev" >> $GITHUB_OUTPUT
+                      echo "MAIN_TAG=alpha" >> $GITHUB_OUTPUT
+                      echo "NGINX_TAG=alpha" >> $GITHUB_OUTPUT
                     else
                       echo "MAIN_TAG=latest" >> $GITHUB_OUTPUT
                       echo "NGINX_TAG=latest" >> $GITHUB_OUTPUT
                     fi
                     echo "VERSION_TAG=$VERSION" >> $GITHUB_OUTPUT
                   elif [[ "${{ github.ref }}" == "refs/heads/feature/licensing-system" ]] || [[ "${{ github.event.workflow_run.head_branch }}" == "feature/licensing-system" ]]; then
-                    echo "MAIN_TAG=licensing-dev" >> $GITHUB_OUTPUT
-                    echo "NGINX_TAG=licensing-dev" >> $GITHUB_OUTPUT
-                    echo "VERSION_TAG=licensing-v$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+                    # Для feature/licensing-system используем последний релиз тег
+                    git fetch --tags --force
+                    VERSION="$(git describe --tags --abbrev=0 || true)"
+                    if [[ -z "$VERSION" ]]; then
+                      VERSION="v1.0.0-alpha.3"
+                    fi
+                    echo "MAIN_TAG=alpha" >> $GITHUB_OUTPUT
+                    echo "NGINX_TAG=alpha" >> $GITHUB_OUTPUT
+                    echo "VERSION_TAG=$VERSION" >> $GITHUB_OUTPUT
                   elif [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
                     echo "MAIN_TAG=latest" >> $GITHUB_OUTPUT
                     echo "NGINX_TAG=latest" >> $GITHUB_OUTPUT
