@@ -1,3 +1,10 @@
+# [1.0.0-alpha.6](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2025-09-29)
+
+
+### Features
+
+* add database health check and error handling ([c59d92e](https://github.com/deymonster/hw_next/commit/c59d92eb1065463719baa3cc0334a0d329d926cf))
+
 # [1.0.0-alpha.5](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2025-09-25)
 
 
