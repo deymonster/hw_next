@@ -7,7 +7,9 @@ import { AbstractIntlMessages, NextIntlClientProvider } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 
+import { DatabaseProvider } from '@/components/database/DatabaseProvider'
 import { ColorSwitcher } from '@/components/ui/elements/ColorSwitcher'
+import type { DatabaseCheckResult } from '@/libs/database-checker'
 import { SWRProvider } from '@/providers/SWRProvider'
 import { ThemeProvider } from '@/providers/Themeprovider'
 import { ToastProvider } from '@/providers/ToastProvider'
@@ -17,6 +19,7 @@ interface RootLayoutClientProps {
 	locale: string
 	messages: AbstractIntlMessages
 	timeZone: string
+	databaseCheck?: DatabaseCheckResult
 }
 
 const queryClient = new QueryClient({
@@ -32,7 +35,8 @@ export function RootLayoutClient({
 	children,
 	locale,
 	messages,
-	timeZone
+	timeZone,
+	databaseCheck
 }: RootLayoutClientProps) {
 	const searchParams = useSearchParams()
 	const router = useRouter()
@@ -55,18 +59,20 @@ export function RootLayoutClient({
 					locale={locale}
 					timeZone={timeZone}
 				>
-					<SessionProvider>
-						<ThemeProvider
-							attribute='class'
-							defaultTheme='dark'
-							disableTransitionOnChange
-						>
-							<QueryClientProvider client={queryClient}>
-								<ToastProvider />
-								<SWRProvider>{children}</SWRProvider>
-							</QueryClientProvider>
-						</ThemeProvider>
-					</SessionProvider>
+					<DatabaseProvider initialCheck={databaseCheck}>
+						<SessionProvider>
+							<ThemeProvider
+								attribute='class'
+								defaultTheme='dark'
+								disableTransitionOnChange
+							>
+								<QueryClientProvider client={queryClient}>
+									<ToastProvider />
+									<SWRProvider>{children}</SWRProvider>
+								</QueryClientProvider>
+							</ThemeProvider>
+						</SessionProvider>
+					</DatabaseProvider>
 				</NextIntlClientProvider>
 			</body>
 		</html>

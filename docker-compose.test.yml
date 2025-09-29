@@ -1,0 +1,152 @@
+# Docker Compose для тестирования
+# ВСЕ сервисы в контейнерах с отдельными портами
+services:
+    postgres:
+        image: postgres:13
+        container_name: postgres_test
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        ports:
+            - '5433:5432' # Другой порт для избежания конфликтов
+        volumes:
+            - pg_data_test:/var/lib/postgresql/data
+        networks:
+            - hw-network-test
+        env_file:
+            - .env
+
+    # Добавляем сервис для применения миграций в test среде
+    db-migrate:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: db-migrate-test
+        command: npx prisma migrate deploy
+        depends_on:
+            - postgres
+        environment:
+            - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+        networks:
+            - hw-network-test
+        restart: 'no'
+
+    nextjs:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: nextjs_test
+        ports:
+            - '3001:3000' # Тестовый порт
+        depends_on:
+            - postgres
+            - redis
+            - licd
+            - db-migrate # Добавляем зависимость от миграций
+        environment:
+            - NODE_ENV=production
+            - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+            - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+        networks:
+            - hw-network-test
+        restart: unless-stopped
+
+    prometheus:
+        image: prom/prometheus:v2.36.0
+        container_name: prometheus_test
+        ports:
+            - '9091:9090' # Другой порт
+        expose:
+            - 9090
+        networks:
+            - hw-network-test
+        volumes:
+            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - ./prometheus/alerts:/etc/prometheus/alerts:ro
+            - prom_data_test:/prometheus
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+            - '--web.console.templates=/usr/share/prometheus/consoles'
+            - '--web.enable-lifecycle'
+        env_file:
+            - .env
+        depends_on:
+            - licd
+
+    alertmanager:
+        image: prom/alertmanager:v0.26.0
+        container_name: alertmanager_test
+        ports:
+            - '9094:9093' # Другой порт
+        volumes:
+            - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+        command:
+            - '--config.file=/etc/alertmanager/alertmanager.yml'
+            - '--storage.path=/alertmanager'
+        networks:
+            - hw-network-test
+        depends_on:
+            - nextjs
+
+    nginx-proxy:
+        build:
+            context: .
+            dockerfile: Dockerfile.nginx
+        container_name: nginx_combined_test
+        ports:
+            - '8085:8080' # Прокси для Prometheus (другой порт)
+            - '8084:80' # Файловое хранилище (другой порт)
+        volumes:
+            - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
+            - ./nginx/conf.d/upstream.conf:/etc/nginx/conf.d/upstream.conf
+            - ./storage/uploads:/usr/share/nginx/html/uploads
+        networks:
+            - hw-network-test
+
+    redis:
+        image: redis:alpine
+        container_name: redis_test
+        env_file:
+            - .env
+        command: redis-server --requirepass ${REDIS_PASSWORD}
+        ports:
+            - '6380:6379' # Другой порт
+        volumes:
+            - redis_data_test:/data
+        networks:
+            - hw-network-test
+
+    licd:
+        build:
+            context: ./licd
+            dockerfile: Dockerfile
+        container_name: licd_test
+        environment:
+            - MAX_AGENTS=50
+            - JOB_NAME=windows-agents
+            - DB_PATH=/data/licd.db
+        ports:
+            - '8083:8081' # Другой порт
+        expose:
+            - '8081'
+        volumes:
+            - licd_data_test:/data
+        networks:
+            - hw-network-test
+        restart: unless-stopped
+
+volumes:
+    pg_data_test:
+    redis_data_test:
+    prom_data_test:
+    prom_configs_test:
+    uploads_test:
+        driver: local
+    licd_data_test:
+
+networks:
+    hw-network-test:
+        driver: bridge

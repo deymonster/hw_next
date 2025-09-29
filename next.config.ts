@@ -7,7 +7,7 @@ import createNextIntlPlugin from 'next-intl/plugin'
 const withNextIntl = createNextIntlPlugin('./libs/i18n/request.ts')
 
 // Получаем IP-адрес сервера из переменной окружения
-const serverIp = process.env.NEXT_PUBLIC_SERVER_IP || '192.168.1.227'
+const serverIp = process.env.NEXT_PUBLIC_SERVER_IP || '192.168.1.1'
 
 const nextConfig: NextConfig = {
 	reactStrictMode: true,

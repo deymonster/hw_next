@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader } from 'lucide-react'
+import { CheckCircle, Loader, XCircle } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -16,12 +16,11 @@ interface VerifyAccountFormProps {
 
 export function VerifyAccountForm({ token }: VerifyAccountFormProps) {
 	const t = useTranslations('auth.verify')
+	const tErrors = useTranslations('auth.errors')
 	const { auth } = useAuth()
 	const router = useRouter()
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const [_isVerifying, setIsVerifying] = useState(true)
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const [_verificationStatus, setVerificationStatus] = useState<
+	const [isVerifying, setIsVerifying] = useState(true)
+	const [verificationStatus, setVerificationStatus] = useState<
 		'pending' | 'success' | 'error'
 	>('pending')
 
@@ -42,24 +41,57 @@ export function VerifyAccountForm({ token }: VerifyAccountFormProps) {
 					}, 2000)
 				} else {
 					setVerificationStatus('error')
-					toast.error(result.message || t('errorMesage'))
+					// Проверяем, является ли result.message ключом перевода
+					const errorMessage =
+						tErrors(result.message) ||
+						result.message ||
+						t('errorMesage')
+					toast.error(errorMessage)
 				}
 			} catch (error) {
 				console.error(error)
 				setVerificationStatus('error')
-				toast.error(t('error'))
+				toast.error(t('errorMesage'))
 			} finally {
 				setIsVerifying(false)
 			}
 		}
 
 		verifyEmail()
-	}, [token, router, t, auth])
+	}, [token, router, t, tErrors, auth])
 
 	return (
 		<AuthWrapper heading={t('heading')}>
-			<div className='flex justify-center'>
-				<Loader className='size-8 animate-spin' />
+			<div className='flex flex-col items-center space-y-4'>
+				{isVerifying && (
+					<>
+						<Loader className='size-8 animate-spin' />
+						<p className='text-sm text-muted-foreground'>
+							{t('verifying')}
+						</p>
+					</>
+				)}
+
+				{!isVerifying && verificationStatus === 'success' && (
+					<>
+						<CheckCircle className='size-8 text-green-500' />
+						<p className='text-sm text-green-600'>
+							{t('successMessage')}
+						</p>
+						<p className='text-xs text-muted-foreground'>
+							{t('redirecting')}
+						</p>
+					</>
+				)}
+
+				{!isVerifying && verificationStatus === 'error' && (
+					<>
+						<XCircle className='size-8 text-red-500' />
+						<p className='text-sm text-red-600'>
+							{t('errorMesage')}
+						</p>
+					</>
+				)}
 			</div>
 		</AuthWrapper>
 	)
