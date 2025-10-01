@@ -7,7 +7,14 @@ import createNextIntlPlugin from 'next-intl/plugin'
 const withNextIntl = createNextIntlPlugin('./libs/i18n/request.ts')
 
 // Получаем IP-адрес сервера из переменной окружения
-const serverIp = process.env.NEXT_PUBLIC_SERVER_IP || '192.168.1.1'
+const serverIpEnv = process.env.NEXT_PUBLIC_SERVER_IP
+const serverIp = serverIpEnv ? serverIpEnv.trim() : '192.168.1.1'
+
+// Базовый URL для статики (nginx со /uploads), например: http://localhost:8081 или http://localhost:8084
+const rawUploadsBaseUrl = process.env.NEXT_PUBLIC_UPLOADS_BASE_URL
+const uploadsBaseUrl = rawUploadsBaseUrl
+	? rawUploadsBaseUrl.trim().replace(/\/+$/, '')
+	: 'http://localhost:8081'
 
 const nextConfig: NextConfig = {
 	reactStrictMode: true,
@@ -26,6 +33,31 @@ const nextConfig: NextConfig = {
 				hostname: serverIp,
 				port: '3000',
 				pathname: '/uploads/**'
+			},
+			// Разрешаем загрузку картинок с nginx (абсолютные URL)
+			{
+				protocol: 'http',
+				hostname: 'localhost',
+				port: '8081',
+				pathname: '/uploads/**'
+			},
+			{
+				protocol: 'http',
+				hostname: 'localhost',
+				port: '8084',
+				pathname: '/uploads/**'
+			},
+			{
+				protocol: 'http',
+				hostname: serverIp,
+				port: '8081',
+				pathname: '/uploads/**'
+			},
+			{
+				protocol: 'http',
+				hostname: serverIp,
+				port: '8084',
+				pathname: '/uploads/**'
 			}
 		]
 	},
@@ -34,7 +66,7 @@ const nextConfig: NextConfig = {
 		return [
 			{
 				source: '/uploads/:path*',
-				destination: 'http://localhost:8081/uploads/:path*'
+				destination: `${uploadsBaseUrl}/uploads/:path*`
 			}
 		]
 	},

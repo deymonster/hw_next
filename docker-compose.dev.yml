@@ -67,6 +67,8 @@ services:
             - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
             - ./nginx/conf.d/upstream.conf:/etc/nginx/conf.d/upstream.conf
             - ./storage/uploads:/usr/share/nginx/html/uploads
+        extra_hosts:
+            - 'nextjs:host-gateway'
         networks:
             - hw-network-dev
 

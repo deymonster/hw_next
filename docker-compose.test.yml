@@ -15,19 +15,24 @@ services:
         networks:
             - hw-network-test
         env_file:
-            - .env
+            - .env.test
 
     # Добавляем сервис для применения миграций в test среде
     db-migrate:
         build:
             context: .
             dockerfile: Dockerfile
+            args:
+                ENCRYPTION_KEY: ${ENCRYPTION_KEY} # Добавить build arg
         container_name: db-migrate-test
         command: npx prisma migrate deploy
         depends_on:
             - postgres
         environment:
             - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+            - ENCRYPTION_KEY=${ENCRYPTION_KEY} # Добавить переменную окружения
+        env_file:
+            - .env.test # Убедиться, что используется .env файл
         networks:
             - hw-network-test
         restart: 'no'
@@ -36,6 +41,8 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
+            args:
+                ENCRYPTION_KEY: ${ENCRYPTION_KEY}
         container_name: nextjs_test
         ports:
             - '3001:3000' # Тестовый порт
@@ -48,6 +55,13 @@ services:
             - NODE_ENV=production
             - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
             - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+            - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+            # Эти строки можно убрать, так как они теперь в .env.test
+            # - NEXT_PUBLIC_BASE_URL=http://localhost:3001
+            # - NEXTAUTH_URL=http://localhost:3001
+            # - NEXT_PUBLIC_URL=http://localhost:3001
+        env_file:
+            - .env.test
         networks:
             - hw-network-test
         restart: unless-stopped
@@ -72,7 +86,7 @@ services:
             - '--web.console.templates=/usr/share/prometheus/consoles'
             - '--web.enable-lifecycle'
         env_file:
-            - .env
+            - .env.test
         depends_on:
             - licd
 
@@ -110,7 +124,7 @@ services:
         image: redis:alpine
         container_name: redis_test
         env_file:
-            - .env
+            - .env.test
         command: redis-server --requirepass ${REDIS_PASSWORD}
         ports:
             - '6380:6379' # Другой порт

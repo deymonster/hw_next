@@ -6,6 +6,10 @@ export interface DatabaseCheckResult {
 	error?: string
 }
 
+function toCamelCase(name: string): string {
+	return name.charAt(0).toLowerCase() + name.slice(1)
+}
+
 // Список обязательных таблиц из схемы Prisma
 const REQUIRED_TABLES = [
 	'User',
@@ -36,16 +40,15 @@ export async function checkDatabaseTables(): Promise<DatabaseCheckResult> {
 		// Проверяем каждую таблицу
 		for (const tableName of REQUIRED_TABLES) {
 			try {
-				// Для тестовой таблицы сразу добавляем в missing
-				if (tableName === 'TestTable') {
+				const modelName = toCamelCase(tableName)
+				const model = (prisma as any)[modelName]
+
+				if (!model || typeof model.findFirst !== 'function') {
 					missingTables.push(tableName)
 					continue
 				}
 
-				// Пытаемся выполнить простой запрос к таблице
-				await (prisma as any)[tableName.toLowerCase()].findFirst({
-					take: 1
-				})
+				await model.findFirst({ take: 1 })
 			} catch (error: any) {
 				// Если таблица не существует, Prisma выбросит ошибку
 				if (

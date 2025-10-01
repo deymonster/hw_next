@@ -49,9 +49,21 @@ export class UserService
 	}
 
 	async getByToken(token: string): Promise<User | null> {
-		return await this.model.findUnique({
+		await this.log('debug', '[GET_BY_TOKEN_CALLED]', { token })
+		const user = await this.model.findUnique({
 			where: { verificationToken: token }
 		})
+		if (user) {
+			await this.log('info', '[GET_BY_TOKEN_RESULT_FOUND]', {
+				id: user.id,
+				email: user.email
+			})
+		} else {
+			await this.log('warn', '[GET_BY_TOKEN_RESULT_NOT_FOUND]', {
+				token
+			})
+		}
+		return user
 	}
 
 	async getByResetToken(token: string): Promise<User | null> {
@@ -92,8 +104,17 @@ export class UserService
 				}
 			})
 
-			// Формируем ссылку подтверждения
-			const verificationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/account/verify-email?token=${verificationToken}`
+			// Формируем ссылку подтверждения РАНТАЙМ-способом
+			const baseUrl =
+				process.env.NEXTAUTH_URL ||
+				process.env['NEXT_PUBLIC_BASE_URL'] ||
+				process.env['NEXT_PUBLIC_URL'] ||
+				'http://localhost:3000'
+
+			const verificationLink = new URL(
+				`/account/verify-email?token=${verificationToken}`,
+				baseUrl
+			).toString()
 
 			// Отправляем письмо с подтверждением
 			const html = `
@@ -189,7 +210,16 @@ export class UserService
 	}
 
 	async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-		const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/account/recovery/${token}`
+		const baseUrl =
+			process.env.NEXTAUTH_URL ||
+			process.env['NEXT_PUBLIC_BASE_URL'] ||
+			process.env['NEXT_PUBLIC_URL'] ||
+			'http://localhost:3000'
+
+		const resetLink = new URL(
+			`/account/recovery/${token}`,
+			baseUrl
+		).toString()
 
 		await sendMail({
 			sendTo: email,

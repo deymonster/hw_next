@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { MonitoringTabs } from '@/components/features/alert-rules/MonitoringTabs'
 
 export async function generateMetadata(): Promise<Metadata> {
-	const t = await getTranslations('dashboard.inventory.header')
+	const t = await getTranslations('dashboard.monitoring.header')
 
 	return {
 		title: t('heading'),
