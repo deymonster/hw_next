@@ -72,7 +72,7 @@ services:
     nginx-proxy:
         build:
             context: .
-            dockerfile: Dockerfile.nginx
+            dockerfile: Dockerfile.nginx-combined
         container_name: nginx_prometheus_proxy
         ports:
             - '8080:8080'

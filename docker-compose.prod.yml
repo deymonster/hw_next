@@ -16,7 +16,7 @@ services:
             - .env.prod
 
     db-migrate:
-        image: deymonster/hw-monitor:v1.0.0-alpha.6 # Обновить версию
+        image: deymonster/hw-monitor:v1.0.0-alpha.7 # Обновить версию
         container_name: db-migrate
         command: npx prisma migrate deploy
         depends_on:
@@ -28,7 +28,7 @@ services:
         restart: 'no'
 
     nextjs:
-        image: deymonster/hw-monitor:v1.0.0-alpha.6 # Обновить версию
+        image: deymonster/hw-monitor:v1.0.0-alpha.7 # Обновить версию
         container_name: nextjs_app
         user: '1001:65533'
         ports:
@@ -49,7 +49,7 @@ services:
             - nextjs_prometheus_config:/shared-config
 
     prometheus-config-init:
-        image: deymonster/hw-monitor:v1.0.0-alpha.6 # Обновить версию
+        image: deymonster/hw-monitor:v1.0.0-alpha.7 # Обновить версию
         container_name: prometheus_config_init
         user: root
         command: >
@@ -99,7 +99,7 @@ services:
             - prometheus-config-init
 
     nginx-proxy:
-        image: deymonster/hw-monitor-nginx-combined:v1.0.0-alpha.5
+        image: deymonster/hw-monitor-nginx-combined:v1.0.0-alpha.7
         container_name: nginx_combined
         ports:
             - '0.0.0.0:80:80' # Основной порт для monitoring.local

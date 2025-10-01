@@ -108,7 +108,7 @@ services:
     nginx-proxy:
         build:
             context: .
-            dockerfile: Dockerfile.nginx
+            dockerfile: Dockerfile.nginx-combined
         container_name: nginx_combined_test
         ports:
             - '8085:8080' # Прокси для Prometheus (другой порт)
