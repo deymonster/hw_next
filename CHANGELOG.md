@@ -1,3 +1,10 @@
+# [1.0.0-alpha.7](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.6...v1.0.0-alpha.7) (2025-10-01)
+
+
+### Features
+
+* **auth:** improve email verification flow with better error handling ([a195634](https://github.com/deymonster/hw_next/commit/a1956346a09057631605237a051bcf5ce308ecfe))
+
 # [1.0.0-alpha.6](https://github.com/deymonster/hw_next/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2025-09-29)
 
 
