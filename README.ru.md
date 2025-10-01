@@ -172,6 +172,64 @@ docker-compose --version
 3. Дождитесь завершения процесса установки и запуска.
 4. Перейдите по адресу `http://localhost` в браузере или по IP адресу сервера, чтобы проверить работоспособность системы.
 
+### Сборка Docker-образов по тегам (CI/CD)
+
+Сборка и публикация Docker-образов запускается только при пуше специальных git-тегов. Обычные коммиты в ветки (например, `feature/*`) CI не запускают.
+
+- Формат тега: `<service>-v<semver>`
+- Допустимые значения `<service>`:
+    - `hw-monitor` — основной сервис Next.js
+    - `hw-monitor-licd` — сервис лицензирования LICD
+    - `hw-monitor-nginx-combined` — объединённый Nginx (proxy + storage)
+- Семантика версий:
+    - `X.Y.Z-alpha` — альфа-стрим (предрелизные сборки)
+    - `X.Y.Z` — стабильный релиз
+
+Что делает CI при пуше тега:
+
+- Собирает и публикует образ только указанного сервиса
+- Публикует два Docker-тега:
+    - alias-тег: `alpha` (для `-alpha`) или `latest` (для стабильных версий)
+    - версионный тег: `<service>-vX.Y.Z[-alpha[.N]]`
+- Для `X.Y.Z-alpha` без числового суффикса CI автоматически добавляет номер сборки `.N` по истории тегов.
+  Пример: git-тег `hw-monitor-v1.0.0-alpha` → Docker-теги:
+    - `deymonster/hw-monitor:alpha`
+    - `deymonster/hw-monitor:hw-monitor-v1.0.0-alpha.3`
+
+Соответствие сервисов и Dockerfile:
+
+- `hw-monitor` → `Dockerfile` (контекст `.`)
+- `hw-monitor-licd` → `licd/Dockerfile` (контекст `./licd`)
+- `hw-monitor-nginx-combined` → `Dockerfile.nginx-combined` (контекст `.`)
+
+Примеры команд (создание и пуш тегов):
+
+- Next.js (альфа):
+    ```bash
+    git tag hw-monitor-v1.0.0-alpha
+    git push origin hw-monitor-v1.0.0-alpha
+    ```
+- Next.js (стабильный):
+    ```bash
+    git tag hw-monitor-v1.0.0
+    git push origin hw-monitor-v1.0.0
+    ```
+- LICD (альфа):
+    ```bash
+    git tag hw-monitor-licd-v1.0.0-alpha
+    git push origin hw-monitor-licd-v1.0.0-alpha
+    ```
+- Nginx Combined (альфа):
+    ```bash
+    git tag hw-monitor-nginx-combined-v1.0.0-alpha
+    git push origin hw-monitor-nginx-combined-v1.0.0-alpha
+    ```
+
+Примечания:
+
+- Теги вида `v1.0.1` (без названия сервиса) не запускают сборку Docker-образов — используйте сервисные теги, как показано выше.
+- Если нужен фиксированный номер альфа-сборки, добавьте его прямо в git-тег: `hw-monitor-v1.0.0-alpha.7`.
+
 ## Настройка и запуск клиентской части
 
 - Скачайте [агент мониторинга](https://github.com/deymonster/custom_windows_exporter/releases/download/v1.0.10/NITRINOnetControlManagerSetup.exe)

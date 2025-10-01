@@ -256,6 +256,64 @@ For production deployment, additional steps are required:
     - Configure reverse proxy
     - Enable gzip compression
 
+### Release & Docker Tags (CI/CD)
+
+Docker images are built and pushed only when you push specific git tags. Regular commits to branches do not trigger the build.
+
+- Tag format: <service>-v<semver>
+- Allowed values for <service>:
+    - hw-monitor — main Next.js service
+    - hw-monitor-licd — licensing service (LICD)
+    - hw-monitor-nginx-combined — combined Nginx (proxy + storage)
+- Semver:
+    - X.Y.Z-alpha — prerelease stream
+    - X.Y.Z — stable release
+
+What CI does on tag push:
+
+- Builds and publishes exactly the image for the specified service
+- Publishes two Docker tags:
+    - Alias tag: alpha (for -alpha) or latest (for stable)
+    - Version tag: <service>-vX.Y.Z[-alpha[.N]]
+- For X.Y.Z-alpha without numeric suffix, CI auto-increments the build number .N based on tag history.
+  Example: git tag hw-monitor-v1.0.0-alpha → Docker tags:
+    - deymonster/hw-monitor:alpha
+    - deymonster/hw-monitor:hw-monitor-v1.0.0-alpha.3
+
+Service-to-Dockerfile mapping:
+
+- hw-monitor → Dockerfile (context .)
+- hw-monitor-licd → licd/Dockerfile (context ./licd)
+- hw-monitor-nginx-combined → Dockerfile.nginx-combined (context .)
+
+Examples (create and push tags):
+
+- Next.js (alpha):
+    ```bash
+    git tag hw-monitor-v1.0.0-alpha
+    git push origin hw-monitor-v1.0.0-alpha
+    ```
+- Next.js (stable):
+    ```bash
+    git tag hw-monitor-v1.0.0
+    git push origin hw-monitor-v1.0.0
+    ```
+- LICD (alpha):
+    ```bash
+    git tag hw-monitor-licd-v1.0.0-alpha
+    git push origin hw-monitor-licd-v1.0.0-alpha
+    ```
+- Nginx Combined (alpha):
+    ```bash
+    git tag hw-monitor-nginx-combined-v1.0.0-alpha
+    git push origin hw-monitor-nginx-combined-v1.0.0-alpha
+    ```
+
+Notes:
+
+- Tags like v1.0.1 (without a service name) do NOT trigger Docker builds — use service tags as shown above.
+- If you need a fixed alpha build number, include it in the git tag: hw-monitor-v1.0.0-alpha.7
+
 ## Installation
 
 ```bash

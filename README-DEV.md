@@ -313,6 +313,87 @@ git tag -a v1.0.1 -m "Release v1.0.1: добавлены теги устройс
 git push origin v1.0.1
 ```
 
+### Сборка Docker образов по тегам (CI/CD)
+
+Сборка и публикация Docker-образов запускается только при пуше специальных тегов. Обычные коммиты в ветки (например, `feature/*`) CI не запускают.
+
+- Формат тега: `<service>-v<semver>`
+- Допустимые значения `<service>`:
+    - `hw-monitor` — основной Next.js сервис
+    - `hw-monitor-licd` — сервис лицензирования LICD
+    - `hw-monitor-nginx-combined` — объединённый Nginx (proxy + storage)
+- Семантика версий:
+    - `X.Y.Z-alpha` — альфа-стрим (предварительные сборки)
+    - `X.Y.Z` — стабильный релиз
+
+Что делает CI при пуше тега:
+
+- Собирает образ только для указанного сервиса и публикует два Docker-тега:
+    - alias-тег: `alpha` (для `-alpha`) или `latest` (для стабильных)
+    - версионный тег: `<service>-vX.Y.Z[-alpha[.N]]`
+- Для `X.Y.Z-alpha` без числового суффикса CI автоматически добавит номер сборки `.N` по истории тегов.
+  Пример: git-тег `hw-monitor-v1.0.0-alpha` → Docker-теги:
+    - `deymonster/hw-monitor:alpha`
+    - `deymonster/hw-monitor:hw-monitor-v1.0.0-alpha.3` (номер .3 будет вычислен автоматически)
+- Для стабильных: git-тег `hw-monitor-v1.0.0` → Docker-теги:
+    - `deymonster/hw-monitor:latest`
+    - `deymonster/hw-monitor:hw-monitor-v1.0.0`
+
+Команды для создания и пуша тегов:
+
+1. Next.js (hw-monitor)
+
+- Альфа:
+    ```bash
+    git tag hw-monitor-v1.0.0-alpha
+    git push origin hw-monitor-v1.0.0-alpha
+    ```
+- Стабильный:
+    ```bash
+    git tag hw-monitor-v1.0.0
+    git push origin hw-monitor-v1.0.0
+    ```
+
+2. LICD (hw-monitor-licd)
+
+- Альфа:
+    ```bash
+    git tag hw-monitor-licd-v1.0.0-alpha
+    git push origin hw-monitor-licd-v1.0.0-alpha
+    ```
+
+3. Nginx Combined (hw-monitor-nginx-combined)
+
+- Альфа:
+    ```bash
+    git tag hw-monitor-nginx-combined-v1.0.0-alpha
+    git push origin hw-monitor-nginx-combined-v1.0.0-alpha
+    ```
+
+Управление тегами:
+
+- Просмотр тегов:
+    ```bash
+    git tag --list "hw-monitor*"
+    ```
+- Удаление локального тега:
+    ```bash
+    git tag -d hw-monitor-v1.0.0-alpha
+    ```
+- Удаление тега из удалённого репозитория:
+    ```bash
+    git push origin :refs/tags/hw-monitor-v1.0.0-alpha
+    ```
+
+Примечания:
+
+- Теги вида `v1.0.1` (без названия сервиса) не запускают сборку Docker-образов — используйте сервисные теги, как показано выше.
+- Если нужен фиксированный номер альфа-билда, указывайте его прямо в git-теге, например: `hw-monitor-v1.0.0-alpha.7`.
+- Соответствие сервисов и Dockerfile:
+    - `hw-monitor` → `Dockerfile` (контекст `.`)
+    - `hw-monitor-licd` → `licd/Dockerfile` (контекст `./licd`)
+    - `hw-monitor-nginx-combined` → `Dockerfile.nginx-combined` (контекст `.`)
+
 ### Деплой в продакшн
 
 ```bash
