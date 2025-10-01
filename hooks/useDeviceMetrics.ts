@@ -37,7 +37,8 @@ export function useDeviceMetrics(deviceId: string) {
 	useEffect(() => {
 		if (!deviceId) return
 
-		let currentMetrics: DeviceMetrics = {} as DeviceMetrics
+		let currentMetrics: DeviceMetrics = (metricsCache.get(deviceId) ||
+			{}) as DeviceMetrics
 
 		// Увеличиваем счетчик подписчиков
 		const currentSubscribers = connectionSubscribers.get(deviceId) || 0
@@ -54,12 +55,13 @@ export function useDeviceMetrics(deviceId: string) {
 			eventSource.onopen = () => {
 				setIsConnecting(false)
 				setError(null)
+				console.log('[SSE] connection opened for', deviceId)
 			}
 
 			eventSource.onmessage = event => {
 				try {
 					const response: MetricsResponse = JSON.parse(event.data)
-					console.log('SSE Message Type:', response.type)
+					console.log('[SSE] message type:', response.type)
 
 					switch (response.type) {
 						case 'static':
@@ -79,30 +81,41 @@ export function useDeviceMetrics(deviceId: string) {
 								networkMetrics: response.data.networkMetrics
 							}
 							break
+						case 'error':
+							console.warn(
+								'[SSE] static data error:',
+								response.data
+							)
+							break
+						case 'system':
+							// можем показывать индикатор ожидания статики
+							// напр.: response.data.status === 'waiting_static'
+							break
 					}
-					if (
-						currentMetrics.systemInfo &&
-						currentMetrics.hardwareInfo
-					) {
-						metricsCache.set(deviceId, currentMetrics)
-						setMetrics(currentMetrics)
-					}
+
+					// ВАЖНО: обновляем состояние даже при частичных данных
+					metricsCache.set(deviceId, currentMetrics)
+					setMetrics({ ...(currentMetrics as DeviceMetrics) })
 				} catch (err) {
+					console.error('[SSE] parse error:', err)
 					setError(new Error('Failed to parse metrics data'))
 				}
 			}
 
 			eventSource.onerror = err => {
-				setError(new Error('Failed to connect to metrics stream'))
+				console.warn('[SSE] onerror for', deviceId, err)
 				setIsConnecting(false)
-
-				// Пробуем переподключиться через 5 секунд
+				// Не закрываем сразу — EventSource автоматически реконнектится
+				// Если длительное время нет onopen — сбросим соединение
 				setTimeout(() => {
-					if (activeConnections.has(deviceId)) {
-						eventSource?.close()
+					const es = activeConnections.get(deviceId)
+					if (es && es.readyState === EventSource.CLOSED) {
+						try {
+							es.close()
+						} catch {}
 						activeConnections.delete(deviceId)
 					}
-				}, 5000)
+				}, 10000)
 			}
 		}
 
@@ -110,14 +123,12 @@ export function useDeviceMetrics(deviceId: string) {
 		return () => {
 			const subscribers = connectionSubscribers.get(deviceId) || 0
 			if (subscribers <= 1) {
-				// Если это последний подписчик, закрываем соединение
-
-				eventSource?.close()
+				try {
+					eventSource?.close()
+				} catch {}
 				activeConnections.delete(deviceId)
 				connectionSubscribers.delete(deviceId)
 			} else {
-				// Иначе уменьшаем счетчик подписчиков
-
 				connectionSubscribers.set(deviceId, subscribers - 1)
 			}
 		}

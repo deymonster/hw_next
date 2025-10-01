@@ -2,14 +2,15 @@ import { DeviceType } from '@prisma/client'
 import { useState } from 'react'
 
 import { createDevice } from '@/app/actions/device'
-import { getAgentKeyByIp } from '@/app/actions/network-scanner'
 import {
-	addDeviceTarget,
-	getAgentStatuses,
-	getDeviceInfo
-} from '@/app/actions/prometheus.actions'
+	activateBatchDevices,
+	activateDevice,
+	getLicenseStatus
+} from '@/app/actions/licd.actions'
+import { getAgentKeyByIp } from '@/app/actions/network-scanner'
+import { getDeviceInfo } from '@/app/actions/prometheus.actions'
 
-// Данный хук испоьзуется только для полуения данный в окне сканирования
+// Данный хук используется только для получения данных в окне сканирования
 export const useDeviceInfo = () => {
 	const [isLoading, setIsLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
@@ -40,176 +41,305 @@ export const useDeviceInfo = () => {
 		}
 	}
 
+	// Добавление одного устройства
+	const addSingleDevice = async (
+		ipAddress: string
+	): Promise<{
+		success: boolean
+		device?: any
+		error?: string
+		activated?: boolean
+	}> => {
+		try {
+			console.log(
+				`[DEVICE_INFO_HOOK] Adding single device ${ipAddress}...`
+			)
+
+			// Проверяем лицензию
+			const lic = await getLicenseStatus()
+			if (lic.success && lic.data.remaining <= 0) {
+				return {
+					success: false,
+					error: 'License limit reached'
+				}
+			}
+
+			// Получаем информацию об устройстве
+			let deviceInfo: any = null
+			try {
+				deviceInfo = await getDeviceInfo(ipAddress)
+			} catch (infoError) {
+				console.warn(
+					`[DEVICE_INFO_HOOK] getDeviceInfo failed for ${ipAddress}:`,
+					infoError
+				)
+			}
+
+			// Определяем name и agentKey
+			let deviceName = `Device-${ipAddress.split('.').pop()}`
+			let agentKey: string | null = null
+
+			if (
+				deviceInfo?.success &&
+				deviceInfo?.data?.systemInfo &&
+				deviceInfo?.data?.systemInfo?.name
+			) {
+				deviceName = deviceInfo.data.systemInfo.name
+				agentKey =
+					deviceInfo.data.systemInfo.uuid ||
+					`temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+			}
+
+			// Если не получили agentKey из метрик — берём напрямую у агента
+			if (!agentKey) {
+				const k = await getAgentKeyByIp(ipAddress)
+				if (!k) {
+					return {
+						success: false,
+						error: 'Failed to get agent key from device'
+					}
+				}
+				agentKey = k
+			}
+
+			// Создаём устройство в БД
+			const createResult = await createDevice({
+				name: deviceName,
+				ipAddress,
+				agentKey,
+				type: DeviceType.WINDOWS
+			})
+
+			if (!createResult.success || !createResult.device) {
+				return {
+					success: false,
+					error: 'Failed to add device to database'
+				}
+			}
+
+			const device = createResult.device
+
+			// Активируем устройство
+			const activationResult = await activateDevice({
+				deviceId: device.id,
+				agentKey: device.agentKey,
+				ipAddress: device.ipAddress,
+				port: 9182
+			})
+
+			return {
+				success: true,
+				device,
+				activated: activationResult.success
+			}
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : 'Unknown error'
+			console.error(
+				`[DEVICE_INFO_HOOK] Error adding single device ${ipAddress}:`,
+				error
+			)
+			return {
+				success: false,
+				error: errorMessage
+			}
+		}
+	}
+
+	// Добавление нескольких устройств (batch)
 	const addMultipleDevices = async (
 		ipAddresses: string[]
 	): Promise<{
 		success: boolean
 		addedCount: number
 		errors: { [ip: string]: string }
+		activatedCount?: number
+		notActivated?: string[]
 	}> => {
 		try {
 			console.log(
 				`[DEVICE_INFO_HOOK] Starting to add ${ipAddresses.length} devices...`
 			)
 
-			// Добавляем все устройства в Prometheus
-			console.log('[DEVICE_INFO_HOOK] Adding targets to Prometheus...')
-			const addResult = await addDeviceTarget(ipAddresses)
-			if (!addResult.success) {
+			// Если только одно устройство, используем одиночное добавление
+			if (ipAddresses.length === 1) {
+				const result = await addSingleDevice(ipAddresses[0])
+				return {
+					success: result.success,
+					addedCount: result.success ? 1 : 0,
+					activatedCount: result.activated ? 1 : 0,
+					errors: result.success
+						? {}
+						: { [ipAddresses[0]]: result.error || 'Unknown error' },
+					notActivated: result.activated ? [] : [ipAddresses[0]]
+				}
+			}
+
+			// Для множественного добавления используем batch
+			// 1) Узнаём текущий остаток по лицензии
+			const lic = await getLicenseStatus()
+			let remaining = lic.success ? lic.data.remaining : null
+			if (!lic.success) {
 				console.warn(
-					`[DEVICE_INFO_HOOK] Warning: Failed to add targets to Prometheus: ${addResult.error}`
-				)
-			} else {
-				console.log(
-					'[DEVICE_INFO_HOOK] Successfully added targets to Prometheus'
+					'[DEVICE_INFO_HOOK] Licd status unavailable:',
+					lic.error
 				)
 			}
 
-			// Получаем статусы всех агентов
-			console.log('[DEVICE_INFO_HOOK] Getting agent statuses...')
-			const statusResults = await getAgentStatuses(ipAddresses)
-			console.log('[DEVICE_INFO_HOOK] Agent statuses:', statusResults)
+			// // 2) Получаем статусы агентов
+			// console.log('[DEVICE_INFO_HOOK] Getting agent statuses...')
+			// const statusResults = await getAgentStatuses(ipAddresses).catch(
+			// 	(e: any) => {
+			// 		console.warn(
+			// 			'[DEVICE_INFO_HOOK] getAgentStatuses failed:',
+			// 			e
+			// 		)
+			// 		return { success: false } as any
+			// 	}
+			// )
 
-			// Обрабатываем каждое устройство
 			const errors: { [ip: string]: string } = {}
 			let addedCount = 0
-			const createdDevices = []
+			const notActivated: string[] = []
+			const devicesForBatch: Array<{
+				deviceId: string
+				agentKey: string
+				ipAddress: string
+				port?: number
+			}> = []
 
+			// 3) Создаем устройства в БД и подготавливаем для batch активации
 			for (const ipAddress of ipAddresses) {
 				console.log(
 					`[DEVICE_INFO_HOOK] Processing device ${ipAddress}...`
 				)
 				try {
-					// Проверяем статус агента
-					const agentStatus = statusResults.data?.[ipAddress]
-					console.log(
-						`[DEVICE_INFO_HOOK] Agent status for ${ipAddress}:`,
-						agentStatus
-					)
+					// Проверка лимита
+					if (remaining !== null && remaining <= 0) {
+						errors[ipAddress] = 'license_limit_reached'
+						console.warn(
+							`[DEVICE_INFO_HOOK] License limit reached, skipping create for ${ipAddress}`
+						)
+						continue
+					}
 
-					// Пытаемся получить информацию об устройстве
-					let deviceInfo
+					// Получаем информацию об устройстве
+					let deviceInfo: any = null
 					try {
-						console.log(
-							`[DEVICE_INFO_HOOK] Getting device info for ${ipAddress}...`
-						)
 						deviceInfo = await getDeviceInfo(ipAddress)
-						console.log(
-							`[DEVICE_INFO_HOOK] Device info for ${ipAddress}:`,
-							deviceInfo
-						)
 					} catch (infoError) {
 						console.warn(
-							`[DEVICE_INFO_HOOK] Warning: Failed to get device info for ${ipAddress}:`,
+							`[DEVICE_INFO_HOOK] getDeviceInfo failed for ${ipAddress}:`,
 							infoError
 						)
 					}
 
-					// Если не удалось получить информацию или статус, создаем устройство с временными данными
+					// Определяем name и agentKey
+					let deviceName = `Device-${ipAddress.split('.').pop()}`
+					let agentKey: string | null = null
+
 					if (
-						!deviceInfo?.success ||
-						!deviceInfo?.data ||
-						!deviceInfo?.data.systemInfo ||
-						!deviceInfo?.data.systemInfo.name
+						deviceInfo?.success &&
+						deviceInfo?.data?.systemInfo &&
+						deviceInfo?.data?.systemInfo?.name
 					) {
-						console.log(
-							`[DEVICE_INFO_HOOK] Creating device with temporary data for ${ipAddress}`
-						)
+						deviceName = deviceInfo.data.systemInfo.name
+						agentKey =
+							deviceInfo.data.systemInfo.uuid ||
+							`temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+					}
 
-						// Получаем агентский ключ из результатов сканирования
-						console.log(
-							`[DEVICE_INFO_HOOK] Getting agent key for ${ipAddress}...`
-						)
-						const agentKey = await getAgentKeyByIp(ipAddress)
-						console.log(
-							`[DEVICE_INFO_HOOK] Agent key result for ${ipAddress}:`,
-							agentKey
-						)
-
-						// Если не удалось получить agentKey, пропускаем это устройство
-						if (!agentKey) {
+					// Если не получили agentKey из метрик — берём напрямую у агента
+					if (!agentKey) {
+						const k = await getAgentKeyByIp(ipAddress)
+						if (!k) {
 							errors[ipAddress] =
 								'Failed to get agent key from device'
 							continue
 						}
-
-						// Создаем устройство с полученным agentKey
-						console.log(
-							`[DEVICE_INFO_HOOK] Creating device in database for ${ipAddress}...`
-						)
-						const createResult = await createDevice({
-							name: `Device-${ipAddress.split('.').pop()}`,
-							ipAddress: ipAddress,
-							agentKey: agentKey,
-							type: DeviceType.WINDOWS
-						})
-						console.log(
-							`[DEVICE_INFO_HOOK] Create result for ${ipAddress}:`,
-							createResult
-						)
-
-						if (!createResult.success) {
-							errors[ipAddress] =
-								`Failed to add device to database`
-							continue
-						}
-
-						if (createResult.device) {
-							createdDevices.push(createResult.device)
-						}
-
-						addedCount++
-						continue
+						agentKey = k
 					}
 
-					// Если получили информацию, создаем устройство с полными данными
-					const { systemInfo } = deviceInfo.data
-
+					// Создаём устройство в БД
 					const createResult = await createDevice({
-						name:
-							systemInfo.name ||
-							`Device-${ipAddress.split('.').pop()}`,
-						ipAddress: ipAddress,
-						agentKey:
-							systemInfo.uuid ||
-							`temp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+						name: deviceName,
+						ipAddress,
+						agentKey,
 						type: DeviceType.WINDOWS
 					})
 
-					if (!createResult.success) {
-						errors[ipAddress] = `Failed to add device to database`
+					if (!createResult.success || !createResult.device) {
+						errors[ipAddress] = 'Failed to add device to database'
 						continue
 					}
 
-					if (createResult.device) {
-						createdDevices.push(createResult.device)
-					}
-
 					addedCount++
-				} catch (error) {
-					const errorMessage =
-						error instanceof Error ? error.message : 'Unknown error'
-					errors[ipAddress] = errorMessage
+					const dev = createResult.device
+
+					// Добавляем в список для batch активации
+					devicesForBatch.push({
+						deviceId: dev.id,
+						agentKey: dev.agentKey,
+						ipAddress: dev.ipAddress,
+						port: 9182
+					})
+
+					if (remaining !== null) remaining--
+				} catch (err) {
+					const msg =
+						err instanceof Error ? err.message : 'Unknown error'
+					errors[ipAddress] = msg
 					console.error(
 						`[DEVICE_INFO_HOOK] Error processing device ${ipAddress}:`,
-						error
+						err
 					)
 				}
 			}
 
-			// Выводим информацию о созданных устройствах
-			console.log(
-				`[DEVICE_INFO_HOOK] Created ${createdDevices.length} devices:`,
-				createdDevices.map(d => ({
-					id: d.id,
-					name: d.name,
-					ip: d.ipAddress
-				}))
-			)
+			// 4) Batch активация всех созданных устройств
+			let activatedCount = 0
+			if (devicesForBatch.length > 0) {
+				console.log(
+					`[DEVICE_INFO_HOOK] Starting batch activation for ${devicesForBatch.length} devices...`
+				)
+
+				const batchResult = await activateBatchDevices({
+					devices: devicesForBatch
+				})
+
+				if (batchResult.success) {
+					activatedCount = batchResult.successCount
+					console.log(
+						`[DEVICE_INFO_HOOK] Batch activation completed: ${activatedCount}/${devicesForBatch.length} devices activated`
+					)
+
+					// Обрабатываем результаты
+					for (const result of batchResult.results) {
+						if (!result.success) {
+							const key = result.ipAddress ?? result.deviceId
+							notActivated.push(key)
+							errors[key] = result.error || 'activation_failed'
+						}
+					}
+				} else {
+					console.error(
+						'[DEVICE_INFO_HOOK] Batch activation failed:',
+						batchResult.reason
+					)
+					// Все устройства не активированы
+					for (const device of devicesForBatch) {
+						notActivated.push(device.ipAddress)
+						errors[device.ipAddress] =
+							batchResult.reason || 'batch_activation_failed'
+					}
+				}
+			}
 
 			return {
 				success: addedCount > 0,
 				addedCount,
+				activatedCount,
+				notActivated,
 				errors
 			}
 		} catch (error) {
@@ -227,28 +357,12 @@ export const useDeviceInfo = () => {
 		}
 	}
 
-	const addDevice = async (ipAddress: string | string[]) => {
-		try {
-			const result = await addDeviceTarget(ipAddress)
-			if (!result.success) {
-				throw new Error(result.error)
-			}
-			return true
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : 'Failed to add device'
-			setError(errorMessage)
-			console.error('Add device error:', error)
-			return false
-		}
-	}
-
 	return {
 		getInfo,
-		addDevice,
 		isLoading,
 		error,
 		deviceInfo,
+		addSingleDevice,
 		addMultipleDevices
 	}
 }

@@ -40,6 +40,8 @@ model Event {
   userId    String
   user      User          @relation(fields: [userId], references: [id])
 
+  metadata  Json?
+  
   deviceId  String?
   hardwareChangeConfirmed Boolean @default(false)
   device    Device?       @relation(fields: [deviceId], references: [id])
@@ -98,25 +100,29 @@ model SmtpSettings {
 }
 
 model Device {
-  id             String       @id @default(uuid())
-  name           String
-  ipAddress      String   
-  agentKey       String      @unique
-  serialNumber   String?
-  warrantyStatus DateTime?
-  lastUpdate     DateTime     @updatedAt
-  status         DeviceStatus @default(ACTIVE)
-  type           DeviceType   @default(WINDOWS)
-  departmentId   String?
-  employeeId     String?
-  deviceTag      String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  lastSeen       DateTime? 
-  department     Department?    @relation("DepartmentDevices", fields: [departmentId], references: [id])
-  employee       Employee?    @relation(fields: [employeeId], references: [id]) 
-  inventoryItems InventoryItem[]
-  events         Event[]
+  id                String       @id @default(uuid())
+  name              String
+  ipAddress         String   
+  agentKey          String      @unique
+  serialNumber      String?
+  purchaseDate      DateTime?    // Дата приобретения (переименованное поле)
+  warrantyPeriod    Int?         // Срок гарантии в месяцах (12, 24, 36, 48, 60)
+  lastUpdate        DateTime     @updatedAt
+  status            DeviceStatus @default(ACTIVE)
+  type              DeviceType   @default(WINDOWS)
+  departmentId      String?
+  employeeId        String?
+  deviceTag         String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  lastSeen          DateTime? 
+  activationSig     String?
+  activationKeyVer  Int?
+  activatedAt       DateTime?
+  department        Department?    @relation("DepartmentDevices", fields: [departmentId], references: [id])
+  employee          Employee?    @relation(fields: [employeeId], references: [id]) 
+  inventoryItems    InventoryItem[]
+  events            Event[]
 
   @@index([status])
   @@index([agentKey])

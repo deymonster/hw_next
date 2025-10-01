@@ -2,11 +2,11 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Trash } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useSearchParams } from 'next/navigation'
 import { type ChangeEvent, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { useTranslations } from 'use-intl'
 
 import {
 	type TypeUploadFileSchema,

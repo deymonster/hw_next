@@ -104,8 +104,11 @@ export function ScanModal() {
 
 	async function onSubmit(data: TypeScanDeviceSchema) {
 		if (isScanning) {
+			// Если уже сканируем, останавливаем
 			stopScan()
+			return
 		}
+
 		setSelectedDevices([])
 		setLocalAgents([])
 
@@ -276,38 +279,60 @@ export function ScanModal() {
 						</div>
 
 						<DialogFooter className='gap-2'>
-							{localAgents && localAgents.length > 0 && (
+							{localAgents &&
+								localAgents.length > 0 &&
+								!isScanning && (
+									<Button
+										type='button'
+										variant='default'
+										disabled={
+											selectedDevices.length === 0 ||
+											isLoading ||
+											isAddingDevices
+										}
+										onClick={handleAddDevices}
+									>
+										{isAddingDevices ? (
+											<>
+												<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+												Добавление...
+											</>
+										) : (
+											'Добавить'
+										)}
+									</Button>
+								)}
+
+							{isScanning && (
+								<div className='w-full space-y-2'>
+									<div className='flex items-center justify-between text-sm text-muted-foreground'>
+										<span>Сканирование сети...</span>
+										<span>
+											{localAgents.length} устройств
+											найдено
+										</span>
+									</div>
+									<div className='h-2 w-full rounded-full bg-secondary'>
+										<div
+											className='h-2 animate-pulse rounded-full bg-primary transition-all duration-300'
+											style={{ width: '100%' }}
+										/>
+									</div>
+								</div>
+							)}
+							{isScanning ? (
 								<Button
 									type='button'
-									variant='default'
-									disabled={
-										selectedDevices.length === 0 ||
-										isLoading ||
-										isAddingDevices
-									}
-									onClick={handleAddDevices}
+									variant='destructive'
+									onClick={stopScan}
 								>
-									{isAddingDevices ? (
-										<>
-											<Loader2 className='mr-2 h-4 w-4 animate-spin' />
-											Добавление...
-										</>
-									) : (
-										'Добавить'
-									)}
+									Остановить сканирование
+								</Button>
+							) : (
+								<Button type='submit' disabled={!isValid}>
+									{t('scanButton')}
 								</Button>
 							)}
-
-							<Button
-								type='submit'
-								disabled={!isValid || isScanning}
-							>
-								{isScanning ? (
-									<Loader2 className='h-4 w-4 animate-spin' />
-								) : (
-									t('scanButton')
-								)}
-							</Button>
 						</DialogFooter>
 					</form>
 				</Form>

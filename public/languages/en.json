@@ -84,7 +84,8 @@
 			"heading": "Account verification",
 			"verifying": "Verifying your email...",
 			"successMessage": "Account verified",
-			"errorMesage": "Verification error"
+			"errorMessage": "Verification error",
+			"redirecting": "Redirecting..."
 		},
 		"login": {
 			"heading": "Login to NITRINOnet Monitoring",
@@ -430,6 +431,9 @@
 					"deviceName": "Device Name",
 					"manufacturer": "Manufacturer",
 					"osArchitecture": "OS Architecture",
+					"deviceModel": "Device Model",
+					"deviceTag": "Device Tag",
+					"location": "Location",
 					"osVersion": "OS Version",
 					"serialNumber": "Serial Number",
 					"warranty": {
@@ -1033,6 +1037,19 @@
 				"november": "november",
 				"december": "december"
 			}
+		}
+	},
+	"database": {
+		"error": {
+			"title": "Database Error",
+			"connectionFailed": "Failed to connect to database",
+			"missingTables": "Required database tables are missing",
+			"missingTablesDescription": "The following tables are missing:",
+			"connectionDescription": "Check your database connection settings and ensure the database server is running.",
+			"migrationRequired": "Database migrations need to be executed",
+			"migrationDescription": "Run the following commands to create the required tables:",
+			"checkAgain": "Check Again",
+			"checking": "Checking database..."
 		}
 	}
 }

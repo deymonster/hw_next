@@ -17,11 +17,14 @@ export function SystemSection({ systemInfo, device }: SystemSectionProps) {
 	if (!systemInfo) return null
 
 	const systemDetails = [
-		{ label: t('deviceName'), value: systemInfo.model },
+		{ label: t('deviceName'), value: systemInfo.name },
+		{ label: t('deviceModel'), value: systemInfo.model },
 		{ label: t('manufacturer'), value: systemInfo.manufacturer },
 		{ label: t('osArchitecture'), value: systemInfo.osArchitecture },
 		{ label: t('osVersion'), value: systemInfo.osVersion },
-		{ label: t('serialNumber'), value: systemInfo.serialNumber }
+		{ label: t('serialNumber'), value: systemInfo.serialNumber },
+		{ label: t('deviceTag'), value: systemInfo.deviceTag },
+		{ label: t('location'), value: systemInfo.location }
 	]
 
 	return (
@@ -55,9 +58,12 @@ export function SystemSection({ systemInfo, device }: SystemSectionProps) {
 					</h3>
 					<WarrantyEditor
 						deviceId={device.id}
-						currentWarrantyStatus={
-							device.warrantyStatus?.toISOString() || null
+						initialPurchaseDate={
+							device.purchaseDate
+								? device.purchaseDate.toISOString()
+								: null
 						}
+						initialWarrantyPeriod={device.warrantyPeriod ?? null}
 					/>
 				</CardContent>
 			</Card>

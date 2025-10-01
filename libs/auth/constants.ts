@@ -9,7 +9,7 @@ export const AUTH_ROUTES = {
 	API: {
 		SIGN_IN: '/api/auth/signin',
 		SIGN_UP: '/api/auth/signup',
-		VERIFY_EMAIL: '/api/auth/verify-email',
+		VERIFY_EMAIL: '/api/account/verify-email', // исправлено: был /api/auth/verify-email
 		RESET_PASSWORD: '/api/auth/reset-password'
 	}
 } as const

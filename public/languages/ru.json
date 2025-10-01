@@ -84,7 +84,8 @@
 			"heading": "Верификация аккаунта",
 			"verifying": "Проверяем ваш email...",
 			"successMessage": "Аккаунт верифицирован",
-			"errorMesage": "Ошибка при верификации аккаунта"
+			"errorMessage": "Ошибка при верификации аккаунта",
+			"redirecting": "Перенаправляем..."
 		},
 
 		"login": {
@@ -428,11 +429,14 @@
 				},
 				"errors": {
 					"connectionFailed": "Не удается подключиться к устройству. Проверьте, что устройство онлайн.",
-					"tryAgain": "Попробовать снова"
+					"tryAgain": "Попробовать снова",
+					"dataUnavailable": "Данные недоступны"
 				},
 				"status": {
 					"connecting": "Подключение к устройству...",
-					"loadingProcesses": "Загрузка данных процессов..."
+					"loadingProcesses": "Загрузка данных процессов...",
+					"connected": "Подключено",
+					"disconnected": "Отключено"
 				},
 				"hardwareChanges": {
 					"detected": "Обнаружены изменения в конфигурации оборудования",
@@ -481,24 +485,16 @@
 				"system": {
 					"title": "Информация о системе",
 					"deviceName": "Имя устройства",
+					"deviceModel": "Модель устройства",
 					"manufacturer": "Производитель",
 					"osArchitecture": "Архитектура ОС",
 					"osVersion": "Версия ОС",
 					"serialNumber": "Серийный номер",
+					"deviceTag": "Тег устройства",
+					"location": "Локация",
 					"warranty": {
 						"title": "Информация о гарантии"
 					}
-				},
-				"errors": {
-					"connectionFailed": "Ошибка подключения",
-					"dataUnavailable": "Данные недоступны"
-				},
-				"status": {
-					"connected": "Подключено",
-					"disconnected": "Отключено"
-				},
-				"hardwareChanges": {
-					"confirmButton": "Подтвердить изменения оборудования"
 				}
 			}
 		},
@@ -1038,6 +1034,19 @@
 				"november": "ноября",
 				"december": "декабря"
 			}
+		}
+	},
+	"database": {
+		"error": {
+			"title": "Ошибка базы данных",
+			"connectionFailed": "Не удалось подключиться к базе данных",
+			"missingTables": "Отсутствуют обязательные таблицы в базе данных",
+			"missingTablesDescription": "Следующие таблицы отсутствуют:",
+			"connectionDescription": "Проверьте настройки подключения к базе данных и убедитесь, что сервер базы данных запущен.",
+			"migrationRequired": "Требуется выполнить миграции базы данных",
+			"migrationDescription": "Выполните следующие команды для создания необходимых таблиц:",
+			"checkAgain": "Проверить снова",
+			"checking": "Проверка базы данных..."
 		}
 	}
 }

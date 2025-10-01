@@ -16,7 +16,7 @@ services:
             - .env.prod
 
     db-migrate:
-        image: deymonster/hw-monitor:latest
+        image: deymonster/hw-monitor:v1.0.0-alpha.7 # Обновить версию
         container_name: db-migrate
         command: npx prisma migrate deploy
         depends_on:
@@ -28,7 +28,7 @@ services:
         restart: 'no'
 
     nextjs:
-        image: deymonster/hw-monitor:latest
+        image: deymonster/hw-monitor:v1.0.0-alpha.7 # Обновить версию
         container_name: nextjs_app
         user: '1001:65533'
         ports:
@@ -49,7 +49,7 @@ services:
             - nextjs_prometheus_config:/shared-config
 
     prometheus-config-init:
-        image: deymonster/hw-monitor:latest
+        image: deymonster/hw-monitor:v1.0.0-alpha.7 # Обновить версию
         container_name: prometheus_config_init
         user: root
         command: >
@@ -81,6 +81,7 @@ services:
             - .env.prod
         depends_on:
             - prometheus-config-init
+            - licd
 
     alertmanager:
         image: prom/alertmanager:v0.26.0
@@ -98,13 +99,12 @@ services:
             - prometheus-config-init
 
     nginx-proxy:
-        image: deymonster/hw-monitor-nginx-combined:latest
+        image: deymonster/hw-monitor-nginx-combined:v1.0.0-alpha.7
         container_name: nginx_combined
         ports:
             - '0.0.0.0:80:80' # Основной порт для monitoring.local
             - '0.0.0.0:8080:8080' # Для обратной совместимости с Prometheus
         volumes:
-            # Убираем эту строку: - ./nginx_combined/conf.d:/etc/nginx/conf.d
             - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
             - ./storage/uploads:/usr/share/nginx/html/uploads
         networks:
@@ -127,6 +127,21 @@ services:
         networks:
             - hw-network
 
+    licd:
+        image: deymonster/hw-monitor-licd:v1.0.0-alpha.7
+        container_name: licd
+        environment:
+            - MAX_AGENTS=50
+            - JOB_NAME=windows-agents
+            - STORAGE_FILE_PATH=/data/licd.db
+        expose:
+            - '8081'
+        volumes:
+            - licd_data:/data
+        networks:
+            - hw-network
+        restart: unless-stopped
+
 volumes:
     pg_data:
     redis_data:
@@ -136,6 +151,7 @@ volumes:
         driver: local
     nextjs_prometheus_config:
         driver: local
+    licd_data:
 
 networks:
     hw-network:

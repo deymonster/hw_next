@@ -2,6 +2,7 @@
 
 import { Event } from '@prisma/client'
 
+import { EventWithDevice } from '@/services/event.interfaces'
 import { services } from '@/services/index'
 
 export async function getUnreadEventCount(userId: string): Promise<number> {
@@ -17,7 +18,7 @@ export async function getUnreadEventCount(userId: string): Promise<number> {
 
 export async function findUnreadEvents(
 	userId: string
-): Promise<{ events?: Event[]; error?: string }> {
+): Promise<{ events?: EventWithDevice[]; error?: string }> {
 	if (!userId) {
 		return { error: 'User ID is required' }
 	}
@@ -32,7 +33,7 @@ export async function findUnreadEvents(
 }
 
 export async function findAndMarkAllAsRead(userId: string): Promise<{
-	events?: Event[]
+	events?: EventWithDevice[]
 	unreadCount?: number
 	error?: string
 }> {
@@ -78,7 +79,7 @@ export async function findAllEvents(
 		orderDir?: 'asc' | 'desc'
 	}
 ): Promise<{
-	events?: Event[]
+	events?: EventWithDevice[]
 	total?: number
 	error?: string
 }> {
@@ -102,7 +103,7 @@ export async function findAllEvents(
 export async function getUnconfirmedHardwareChangeEvents(
 	deviceId: string
 ): Promise<{
-	events?: Event[]
+	events?: EventWithDevice[]
 	error?: string
 }> {
 	if (!deviceId) {

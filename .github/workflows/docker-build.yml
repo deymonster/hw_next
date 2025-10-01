@@ -1,20 +1,29 @@
+# файл docker-build.yml (фрагменты)
 name: Build and Push Docker Images
 
 on:
     push:
-        branches: [main, master]
-        tags: ['v*']
-    pull_request:
-        branches: [main, master]
-    # Ручной запуск
+        tags:
+            - 'hw-monitor-v*'
+            - 'hw-monitor-licd-v*'
+            - 'hw-monitor-nginx-combined-v*'
     workflow_dispatch:
 
 jobs:
     code-quality:
+        # Запускается только после release workflow, на PR, или вручную
+        if: >
+            github.event_name == 'release' ||
+            github.event_name == 'pull_request' ||
+            (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+            github.event_name == 'workflow_dispatch'
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout code
-              uses: actions/checkout@v3
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  # При workflow_run нужно чекаутить правильную ветку
+                  ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
 
             - name: Setup Node.js
               uses: actions/setup-node@v3
@@ -52,10 +61,14 @@ jobs:
 
     build-and-push:
         runs-on: ubuntu-latest
-        needs: code-quality
+        if: github.event_name == 'push'
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  # При workflow_run нужно чекаутить правильную ветку
+                  ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v2
@@ -66,39 +79,102 @@ jobs:
                   username: ${{ secrets.DOCKERHUB_USERNAME }}
                   password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            - name: Extract metadata for Docker
-              id: meta
-              uses: docker/metadata-action@v4
-              with:
-                  images: ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor
-                  tags: |
-                      type=ref,event=branch
-                      type=ref,event=pr
-                      type=semver,pattern={{version}}
-                      type=semver,pattern={{major}}.{{minor}}
-                      type=sha
-                      type=raw,value=latest,enable={{is_default_branch}}
+            - name: Determine service, version and tags
+              id: vars
+              shell: bash
+              run: |
+                  TAG="${GITHUB_REF_NAME}" # например: hw-monitor-v1.0.0-alpha
+                  SERVICE="${TAG%%-v*}"    # hw-monitor | hw-monitor-licd | hw-monitor-nginx-combined
+                  VERSION="${TAG#${SERVICE}-v}" # 1.0.0-alpha или 1.0.0
 
-            - name: Build and push NextJS app
+                  if [[ -z "$SERVICE" || -z "$VERSION" ]]; then
+                    echo "❌ Неверный формат тега: '$TAG'. Ожидается '<service>-v<semver>'"
+                    exit 1
+                  fi
+
+                  # alias тег (latest или alpha)
+                  if [[ "$VERSION" == *"-alpha"* ]]; then
+                    ALIAS_TAG="alpha"
+                  else
+                    ALIAS_TAG="latest"
+                  fi
+
+                  # Если тег заканчивается ровно на '-alpha' без числового суффикса, автоматически допишем .N
+                  # Пример: git-тег 'hw-monitor-v1.0.0-alpha' => docker-тег 'hw-monitor-v1.0.0-alpha.3'
+                  if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-alpha$ ]]; then
+                    git fetch --tags --force
+                    BASE="${SERVICE}-v${VERSION}"
+                    LAST=$(git tag -l "${BASE}.*" | sed -E 's/.*-alpha\.([0-9]+)$/\1/' | sort -n | tail -n1)
+                    if [[ -z "$LAST" ]]; then
+                      NEXT=1
+                    else
+                      NEXT=$((LAST+1))
+                    fi
+                    VERSION_TAG="${SERVICE}-v${VERSION}.${NEXT}"
+                  else
+                    VERSION_TAG="${TAG}"
+                  fi
+
+                  case "$SERVICE" in
+                    hw-monitor)
+                      IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor"
+                      DOCKERFILE="./Dockerfile"
+                      CONTEXT="."
+                      ;;
+                    hw-monitor-licd)
+                      IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-licd"
+                      DOCKERFILE="./licd/Dockerfile"
+                      CONTEXT="./licd"
+                      ;;
+                    hw-monitor-nginx-combined)
+                      IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined"
+                      DOCKERFILE="./Dockerfile.nginx-combined"
+                      CONTEXT="."
+                      ;;
+                    *)
+                      echo "❌ Unsupported service: $SERVICE"
+                      exit 1
+                      ;;
+                  esac
+
+                  echo "SERVICE=$SERVICE" >> $GITHUB_OUTPUT
+                  echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+                  echo "COMMIT=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+                  echo "DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+                  echo "ALIAS_TAG=$ALIAS_TAG" >> $GITHUB_OUTPUT
+                  echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_OUTPUT
+                  echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
+                  echo "DOCKERFILE=$DOCKERFILE" >> $GITHUB_OUTPUT
+                  echo "CONTEXT=$CONTEXT" >> $GITHUB_OUTPUT
+
+            - name: Build and push selected service
               uses: docker/build-push-action@v4
               with:
-                  context: .
-                  file: ./Dockerfile
-                  push: ${{ github.event_name != 'pull_request' }}
-                  tags: ${{ steps.meta.outputs.tags }}
-                  labels: ${{ steps.meta.outputs.labels }}
+                  context: ${{ steps.vars.outputs.CONTEXT }}
+                  file: ${{ steps.vars.outputs.DOCKERFILE }}
+                  push: true
+                  tags: |
+                      ${{ steps.vars.outputs.IMAGE }}:${{ steps.vars.outputs.ALIAS_TAG }}
+                      ${{ steps.vars.outputs.IMAGE }}:${{ steps.vars.outputs.VERSION_TAG }}
                   build-args: |
-                      ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
-                      ENABLE_OBFUSCATION=true
+                      VERSION=${{ steps.vars.outputs.VERSION }}
+                      COMMIT=${{ steps.vars.outputs.COMMIT }}
+                      DATE=${{ steps.vars.outputs.DATE }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
-            - name: Build and push Nginx combined
+            - name: Build and push licd
               uses: docker/build-push-action@v4
               with:
-                  context: .
-                  file: ./Dockerfile.nginx-combined
+                  context: ./licd
+                  file: ./licd/Dockerfile
                   push: ${{ github.event_name != 'pull_request' }}
-                  tags: ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:${{ github.sha }},${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined:latest
+                  tags: |
+                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-licd:${{ steps.tags.outputs.MAIN_TAG }}
+                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-licd:${{ steps.tags.outputs.VERSION_TAG }}
+                  build-args: |
+                      VERSION=${{ steps.vars.outputs.VERSION }}
+                      COMMIT=${{ steps.vars.outputs.COMMIT }}
+                      DATE=${{ steps.vars.outputs.DATE }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max

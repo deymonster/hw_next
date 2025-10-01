@@ -1,8 +1,9 @@
 import { Event, Prisma } from '@prisma/client'
 
 export interface IEventCreateInput
-	extends Omit<Event, 'id' | 'createdAt' | 'updatedAt'> {
+	extends Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'metadata'> {
 	userId: string
+	metadata?: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput
 }
 
 export interface IEventFindManyArgs {

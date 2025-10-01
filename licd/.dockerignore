@@ -1,0 +1,26 @@
+# VCS
+.git
+.gitignore
+
+# Binaries, build cache
+bin/
+out/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
+
+# Runtime data
+data/
+*.db
+*.db-wal
+*.db-shm
+
+deployments/
+docs/

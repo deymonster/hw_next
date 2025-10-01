@@ -5,6 +5,7 @@ import { WebSocket, WebSocketServer } from 'ws'
 import { services } from '@/services'
 import { LoggerService } from '@/services/logger/logger.interface'
 import { MetricType } from '@/services/prometheus/metrics'
+import { ProcessListInfo } from '@/services/prometheus/prometheus.interfaces'
 import { PrometheusParser } from '@/services/prometheus/prometheus.parser'
 
 interface NodeError extends Error {
@@ -137,6 +138,89 @@ function initWebSocketServer(): WebSocketServer | null {
 				// eslint-disable-next-line prefer-const
 				let interval: NodeJS.Timeout
 
+				// Сразу отправим кэш, если он свежий (например, не старше 10 секунд)
+				const cached = processesCache.get(deviceId)
+				if (cached && Date.now() - cached.updatedAt < 10_000) {
+					try {
+						ws.send(JSON.stringify(cached.data))
+					} catch (e) {
+						services.infrastructure.logger.warn(
+							LoggerService.APP,
+							'[WS] Failed to send cached processes:',
+							e
+						)
+					}
+				}
+
+				// Помощник: единичная выборка + рассылка всем клиентам устройства
+				const fetchAndBroadcast = async () => {
+					if (fetchingFlag.get(deviceId)) return
+					fetchingFlag.set(deviceId, true)
+					try {
+						const response =
+							await services.infrastructure.prometheus.getMetricsByIp(
+								deviceId,
+								MetricType.PROCESS
+							)
+
+						if (response?.data?.result) {
+							const parser = new PrometheusParser(response)
+							const processes = await parser.getProcessList()
+
+							// Обновляем кэш
+							processesCache.set(deviceId, {
+								data: processes,
+								updatedAt: Date.now()
+							})
+
+							// Рассылаем всем активным подключениям устройства
+							const deviceConnections =
+								wsConnections.get(deviceId)
+							if (deviceConnections) {
+								for (const client of deviceConnections) {
+									if (client.readyState === WebSocket.OPEN) {
+										try {
+											client.send(
+												JSON.stringify(processes)
+											)
+										} catch (e) {
+											services.infrastructure.logger.warn(
+												LoggerService.APP,
+												'[WS] Send to client failed:',
+												e
+											)
+										}
+									}
+								}
+							}
+						} else {
+							services.infrastructure.logger.warn(
+								LoggerService.APP,
+								`[WS] No process data for device ${deviceId}`
+							)
+						}
+					} catch (error) {
+						services.infrastructure.logger.error(
+							LoggerService.APP,
+							'[WS] Metrics fetch error:',
+							error
+						)
+						// Отправим ошибку только текущему клиенту
+						if (ws.readyState === WebSocket.OPEN) {
+							ws.send(
+								JSON.stringify({
+									error: 'Failed to fetch metrics'
+								})
+							)
+						}
+					} finally {
+						fetchingFlag.set(deviceId, false)
+					}
+				}
+
+				// Моментальная первая выборка, чтобы убрать «холодный старт»
+				fetchAndBroadcast().catch(() => {})
+
 				// Handle client connection errors
 				ws.on('error', error => {
 					services.infrastructure.logger.error(
@@ -156,55 +240,14 @@ function initWebSocketServer(): WebSocketServer | null {
 					}
 				})
 
-				// Set up metrics interval
+				// Обновляем процессы чаще и без накладок
 				interval = setInterval(async () => {
 					if (ws.readyState !== WebSocket.OPEN) {
 						clearInterval(interval)
 						return
 					}
-
-					try {
-						const response =
-							await services.infrastructure.prometheus.getMetricsByIp(
-								deviceId,
-								MetricType.PROCESS
-							)
-
-						if (response?.data?.result) {
-							services.infrastructure.logger.debug(
-								LoggerService.APP,
-								'[WS] Raw process metrics:',
-								response.data.result
-							)
-							const parser = new PrometheusParser(response)
-							const processes = await parser.getProcessList()
-							services.infrastructure.logger.debug(
-								LoggerService.APP,
-								'[WS] Parsed processes:',
-								processes
-							)
-							ws.send(JSON.stringify(processes))
-						} else {
-							services.infrastructure.logger.warn(
-								LoggerService.APP,
-								`[WS] No process data for device ${deviceId}`
-							)
-						}
-					} catch (error) {
-						services.infrastructure.logger.error(
-							LoggerService.APP,
-							'[WS] Metrics fetch error:',
-							error
-						)
-						if (ws.readyState === WebSocket.OPEN) {
-							ws.send(
-								JSON.stringify({
-									error: 'Failed to fetch metrics'
-								})
-							)
-						}
-					}
-				}, 5000)
+					await fetchAndBroadcast()
+				}, 3000)
 
 				// Cleanup on connection close
 				ws.on('close', () => {
@@ -319,3 +362,11 @@ export async function GET(
 		}
 	)
 }
+
+// Простая in-memory кэшизация последних процессов по устройству
+const processesCache = new Map<
+	string,
+	{ data: ProcessListInfo; updatedAt: number }
+>()
+// Флаг для предотвращения наложения выборок на одно устройство
+const fetchingFlag = new Map<string, boolean>()

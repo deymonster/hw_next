@@ -420,8 +420,11 @@ export interface DeviceMetrics {
 	systemInfo: {
 		manufacturer: string
 		model: string
+		name: string
 		osArchitecture: string
 		osVersion: string
+		deviceTag?: string
+		location?: string
 		serialNumber: string
 	}
 	hardwareInfo: {

@@ -1,0 +1,118 @@
+# Docker Compose для разработки
+# Next.js запускается через yarn dev (вне контейнера)
+# ВСЕ остальные сервисы в контейнерах
+services:
+    postgres:
+        image: postgres:13
+        container_name: postgres_dev
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        ports:
+            - '${POSTGRES_PORT}:5432'
+        volumes:
+            - pg_data_dev:/var/lib/postgresql/data
+        networks:
+            - hw-network-dev
+        env_file:
+            - .env
+
+    prometheus:
+        image: prom/prometheus:v2.36.0
+        container_name: prometheus_dev
+        ports:
+            - '${PROMETHEUS_PORT}:9090'
+        expose:
+            - 9090
+        networks:
+            - hw-network-dev
+        volumes:
+            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - ./prometheus/alerts:/etc/prometheus/alerts:ro
+            - prom_data_dev:/prometheus
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+            - '--web.console.templates=/usr/share/prometheus/consoles'
+            - '--web.enable-lifecycle'
+        env_file:
+            - .env
+        depends_on:
+            - licd
+
+    alertmanager:
+        image: prom/alertmanager:v0.26.0
+        container_name: alertmanager_dev
+        ports:
+            - '9093:9093'
+        volumes:
+            - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+        command:
+            - '--config.file=/etc/alertmanager/alertmanager.yml'
+            - '--storage.path=/alertmanager'
+        networks:
+            - hw-network-dev
+
+    nginx-proxy:
+        build:
+            context: .
+            dockerfile: Dockerfile.nginx-combined
+        container_name: nginx_combined_dev
+        ports:
+            - '8080:8080' # Прокси для Prometheus
+            - '8081:80' # Файловое хранилище
+        volumes:
+            - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
+            - ./nginx/conf.d/upstream.conf:/etc/nginx/conf.d/upstream.conf
+            - ./storage/uploads:/usr/share/nginx/html/uploads
+        extra_hosts:
+            - 'nextjs:host-gateway'
+        networks:
+            - hw-network-dev
+
+    redis:
+        image: redis:alpine
+        container_name: redis_dev
+        env_file:
+            - .env
+        command: redis-server --requirepass ${REDIS_PASSWORD}
+        ports:
+            - '6379:6379'
+        volumes:
+            - redis_data_dev:/data
+        networks:
+            - hw-network-dev
+
+    licd:
+        build:
+            context: ./licd
+            dockerfile: Dockerfile
+        container_name: licd_dev
+        environment:
+            - MAX_AGENTS=50
+            - JOB_NAME=windows-agents
+            - DB_PATH=/data/licd.db
+        ports:
+            - '8082:8081'
+        expose:
+            - '8081'
+        volumes:
+            - licd_data_dev:/data
+        networks:
+            - hw-network-dev
+        restart: unless-stopped
+
+volumes:
+    pg_data_dev:
+    redis_data_dev:
+    prom_data_dev:
+    prom_configs_dev:
+    uploads_dev:
+        driver: local
+    licd_data_dev:
+
+networks:
+    hw-network-dev:
+        driver: bridge

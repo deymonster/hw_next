@@ -9,10 +9,11 @@
 	"importOrderSeparation": true,
 	"importOrderSortSpecifiers": true,
 	"importOrderCaseInsensitive": true,
-	"importOrderParsePlugins": [
-		"classProperties",
+	"importOrderParserPlugins": [
+		"typescript",
+		"jsx",
 		"decorators-legacy",
-		"typescript"
+		"classProperties"
 	],
 	"importOrder": [
 		"<THIRD_PARTY_MODULES>",

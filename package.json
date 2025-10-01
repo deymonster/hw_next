@@ -1,6 +1,6 @@
 {
 	"name": "hw-monitor",
-	"version": "0.1.0",
+	"version": "1.0.0-alpha.7",
 	"private": true,
 	"scripts": {
 		"dev": "next dev -H 0.0.0.0 --turbopack",
@@ -13,9 +13,7 @@
 		"prepare": "husky"
 	},
 	"lint-staged": {
-		"*.{js,jsx,ts,tsx,json,css,md}": [
-			"prettier --write"
-		]
+		"**/*": "prettier --write --ignore-unknown"
 	},
 	"dependencies": {
 		"@auth/core": "^0.37.4",

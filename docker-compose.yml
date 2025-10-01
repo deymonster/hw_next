@@ -42,7 +42,6 @@ services:
             - hw-network
         volumes:
             - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-            - ./prometheus/targets:/etc/prometheus/targets:ro
             - ./prometheus/alerts:/etc/prometheus/alerts:ro
         command:
             - '--config.file=/etc/prometheus/prometheus.yml'
@@ -52,6 +51,8 @@ services:
             - '--web.enable-lifecycle'
         env_file:
             - .env
+        depends_on:
+            - licd
 
     alertmanager:
         image: prom/alertmanager:v0.26.0
@@ -71,7 +72,7 @@ services:
     nginx-proxy:
         build:
             context: .
-            dockerfile: Dockerfile.nginx
+            dockerfile: Dockerfile.nginx-combined
         container_name: nginx_prometheus_proxy
         ports:
             - '8080:8080'
@@ -106,6 +107,23 @@ services:
             - redis_data:/data
         networks:
             - hw-network
+
+    licd:
+        build:
+            context: ./licd
+            dockerfile: Dockerfile
+        container_name: licd
+        environment:
+            - MAX_AGENTS=50
+            - JOB_NAME=windows-agents
+            - DB_PATH=/data/licd.db
+        ports:
+            - '8082:8081'
+        expose:
+            - '8081'
+        networks:
+            - hw-network
+        restart: unless-stopped
 
 volumes:
     pg_data:

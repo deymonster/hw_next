@@ -1,14 +1,20 @@
-import { Device, DeviceStatus, DeviceType, PrismaClient } from '@prisma/client'
+import {
+	Device,
+	DeviceStatus,
+	DeviceType,
+	EventSeverity,
+	EventType,
+	PrismaClient
+} from '@prisma/client'
 
 import { BaseRepository } from '../base.service'
 import {
+	DeviceActivationUpdateInput,
 	DeviceFilterOptions,
 	IDeviceCreateInput,
 	IDeviceFindManyArgs,
 	IDeviceRepository
 } from './device.interfaces'
-
-import { services } from '@/services'
 
 /**
  * Сервис для управления устройствами в системе мониторинга
@@ -650,16 +656,58 @@ export class DeviceService
 	}
 
 	/**
+	 * Обновление данных активации устройства
+	 *
+	 * @param id - ID устройства
+	 * @param data - Данные активации
+	 * @returns Promise<Device> - Обновленное устройство
+	 */
+	async updateActivation(
+		id: string,
+		data: DeviceActivationUpdateInput
+	): Promise<Device> {
+		return await this.model.update({
+			where: { id },
+			data: {
+				activationSig: data.activationSig,
+				activationKeyVer: data.activationKeyVer,
+				activatedAt: new Date(data.activatedAt),
+				lastUpdate: new Date()
+			}
+		})
+	}
+
+	/**
+	 * Очистка данных активации устройства
+	 *
+	 * @param id - ID устройства
+	 * @returns Promise<Device> - Обновленное устройство
+	 */
+	async clearActivation(id: string): Promise<Device> {
+		return await this.model.update({
+			where: { id },
+			data: {
+				activationSig: null,
+				activationKeyVer: null,
+				activatedAt: null,
+				lastUpdate: new Date()
+			}
+		})
+	}
+
+	/**
 	 * Обновление статуса гарантии устройства с созданием события
 	 *
 	 * @param id - ID устройства
-	 * @param warrantyStatus - Новый статус гарантии
+	 * @param purchaseDate - Дата приобретения
+	 * @param warrantyPeriod - Срок гарантии в месяцах
 	 * @param userId - ID пользователя, выполняющего операцию
 	 * @returns Promise<Device> - Обновленное устройство
 	 */
 	async updateWarrantyStatus(
 		id: string,
-		warrantyStatus: string,
+		purchaseDate: Date | null,
+		warrantyPeriod: number | null,
 		userId: string
 	): Promise<Device> {
 		try {
@@ -669,57 +717,188 @@ export class DeviceService
 				throw new Error('Устройство не найдено')
 			}
 
-			// Обновляем статус гарантии
+			// Обновляем данные гарантии
 			const updatedDevice = await this.model.update({
 				where: { id },
-				data: { warrantyStatus },
+				data: {
+					purchaseDate,
+					warrantyPeriod,
+					lastUpdate: new Date()
+				},
 				include: {
 					department: true
 				}
 			})
 
-			// Функция для форматирования даты в формате "месяц год"
-			const formatWarrantyDate = (dateString: string | null): string => {
-				if (!dateString) return 'не установлена'
+			// Создаем событие об изменении гарантии (используем прямой доступ к EventService)
+			const eventService = new (
+				await import('../event.service')
+			).EventService(this.prisma)
 
-				const date = new Date(dateString)
-				const months = [
-					'январь',
-					'февраль',
-					'март',
-					'апрель',
-					'май',
-					'июнь',
-					'июль',
-					'август',
-					'сентябрь',
-					'октябрь',
-					'ноябрь',
-					'декабрь'
-				]
+			let message = `Данные гарантии устройства "${currentDevice.name}" обновлены`
 
-				return `${months[date.getMonth()]} ${date.getFullYear()}`
+			if (purchaseDate && warrantyPeriod) {
+				const endDate = this.calculateWarrantyEndDate(
+					purchaseDate,
+					warrantyPeriod
+				)
+				const formatDate = (date: Date) =>
+					date.toLocaleDateString('ru-RU')
+				message += `. Дата приобретения: ${formatDate(purchaseDate)}, срок гарантии: ${warrantyPeriod} мес., окончание: ${formatDate(endDate)}`
 			}
 
-			// Создаем событие об изменении статуса гарантии
-			const warrantyEndDate = warrantyStatus
-				? formatWarrantyDate(warrantyStatus)
-				: 'не установлена'
+			const metadata = {
+				context: 'warranty_update',
+				previous: {
+					purchaseDate: currentDevice.purchaseDate
+						? currentDevice.purchaseDate.toISOString()
+						: null,
+					warrantyPeriod: currentDevice.warrantyPeriod ?? null,
+					warrantyEndDate:
+						currentDevice.purchaseDate &&
+						currentDevice.warrantyPeriod
+							? this.calculateWarrantyEndDate(
+									currentDevice.purchaseDate,
+									currentDevice.warrantyPeriod
+								).toISOString()
+							: null
+				},
+				next: {
+					purchaseDate: purchaseDate
+						? purchaseDate.toISOString()
+						: null,
+					warrantyPeriod: warrantyPeriod ?? null,
+					warrantyEndDate:
+						purchaseDate && warrantyPeriod
+							? this.calculateWarrantyEndDate(
+									purchaseDate,
+									warrantyPeriod
+								).toISOString()
+							: null
+				}
+			}
 
-			await services.data.event.create({
-				userId,
-				type: 'DEVICE',
-				severity: 'LOW',
-				title: 'Изменен статус гарантии',
-				message: `Статус гарантии устройства "${currentDevice.name}" изменен, окончание гарантии ${warrantyEndDate}`,
+			await eventService.create({
+				type: EventType.DEVICE,
+				severity: EventSeverity.LOW,
+				title: 'Обновление гарантии',
+				message,
 				isRead: false,
 				deviceId: id,
+				userId,
+				hardwareChangeConfirmed: false,
+				metadata
+			})
+
+			return updatedDevice
+		} catch (error) {
+			console.error('Ошибка при обновлении гарантии:', error)
+			throw error
+		}
+	}
+
+	/**
+	 * Вычисляет дату окончания гарантии на основе даты приобретения и срока гарантии
+	 */
+	private calculateWarrantyEndDate(
+		purchaseDate: Date,
+		warrantyPeriodMonths: number
+	): Date {
+		const endDate = new Date(purchaseDate)
+		endDate.setMonth(endDate.getMonth() + warrantyPeriodMonths)
+		return endDate
+	}
+
+	/**
+	 * Получает статус гарантии устройства
+	 */
+	getWarrantyStatus(device: Device): {
+		isActive: boolean
+		endDate: Date | null
+		daysLeft: number | null
+	} {
+		if (!device.purchaseDate || !device.warrantyPeriod) {
+			return {
+				isActive: false,
+				endDate: null,
+				daysLeft: null
+			}
+		}
+
+		const endDate = this.calculateWarrantyEndDate(
+			device.purchaseDate,
+			device.warrantyPeriod
+		)
+		const now = new Date()
+		const isActive = endDate > now
+		const daysLeft = isActive
+			? Math.ceil(
+					(endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+				)
+			: 0
+
+		return {
+			isActive,
+			endDate,
+			daysLeft
+		}
+	}
+
+	/**
+	 * Обновляет данные гарантии устройства
+	 */
+	async updateWarrantyInfo(
+		id: string,
+		purchaseDate: Date | null,
+		warrantyPeriod: number | null,
+		userId: string
+	): Promise<Device> {
+		try {
+			const currentDevice = await this.findById(id)
+			if (!currentDevice) {
+				throw new Error('Устройство не найдено')
+			}
+
+			const updatedDevice = await this.model.update({
+				where: { id },
+				data: {
+					purchaseDate,
+					warrantyPeriod,
+					lastUpdate: new Date()
+				}
+			})
+
+			// Создаем событие об изменении гарантии (используем прямой доступ к EventService)
+			const eventService = new (
+				await import('../event.service')
+			).EventService(this.prisma)
+
+			let message = `Статус гарантии устройства "${currentDevice.name}" обновлен.`
+
+			if (purchaseDate && warrantyPeriod) {
+				const endDate = this.calculateWarrantyEndDate(
+					purchaseDate,
+					warrantyPeriod
+				)
+				const formatDate = (date: Date) =>
+					date.toLocaleDateString('ru-RU')
+				message += `. Дата приобретения: ${formatDate(purchaseDate)}, срок гарантии: ${warrantyPeriod} мес., окончание: ${formatDate(endDate)}`
+			}
+
+			await eventService.create({
+				type: EventType.DEVICE,
+				severity: EventSeverity.LOW,
+				title: 'Обновление гарантии',
+				message,
+				isRead: false,
+				deviceId: id,
+				userId,
 				hardwareChangeConfirmed: false
 			})
 
 			return updatedDevice
 		} catch (error) {
-			console.error('[UPDATE_WARRANTY_STATUS_ERROR]:', error)
+			console.error('Ошибка при обновлении данных гарантии:', error)
 			throw error
 		}
 	}

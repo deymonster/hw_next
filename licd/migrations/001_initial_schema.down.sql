@@ -1,0 +1,13 @@
+DROP TRIGGER IF EXISTS update_activations_updated_at;
+DROP TRIGGER IF EXISTS update_license_info_updated_at;
+DROP INDEX IF EXISTS idx_license_info_status;
+DROP INDEX IF EXISTS idx_license_info_install_id;
+DROP INDEX IF EXISTS idx_audit_log_agent_key;
+DROP INDEX IF EXISTS idx_audit_log_action;
+DROP INDEX IF EXISTS idx_audit_log_created_at;
+DROP INDEX IF EXISTS idx_activations_last_seen_at;
+DROP INDEX IF EXISTS idx_activations_updated_at;
+DROP INDEX IF EXISTS idx_activations_ip;
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS activations;
+DROP TABLE IF EXISTS license_info;

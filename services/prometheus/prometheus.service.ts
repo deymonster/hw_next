@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events'
-import path from 'path'
 
 import { LoggerService, LogLevel } from '../logger/logger.interface'
 import { Logger } from '../logger/logger.service'
@@ -9,13 +8,10 @@ import {
 	MetricTimeSeries,
 	PrometheusApiResponse,
 	PrometheusServiceConfig,
-	PrometheusTarget,
 	TimeRange,
 	TimeRangeParams
 } from './prometheus.interfaces'
 import { PrometheusParser } from './prometheus.parser'
-
-import fs from 'fs/promises'
 
 // import { STATIC, DYNAMIC, PROCESS } from '@/mocks/prometheus.mock';
 
@@ -355,41 +351,29 @@ export class PrometheusService {
 	/**
 	 * Перезагружает конфигурацию Prometheus
 	 */
-	// private async reloadPrometheusConfig(): Promise<void> {
-	// 	try {
-	// 		this.log('info', `Reloading Prometheus configuration...`)
-	// 		const response = await fetch(
-	// 			`${this.config.url}/prometheus/-/reload`,
-	// 			{
-	// 				method: 'POST',
-	// 				headers: {
-	// 					Authorization: this.getAuthHeader(),
-	// 					'Content-Type': 'application/json'
-	// 				}
-	// 			}
-	// 		)
-	// 		if (!response.ok) {
-	// 			throw new Error(
-	// 				`Failed to reload prometheus config: ${response.statusText}`
-	// 			)
-	// 		}
-	// 		this.log('info', `Prometheus configuration reloaded successfully`)
-	// 	} catch (error) {
-	// 		throw new Error(`Failed to reload prometheus config: ${error}`)
-	// 	}
-	// }
-
-	/**
-	 * Ожидает указанное время после перезагрузки конфигурации
-	 * @param ms Время ожидания в миллисекундах
-	 */
-	// private async waitAfterReload(ms: number = 1000): Promise<void> {
-	// 	this.log(
-	// 		'info',
-	// 		`Waiting ${ms}ms for Prometheus to apply configuration...`
-	// 	)
-	// 	return new Promise(resolve => setTimeout(resolve, ms))
-	// }
+	public async reloadPrometheusConfig(): Promise<void> {
+		try {
+			this.log('info', `Reloading Prometheus configuration...`)
+			const response = await fetch(
+				`${this.config.url}/prometheus/-/reload`,
+				{
+					method: 'POST',
+					headers: {
+						Authorization: this.getAuthHeader(),
+						'Content-Type': 'application/json'
+					}
+				}
+			)
+			if (!response.ok) {
+				throw new Error(
+					`Failed to reload prometheus config: ${response.statusText}`
+				)
+			}
+			this.log('info', `Prometheus configuration reloaded successfully`)
+		} catch (error) {
+			throw new Error(`Failed to reload prometheus config: ${error}`)
+		}
+	}
 
 	/**
 	 * Получает статус агента Prometheus
@@ -527,7 +511,11 @@ export class PrometheusService {
 
 				// Пробуем получить метрики независимо от статуса агента
 				try {
-					const response = await this.getMetricsByIp(ipAddress)
+					// Раньше здесь не передавался тип — это ломало проверку доступности
+					const response = await this.getMetricsByIp(
+						ipAddress,
+						MetricType.STATIC
+					)
 					if (
 						response &&
 						response.data &&
@@ -568,125 +556,6 @@ export class PrometheusService {
 			`Failed to get metrics after ${maxAttempts} attempts for ${ipAddress}`
 		)
 		return false
-	}
-
-	/**
-	 * Добавляет цель мониторинга через API синхронизации
-	 * @param ipAddress IP-адрес устройства или массив адресов
-	 * @param waitForMetrics Ожидать ли доступности метрик
-	 * @returns Результат добавления цели
-	 */
-	async addTarget(
-		ipAddress: string | string[],
-		waitForMetrics = true
-	): Promise<boolean | { [ip: string]: boolean }> {
-		try {
-			// Читаем текущие targets из shared volume
-			const sharedConfigPath =
-				process.env.PROMETHEUS_SHARED_CONFIG_PATH || '/shared-config'
-			const targetsPath = path.join(
-				sharedConfigPath,
-				'targets',
-				'windows_targets.json'
-			)
-
-			let targets: PrometheusTarget[] = []
-
-			try {
-				const content = await fs.readFile(targetsPath, 'utf-8')
-				targets = JSON.parse(content)
-			} catch (error) {
-				targets = [{ targets: [], labels: { job: 'windows-agents' } }]
-			}
-
-			// Добавляем новые targets
-			const ips = Array.isArray(ipAddress) ? ipAddress : [ipAddress]
-			const existingTargets = targets[0]?.targets || []
-
-			for (const ip of ips) {
-				const target = `${ip}:9182`
-				if (!existingTargets.includes(target)) {
-					existingTargets.push(target)
-				}
-			}
-
-			targets[0] = {
-				targets: existingTargets,
-				labels: { job: 'windows-agents' }
-			}
-
-			// Синхронизация через API
-			const response = await fetch('/api/prometheus/sync-config', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					type: 'targets',
-					data: targets
-				})
-			})
-
-			if (!response.ok) {
-				throw new Error('Failed to sync targets configuration')
-			}
-
-			return Array.isArray(ipAddress)
-				? ips.reduce((acc, ip) => ({ ...acc, [ip]: true }), {})
-				: true
-		} catch (error) {
-			this.log('error', 'Failed to add target:', error)
-			return Array.isArray(ipAddress)
-				? ipAddress.reduce((acc, ip) => ({ ...acc, [ip]: false }), {})
-				: false
-		}
-	}
-
-	/**
-	 * Удаляет цель мониторинга через API синхронизации
-	 * @param ipAddress IP-адрес устройства
-	 * @returns Результат удаления цели
-	 */
-	async removeTarget(ipAddress: string): Promise<boolean> {
-		try {
-			const sharedConfigPath =
-				process.env.PROMETHEUS_SHARED_CONFIG_PATH || '/shared-config'
-			const targetsPath = path.join(
-				sharedConfigPath,
-				'targets',
-				'windows_targets.json'
-			)
-
-			let targets: PrometheusTarget[] = []
-
-			try {
-				const content = await fs.readFile(targetsPath, 'utf-8')
-				targets = JSON.parse(content)
-			} catch (error) {
-				return false
-			}
-
-			// Удаляем target
-			const targetToRemove = `${ipAddress}:9182`
-			if (targets[0]?.targets) {
-				targets[0].targets = targets[0].targets.filter(
-					t => t !== targetToRemove
-				)
-			}
-
-			// Синхронизация через API
-			const response = await fetch('/api/prometheus/sync-config', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					type: 'targets',
-					data: targets
-				})
-			})
-
-			return response.ok
-		} catch (error) {
-			this.log('error', 'Failed to remove target:', error)
-			return false
-		}
 	}
 
 	/**
@@ -953,7 +822,7 @@ export class PrometheusService {
 	async getHardwareInfo(ipAddress: string) {
 		try {
 			const parser = await this.getParser(ipAddress)
-			const info = await parser.getSystemInfo()
+			const info = await parser.getHardwareInfo()
 
 			return info
 		} catch (error) {
