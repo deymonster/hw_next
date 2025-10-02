@@ -24,12 +24,13 @@ on:
 
 jobs:
     code-quality:
-        # Запускается только после release workflow, на PR, или вручную
+        # Запускается на release, PR, workflow_run, вручную и на push (теги)
         if: >
             github.event_name == 'release' ||
             github.event_name == 'pull_request' ||
             (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-            github.event_name == 'workflow_dispatch'
+            github.event_name == 'workflow_dispatch' ||
+            github.event_name == 'push'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -75,6 +76,7 @@ jobs:
     build-and-push:
         runs-on: ubuntu-latest
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        needs: code-quality
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -175,7 +177,7 @@ jobs:
                       VERSION=${{ steps.vars.outputs.VERSION }}
                       COMMIT=${{ steps.vars.outputs.COMMIT }}
                       DATE=${{ steps.vars.outputs.DATE }}
-                      ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}  # ← уже добавлено
+                      ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
