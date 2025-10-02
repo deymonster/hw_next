@@ -870,7 +870,8 @@
 					"cpu_usage": "Загрузка процессора",
 					"disk_usage_percent": "Занятое место на диске %",
 					"Hardware_Change_Detected": "Контроль оборудования",
-					"network_errors": "Ошибки сети"
+					"network_errors": "Ошибки сети",
+					"up": "Доступность агента"
 				},
 				"operators": {
 					"greater_than": "больше",
@@ -893,7 +894,7 @@
 					"subcategory": "Подкатегория",
 					"triggerCondition": "Условие срабатывания",
 					"duration": "Продолжительность",
-					"severity": "Пrioритет"
+					"severity": "Приоритет"
 				},
 				"duplicate": "Дублировать",
 				"edit": "Редактировать",
@@ -907,7 +908,7 @@
 					"columns": {
 						"name": "Название",
 						"category": "Категория",
-						"severity": "Пrioритет",
+						"severity": "Приоритет",
 						"status": "Статус",
 						"metric": "Метрика",
 						"threshold": "Порог",
@@ -920,7 +921,8 @@
 					"hardware_change": "Изменение оборудования",
 					"cpu_monitoring": "Контроль процессора",
 					"disk_monitoring": "Контроль дисков",
-					"network_monitoring": "Контроль сети"
+					"network_monitoring": "Контроль сети",
+					"agent_status": "Контроль статуса агента"
 				},
 				"subcategories": {
 					"cpu": {
@@ -946,7 +948,7 @@
 					"columns": {
 						"title": "Название",
 						"type": "Тип",
-						"severity": "Пrioритет",
+						"severity": "Приоритет",
 						"status": "Статус",
 						"createdAt": "Дата создания",
 						"actions": "Действия"
@@ -993,7 +995,7 @@
 					"device": "Устройство"
 				},
 				"message": "Сообщение",
-				"severity": "Пrioритет",
+				"severity": "Приоритет",
 				"type": "Тип"
 			}
 		}

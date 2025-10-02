@@ -105,8 +105,12 @@ export class AlertProcessorService {
 			return false
 		}
 
-		// Проверяем metric (alertname)
-		if (rule.metric && rule.metric !== alert.labels.alertname) {
+		// Сопоставляем по имени правила (alertname), а не по метрике
+		if (
+			rule.name &&
+			alert.labels.alertname &&
+			rule.name !== alert.labels.alertname
+		) {
 			return false
 		}
 

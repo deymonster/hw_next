@@ -17,6 +17,8 @@ import {
 	ComparisonOperator
 } from './alert-rules.types'
 
+import * as fs from 'fs/promises'
+
 /**
  * Сервис для управления правилами алертов Prometheus
  *
@@ -200,14 +202,17 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 		const reloadUrl = `${this.config.prometheusUrl}/prometheus/-/reload`
 		console.log(`Отправка запроса на перезагрузку Prometheus: ${reloadUrl}`)
 
-		const username = process.env.PROMETHEUS_AUTH_USERNAME || 'admin'
-		const password = process.env.PROMETHEUS_AUTH_PASSWORD || 'admin'
+		// Используем те же переменные окружения, что и PrometheusService
+		const username = process.env.PROMETHEUS_USERNAME || 'admin'
+		const password = process.env.PROMETHEUS_AUTH_PASSWORD || ''
 		const authHeader =
 			'Basic ' + Buffer.from(`${username}:${password}`).toString('base64')
+
 		try {
 			const response = await this.httpClient.post(reloadUrl, {
 				headers: {
-					Authorization: authHeader
+					Authorization: authHeader,
+					'Content-Type': 'application/json'
 				}
 			})
 
@@ -216,7 +221,6 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 				let responseBody = 'Не удалось получить тело ответа'
 
 				try {
-					// Пытаемся прочитать тело ответа для дополнительной информации
 					responseBody = await response.text()
 				} catch (bodyError) {
 					console.error(
@@ -317,16 +321,7 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 	// ==================== Работа с файловой системой ====================
 
 	/**
-	 * Сохраняет правила в файл в формате YAML
-	 *
-	 * @param rules - Массив правил для сохранения
-	 * @param filename - Имя файла (без пути)
-	 * @returns Promise, который разрешается после успешного сохранения
-	 *
-	 * @throws {Error} Если произошла ошибка записи файла
-	 */
-	/**
-	 * Сохраняет правила в файл через API синхронизации
+	 * Сохраняет правила в файл в формате YAML (напрямую в каталог правил)
 	 */
 	async saveRulesToFile(
 		rules: AlertRuleConfig[],
@@ -335,22 +330,13 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 		try {
 			const yamlContent = await this.exportToYaml(rules)
 
-			// Синхронизация через API
-			const response = await fetch('/api/prometheus/sync-config', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					type: 'alerts',
-					data: {
-						filename,
-						content: yamlContent
-					}
-				})
-			})
+			// Убедимся, что каталог существует
+			const dirPath = this.config.rulesPath
+			await fs.mkdir(dirPath, { recursive: true })
 
-			if (!response.ok) {
-				throw new Error('Failed to sync alert rules configuration')
-			}
+			// Сохраняем файл прямо в директорию правил Prometheus
+			const filePath = path.join(dirPath, filename)
+			await this.fileSystem.writeFile(filePath, yamlContent, 'utf8')
 		} catch (error) {
 			throw new Error(
 				`Ошибка сохранения правил: ${error instanceof Error ? error.message : String(error)}`
@@ -488,18 +474,11 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 	 * @private
 	 */
 	private convertToPrometheusRule(rule: AlertRuleConfig): any {
-		// Базовые аннотации для всех типов правил
 		const annotations: Record<string, string> = {
 			summary: rule.description,
 			description: `Рабочее место: {{ $labels.instance }}`
 		}
 
-		// Добавляем информацию о текущем значении и пороге, если они есть
-		if (rule.threshold !== undefined) {
-			annotations.description += `\nТекущее значение: {{ $value }}\nПороговое значение: ${rule.threshold}`
-		}
-
-		// Специальное форматирование для правил категории HARDWARE_CHANGE
 		if (rule.category === AlertCategory.HARDWARE_CHANGE) {
 			annotations.summary =
 				'Конфигурация оборудования была изменена на {{ $labels.instance }}'
@@ -509,7 +488,6 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 			annotations.description += `\nТекущее значение: {{ $value }}\nПороговое значение: ${rule.threshold}`
 		}
 
-		// Формируем объект правила для Prometheus
 		return {
 			alert: rule.name,
 			expr: rule.expression,
@@ -566,6 +544,7 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 		if (groupName.includes('disk')) return AlertCategory.DISK_MONITORING
 		if (groupName.includes('network'))
 			return AlertCategory.NETWORK_MONITORING
+		if (groupName.includes('agent')) return AlertCategory.AGENT_STATUS
 		return AlertCategory.HARDWARE_CHANGE
 	}
 

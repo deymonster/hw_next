@@ -253,6 +253,7 @@ enum AlertCategory {
   CPU_MONITORING
   DISK_MONITORING
   NETWORK_MONITORING
+  AGENT_STATUS
 }
 
 enum AlertSeverity {

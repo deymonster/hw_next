@@ -47,14 +47,27 @@ export class AlertRulesManagerService {
 		userId: string
 	): Promise<AlertRule | null> {
 		try {
-			const userRules = await this.alertRulesService.getUserRules(userId)
+			// Для статуса агента дубликаты разрешаем (разные instance)
+			if (data.category === AlertCategory.AGENT_STATUS) {
+				return null
+			}
 
-			const duplicate = userRules.find(
-				rule =>
+			const userRules = await this.alertRulesService.getUserRules(userId)
+			const instanceToCheck = data.labels?.instance
+
+			const duplicate = userRules.find(rule => {
+				const ruleLabels = (rule.labels as Record<string, string>) || {}
+				const ruleInstance = ruleLabels.instance
+
+				return (
+					rule.category === data.category &&
 					rule.metric === data.metric &&
 					rule.operator === data.operator &&
-					rule.threshold === data.threshold
-			)
+					rule.threshold === data.threshold &&
+					(ruleInstance ?? undefined) ===
+						(instanceToCheck ?? undefined)
+				)
+			})
 
 			return duplicate || null
 		} catch (error) {
@@ -190,7 +203,8 @@ export class AlertRulesManagerService {
 		const expression = this.generateExpression(
 			request.metric,
 			request.operator,
-			request.threshold
+			request.threshold,
+			request.labels?.instance
 		)
 
 		const dbData: IAlertRuleCreateInput = {
@@ -211,7 +225,6 @@ export class AlertRulesManagerService {
 		return this.alertRulesService.createRule(dbData)
 	}
 
-	// ==================== Приватные методы для обновления правил ====================
 	private async updateRuleInDatabase(
 		id: string,
 		request: UpdateAlertRuleRequest
@@ -221,7 +234,8 @@ export class AlertRulesManagerService {
 		if (
 			request.threshold !== undefined ||
 			request.operator !== undefined ||
-			request.metric !== undefined
+			request.metric !== undefined ||
+			request.labels !== undefined
 		) {
 			const currentRule = await this.alertRulesService.findById(id)
 			if (!currentRule) {
@@ -229,14 +243,20 @@ export class AlertRulesManagerService {
 			}
 
 			const metric = request.metric ?? currentRule.metric
-			const operator = request.operator ?? currentRule.operator
-			const threshold = request.threshold ?? currentRule.threshold
+			const operator =
+				request.operator ?? (currentRule.operator as ComparisonOperator)
+			const threshold =
+				request.threshold ?? (currentRule.threshold as number)
+			const currentLabels =
+				(currentRule.labels as Record<string, string>) || {}
+			const instance = request.labels?.instance ?? currentLabels?.instance
 
 			if (threshold !== null && operator !== null) {
 				updateData.expression = this.generateExpression(
 					metric,
 					operator as ComparisonOperator,
-					threshold
+					threshold,
+					instance
 				)
 			}
 		}
@@ -244,20 +264,27 @@ export class AlertRulesManagerService {
 		return this.alertRulesService.update(id, updateData)
 	}
 
-	// ==================== Генерация и конвертация ====================
-
 	/**
-	 * Генерирует выражение для сравнения
+	 * Генерирует выражение для сравнения с учетом фильтра по instance
 	 */
 	private generateExpression(
 		metric: string,
 		operator: ComparisonOperator,
-		threshold: number
+		threshold: number,
+		instance?: string
 	): string {
 		const operatorSymbol =
 			this.configService.convertOperatorToPromQL(operator)
-		return `${metric} ${operatorSymbol} ${threshold}`
+
+		// Если указан instance, добавляем фильтр по лейблу: матчим ip с любым портом
+		const labelFilter = instance
+			? `{instance=~"^${instance.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}(:.*)?$"}`
+			: ''
+
+		return `${metric}${labelFilter} ${operatorSymbol} ${threshold}`
 	}
+
+	// ==================== Генерация и конвертация ====================
 
 	/**
 	 * Экспортирует все активные правила в YAML формат

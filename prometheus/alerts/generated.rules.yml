@@ -1,40 +1,51 @@
 groups:
-    - name: cpu_monitoring_alerts
+    - name: agent_status_alerts
       rules:
-          - alert: температура процессора
-            expr: cpu_temperature > 80
+          - alert: Контроль статуса агента 107
+            expr: up{instance=~"^192.168.13.107(:.*)?$"} == 0
             for: 5m
             labels:
                 severity: warning
-                category: cpu_monitoring
+                category: agent_status
+                instance: 192.168.13.107
             annotations:
                 summary: ''
                 description: |-
                     Рабочее место: {{ $labels.instance }}
                     Текущее значение: {{ $value }}
-                    Пороговое значение: 80
-                    Текущее значение: {{ $value }}
-                    Пороговое значение: 80
-    - name: disk_monitoring_alerts
-      rules:
-          - alert: Контроль свободного места
-            expr: disk_usage_percent > 90
+                    Пороговое значение: 0
+          - alert: контроль 59
+            expr: up{instance=~"^192.168.13.59(:.*)?$"} == 0
             for: 5m
             labels:
-                severity: info
-                category: disk_monitoring
+                severity: warning
+                category: agent_status
+                instance: 192.168.13.59
             annotations:
                 summary: ''
                 description: |-
                     Рабочее место: {{ $labels.instance }}
                     Текущее значение: {{ $value }}
-                    Пороговое значение: 90
-                    Текущее значение: {{ $value }}
-                    Пороговое значение: 90
+                    Пороговое значение: 0
+    - name: hardware_change_alerts
+      rules:
+          - alert: Контроль оборудования
+            expr: Hardware_Change_Detected == 1
+            for: 0s
+            labels:
+                severity: warning
+                category: hardware_change
+            annotations:
+                summary: Конфигурация оборудования была изменена на {{ $labels.instance }}
+                description: >-
+                    Рабочее место: {{ $labels.instance }}
+
+                    Конфигурация оборудования была изменена с момента последнего
+                    запуска.
     - name: network_monitoring_alerts
       rules:
-          - alert: контроль сети ошибки
-            expr: network_errors > 10
+          - alert: Контроль сети статус
+            expr: up == 0
             for: 5m
             labels:
                 severity: warning
@@ -44,21 +55,4 @@ groups:
                 description: |-
                     Рабочее место: {{ $labels.instance }}
                     Текущее значение: {{ $value }}
-                    Пороговое значение: 10
-                    Текущее значение: {{ $value }}
-                    Пороговое значение: 10
-    - name: hardware_change_alerts
-      rules:
-          - alert: Контроль оборудования
-            expr: Hardware_Change_Detected == 1
-            for: 0s
-            labels:
-                severity: critical
-                category: hardware_change
-            annotations:
-                summary: Конфигурация оборудования была изменена на {{ $labels.instance }}
-                description: >-
-                    Рабочее место: {{ $labels.instance }}
-
-                    Конфигурация оборудования была изменена с момента последнего
-                    запуска.
+                    Пороговое значение: 0

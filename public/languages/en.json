@@ -877,7 +877,9 @@
 					"cpu_temperature": "CPU Temperature",
 					"cpu_usage": "CPU Usage",
 					"disk_usage_percent": "Disk Usage %",
-					"Hardware_Change_Detected": "Hardware Control"
+					"Hardware_Change_Detected": "Hardware Control",
+					"network_errors": "Network errors",
+					"up": "Agent Availability"
 				},
 				"operators": {
 					"greater_than": "greater than",
@@ -927,7 +929,8 @@
 					"hardware_change": "Hardware Change",
 					"cpu_monitoring": "CPU Monitoring",
 					"disk_monitoring": "Disk Monitoring",
-					"network_monitoring": "Network Monitoring"
+					"network_monitoring": "Network Monitoring",
+					"agent_status": "Agent Status"
 				},
 				"subcategories": {
 					"cpu": {

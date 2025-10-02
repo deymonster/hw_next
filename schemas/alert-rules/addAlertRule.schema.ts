@@ -20,7 +20,12 @@ export const addAlertRuleSchema = z.object({
 		.or(z.literal('')),
 	severity: z.nativeEnum(AlertSeverity),
 	description: z.string().optional(),
-	enabled: z.boolean().default(true)
+	enabled: z.boolean().default(true),
+	labels: z
+		.object({
+			instance: z.string().optional()
+		})
+		.optional()
 })
 
 export type AddAlertRuleForm = z.infer<typeof addAlertRuleSchema>

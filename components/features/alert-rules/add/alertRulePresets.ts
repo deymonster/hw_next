@@ -52,6 +52,24 @@ export const ALERT_RULE_PRESETS: AlertRulePreset[] = [
 		autoFillData: {
 			metric: 'Hardware_Change_Detected'
 		}
+	},
+	{
+		id: 'agent_offline',
+		name: 'Агент не в сети',
+		category: AlertCategory.AGENT_STATUS,
+		description:
+			'Уведомление, когда агент недоступен для сборки метрик (up == 0)',
+		metric: 'up',
+		operator: ComparisonOperator.EQUAL,
+		threshold: 0,
+		duration: '2m',
+		severity: AlertSeverity.CRITICAL,
+		autoFillData: {
+			metric: 'up',
+			operator: ComparisonOperator.EQUAL,
+			threshold: 0,
+			duration: '2m'
+		}
 	}
 ]
 
@@ -157,10 +175,10 @@ export const METRIC_CATEGORIES = {
 				description: 'Мониторинг статуса сетевого подключения',
 				metrics: [
 					{
-						name: 'network_status',
-						label: 'Статус сетевого подключения',
+						name: 'up',
+						label: 'Доступность агента (up)',
 						defaultThreshold: 0,
-						operator: 'EQUALS'
+						operator: 'EQUAL'
 					}
 				],
 				requiresThreshold: true,
@@ -184,6 +202,14 @@ export const METRIC_CATEGORIES = {
 		},
 		requiresThreshold: true,
 		icon: '🌐'
+	},
+	AGENT_STATUS: {
+		id: 'AGENT_STATUS',
+		name: 'Контроль статуса агента',
+		description: 'Проверка доступности агента (в сети или нет)',
+		metrics: ['up'],
+		requiresThreshold: false,
+		icon: '🛰️'
 	}
 }
 

@@ -9,10 +9,13 @@ import { useEffect } from 'react'
 
 import { DatabaseProvider } from '@/components/database/DatabaseProvider'
 import { ColorSwitcher } from '@/components/ui/elements/ColorSwitcher'
+import { DevicesProvider } from '@/contexts/DeviceContext'
 import type { DatabaseCheckResult } from '@/libs/database-checker'
 import { SWRProvider } from '@/providers/SWRProvider'
 import { ThemeProvider } from '@/providers/Themeprovider'
 import { ToastProvider } from '@/providers/ToastProvider'
+
+// добавляем провайдер
 
 interface RootLayoutClientProps {
 	children: React.ReactNode
@@ -67,8 +70,10 @@ export function RootLayoutClient({
 								disableTransitionOnChange
 							>
 								<QueryClientProvider client={queryClient}>
-									<ToastProvider />
-									<SWRProvider>{children}</SWRProvider>
+									<DevicesProvider>
+										<ToastProvider />
+										<SWRProvider>{children}</SWRProvider>
+									</DevicesProvider>
 								</QueryClientProvider>
 							</ThemeProvider>
 						</SessionProvider>

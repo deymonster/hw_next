@@ -1,52 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server'
-import path from 'path'
+import { NextResponse } from 'next/server'
+import * as path from 'path'
 
-import fs from 'fs/promises'
+import * as fs from 'fs/promises'
 
-// API для синхронизации конфигурации Prometheus
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
 	try {
-		const { type, data } = await request.json()
+		const body = await request.json()
 
-		const sharedConfigPath =
-			process.env.PROMETHEUS_SHARED_CONFIG_PATH || '/shared-config'
-
-		if (type === 'targets') {
-			// Обновление targets
-			const targetsPath = path.join(
-				sharedConfigPath,
-				'targets',
-				'windows_targets.json'
-			)
-			await fs.writeFile(targetsPath, JSON.stringify(data, null, 2))
-		} else if (type === 'alerts') {
-			// Обновление alert rules
-			const alertsPath = path.join(
-				sharedConfigPath,
-				'alerts',
-				data.filename
-			)
-			await fs.writeFile(alertsPath, data.content)
-		}
-
-		// Перезагрузка конфигурации Prometheus через API
-		const prometheusUrl =
-			process.env.PROMETHEUS_INTERNAL_URL || 'http://prometheus:9090'
-		const reloadResponse = await fetch(`${prometheusUrl}/-/reload`, {
-			method: 'POST'
-		})
-
-		if (!reloadResponse.ok) {
-			throw new Error(
-				`Failed to reload Prometheus: ${reloadResponse.statusText}`
+		const { type, data } = body || {}
+		if (type !== 'alerts') {
+			return NextResponse.json(
+				{ success: false, error: 'Unsupported type' },
+				{ status: 400 }
 			)
 		}
 
-		return NextResponse.json({ success: true })
+		const { filename, content } = data || {}
+		if (!filename || typeof content !== 'string') {
+			return NextResponse.json(
+				{ success: false, error: 'Invalid payload' },
+				{ status: 400 }
+			)
+		}
+
+		const rulesPath =
+			process.env.PROMETHEUS_RULES_PATH || './prometheus/alerts'
+		const filePath = path.join(rulesPath, filename)
+
+		await fs.mkdir(rulesPath, { recursive: true })
+		await fs.writeFile(filePath, content, 'utf8')
+
+		return NextResponse.json({ success: true, path: filePath })
 	} catch (error) {
-		console.error('Config sync error:', error)
 		return NextResponse.json(
-			{ error: 'Failed to sync configuration' },
+			{
+				success: false,
+				error: error instanceof Error ? error.message : 'Unknown error'
+			},
 			{ status: 500 }
 		)
 	}

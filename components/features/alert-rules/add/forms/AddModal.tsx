@@ -43,6 +43,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useAlertRules } from '@/hooks/useAlertRules'
+import { useDevices } from '@/hooks/useDevices'
 import {
 	CreateAlertRuleRequest,
 	UpdateAlertRuleRequest
@@ -134,6 +135,14 @@ export function AddAlertRuleModal({
 		return 'Создать правило'
 	}, [editMode, duplicateMode])
 
+	const { devices, fetchDevices } = useDevices()
+
+	useEffect(() => {
+		if (isOpen) {
+			fetchDevices()
+		}
+	}, [isOpen, fetchDevices])
+
 	const form = useForm<AddAlertRuleForm>({
 		resolver: zodResolver(addAlertRuleSchema),
 		defaultValues: {
@@ -144,7 +153,8 @@ export function AddAlertRuleModal({
 			duration: '5m',
 			severity: AlertSeverity.WARNING,
 			description: '',
-			enabled: true
+			enabled: true,
+			labels: {}
 		}
 	})
 
@@ -152,6 +162,26 @@ export function AddAlertRuleModal({
 	const watchedOperator = form.watch('operator')
 	const watchedThreshold = form.watch('threshold')
 	const watchedCategory = form.watch('category')
+
+	const isAgentStatus = watchedCategory === AlertCategory.AGENT_STATUS
+	const [agentStatus, setAgentStatus] = useState<'OFFLINE' | 'ONLINE'>(
+		'OFFLINE'
+	)
+
+	useEffect(() => {
+		if (isAgentStatus) {
+			// Для статуса агента всегда оператор EQUAL и порог 0/1
+			form.setValue('operator', ComparisonOperator.EQUAL)
+			form.setValue('threshold', agentStatus === 'OFFLINE' ? 0 : 1)
+		}
+	}, [isAgentStatus, agentStatus, form])
+
+	// При смене категории на любую кроме AGENT_STATUS — очищаем labels.instance
+	useEffect(() => {
+		if (!isAgentStatus) {
+			form.setValue('labels.instance', undefined)
+		}
+	}, [isAgentStatus, form])
 
 	// Получаем данные выбранной категории
 	const selectedCategoryData = useMemo(() => {
@@ -385,6 +415,14 @@ export function AddAlertRuleModal({
 			}
 		}
 
+		if (categoryData?.id === 'AGENT_STATUS') {
+			return {
+				metric: 'up',
+				defaultOperator: ComparisonOperator.EQUAL,
+				defaultThreshold: 0
+			}
+		}
+
 		// Если есть подкатегория, используем её метрики
 		if (subcategoryData) {
 			const firstMetric = subcategoryData.metrics[0]
@@ -393,6 +431,14 @@ export function AddAlertRuleModal({
 				metric: firstMetric.name,
 				defaultOperator: firstMetric.operator,
 				defaultThreshold: firstMetric.defaultThreshold
+			}
+		}
+
+		if (categoryData?.metrics && categoryData.metrics.length > 0) {
+			return {
+				metric: categoryData.metrics[0] as string,
+				defaultOperator: undefined,
+				defaultThreshold: null
 			}
 		}
 
@@ -428,7 +474,8 @@ export function AddAlertRuleModal({
 				metric,
 				severity: data.severity,
 				enabled: data.enabled,
-				duration: isHardwareChange ? '0s' : data.duration || '5m'
+				duration: isHardwareChange ? '0s' : data.duration || '5m',
+				labels: data.labels // сюда попадет labels.instance, если выбран агент
 			}
 
 			// Добавляем специфичные для мониторинга поля
@@ -437,6 +484,12 @@ export function AddAlertRuleModal({
 					data.threshold ?? defaultThreshold ?? 0
 				createRequest.operator =
 					data.operator || (defaultOperator as ComparisonOperator)
+			}
+
+			// Для статуса агента всегда EQUAL и порог 0/1 в зависимости от состояния
+			if (data.category === AlertCategory.AGENT_STATUS) {
+				createRequest.operator = ComparisonOperator.EQUAL
+				createRequest.threshold = agentStatus === 'OFFLINE' ? 0 : 1
 			}
 
 			if (editMode && ruleToEdit) {
@@ -512,7 +565,7 @@ export function AddAlertRuleModal({
 
 	// Проверяем, нужно ли показывать поля threshold и operator
 	const shouldShowThresholdFields =
-		watchedCategory !== AlertCategory.HARDWARE_CHANGE
+		watchedCategory !== AlertCategory.HARDWARE_CHANGE && !isAgentStatus
 
 	return (
 		<Dialog
@@ -608,6 +661,79 @@ export function AddAlertRuleModal({
 								)}
 							/>
 						</div>
+
+						{/* Агент — только для AGENT_STATUS */}
+						{isAgentStatus && (
+							<>
+								<FormItem>
+									<FormLabel>Агент</FormLabel>
+									<Select
+										onValueChange={value => {
+											form.setValue(
+												'labels.instance',
+												value === '__ALL__'
+													? undefined
+													: value
+											)
+										}}
+										value={
+											form.watch('labels.instance') ??
+											'__ALL__'
+										}
+										disabled={isSubmitting}
+									>
+										<FormControl>
+											<SelectTrigger className='text-sm'>
+												<SelectValue placeholder='Выберите агент' />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											<SelectItem value='__ALL__'>
+												Все агенты
+											</SelectItem>
+											{devices.map(device => (
+												<SelectItem
+													key={device.id}
+													value={device.ipAddress}
+												>
+													{device.name} —{' '}
+													{device.ipAddress}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+								{/* Состояние агента */}
+								<FormItem>
+									<FormLabel>Состояние агента</FormLabel>
+									<Select
+										onValueChange={value =>
+											setAgentStatus(
+												value as 'OFFLINE' | 'ONLINE'
+											)
+										}
+										value={agentStatus}
+										disabled={isSubmitting}
+									>
+										<FormControl>
+											<SelectTrigger className='text-sm'>
+												<SelectValue placeholder='Выберите состояние агента' />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											<SelectItem value='OFFLINE'>
+												Агент не в сети
+											</SelectItem>
+											<SelectItem value='ONLINE'>
+												Агент в сети
+											</SelectItem>
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							</>
+						)}
 
 						{/* Подкатегория (тип мониторинга) - показываем только если есть подкатегории */}
 						{availableSubcategories.length > 0 && (
@@ -908,6 +1034,10 @@ export function AddAlertRuleModal({
 										{selectedSubcategoryData.name}
 									</p>
 								)}
+								<p>
+									<strong>Агент:</strong>{' '}
+									{form.watch('labels.instance') || 'Все'}
+								</p>
 								{shouldShowThresholdFields && (
 									<>
 										<p>
