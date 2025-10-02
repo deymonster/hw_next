@@ -160,6 +160,7 @@ jobs:
                       VERSION=${{ steps.vars.outputs.VERSION }}
                       COMMIT=${{ steps.vars.outputs.COMMIT }}
                       DATE=${{ steps.vars.outputs.DATE }}
+                      ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}  # ← только эта строка добавлена
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
