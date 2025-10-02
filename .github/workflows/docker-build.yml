@@ -8,6 +8,19 @@ on:
             - 'hw-monitor-licd-v*'
             - 'hw-monitor-nginx-combined-v*'
     workflow_dispatch:
+        inputs:
+            service:
+                description: 'Сервис для сборки'
+                required: true
+                type: choice
+                options:
+                    - hw-monitor
+                    - hw-monitor-licd
+                    - hw-monitor-nginx-combined
+            version:
+                description: 'Версия (например: 1.0.0-alpha.8)'
+                required: true
+                type: string
 
 jobs:
     code-quality:
@@ -61,13 +74,12 @@ jobs:
 
     build-and-push:
         runs-on: ubuntu-latest
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-                  # При workflow_run нужно чекаутить правильную ветку
                   ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || github.ref }}
 
             - name: Set up Docker Buildx
@@ -83,24 +95,27 @@ jobs:
               id: vars
               shell: bash
               run: |
-                  TAG="${GITHUB_REF_NAME}" # например: hw-monitor-v1.0.0-alpha
-                  SERVICE="${TAG%%-v*}"    # hw-monitor | hw-monitor-licd | hw-monitor-nginx-combined
-                  VERSION="${TAG#${SERVICE}-v}" # 1.0.0-alpha или 1.0.0
+                  if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+                    SERVICE="${{ github.event.inputs.service }}"
+                    VERSION="${{ github.event.inputs.version }}"
+                    TAG="${SERVICE}-v${VERSION}"
+                  else
+                    TAG="${GITHUB_REF_NAME}" # например: hw-monitor-v1.0.0-alpha
+                    SERVICE="${TAG%%-v*}"    # hw-monitor | hw-monitor-licd | hw-monitor-nginx-combined
+                    VERSION="${TAG#${SERVICE}-v}" # 1.0.0-alpha или 1.0.0
+                  fi
 
                   if [[ -z "$SERVICE" || -z "$VERSION" ]]; then
-                    echo "❌ Неверный формат тега: '$TAG'. Ожидается '<service>-v<semver>'"
+                    echo "❌ Неверный формат входных данных: service='$SERVICE' version='$VERSION'"
                     exit 1
                   fi
 
-                  # alias тег (latest или alpha)
                   if [[ "$VERSION" == *"-alpha"* ]]; then
                     ALIAS_TAG="alpha"
                   else
                     ALIAS_TAG="latest"
                   fi
 
-                  # Если тег заканчивается ровно на '-alpha' без числового суффикса, автоматически допишем .N
-                  # Пример: git-тег 'hw-monitor-v1.0.0-alpha' => docker-тег 'hw-monitor-v1.0.0-alpha.3'
                   if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-alpha$ ]]; then
                     git fetch --tags --force
                     BASE="${SERVICE}-v${VERSION}"
@@ -160,7 +175,7 @@ jobs:
                       VERSION=${{ steps.vars.outputs.VERSION }}
                       COMMIT=${{ steps.vars.outputs.COMMIT }}
                       DATE=${{ steps.vars.outputs.DATE }}
-                      ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}  # ← только эта строка добавлена
+                      ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}  # ← уже добавлено
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
