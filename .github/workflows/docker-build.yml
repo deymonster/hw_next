@@ -180,19 +180,3 @@ jobs:
                       ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
-
-            - name: Build and push licd
-              uses: docker/build-push-action@v4
-              with:
-                  context: ./licd
-                  file: ./licd/Dockerfile
-                  push: ${{ github.event_name != 'pull_request' }}
-                  tags: |
-                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-licd:${{ steps.tags.outputs.MAIN_TAG }}
-                      ${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-licd:${{ steps.tags.outputs.VERSION_TAG }}
-                  build-args: |
-                      VERSION=${{ steps.vars.outputs.VERSION }}
-                      COMMIT=${{ steps.vars.outputs.COMMIT }}
-                      DATE=${{ steps.vars.outputs.DATE }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
