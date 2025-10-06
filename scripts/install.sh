@@ -3,31 +3,53 @@ set -euo pipefail
 
 # =========================
 # HW Monitor Installer (Ubuntu/Debian)
+# Fully autonomous: downloads compose file, prepares env, directories, htpasswd, installs Docker/Compose, starts services.
 # =========================
 
 # Defaults
 SERVER_IP=""
 ADMIN_EMAIL="admin@example.com"
 TELEGRAM_BOT_TOKEN=""
+DOCKER_COMPOSE_CMD=""
+
+# Where to store files on server
+INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
+COMPOSE_FILE="${COMPOSE_FILE:-$INSTALL_DIR/docker-compose.prod.yml}"
+ENV_FILE="${ENV_FILE:-$INSTALL_DIR/.env.prod}"
+NGINX_AUTH_DIR="${NGINX_AUTH_DIR:-$INSTALL_DIR/nginx/auth}"
+NGINX_AUTH_FILE="${NGINX_AUTH_FILE:-$NGINX_AUTH_DIR/.htpasswd}"
+
+# Direct raw link to docker-compose.prod.yml
+COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://github.com/deymonster/hw_next/raw/refs/heads/main/docker-compose.prod.yml}"
+
+# Basic auth for nginx
+BASIC_AUTH_USER="${BASIC_AUTH_USER:-admin}"
+BASIC_AUTH_PASSWORD="${BASIC_AUTH_PASSWORD:-admin}"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --server-ip)
-      SERVER_IP="$2"
-      shift 2
-      ;;
+      SERVER_IP="$2"; shift 2 ;;
     --admin-email)
-      ADMIN_EMAIL="$2"
-      shift 2
-      ;;
+      ADMIN_EMAIL="$2"; shift 2 ;;
     --telegram-bot-token)
-      TELEGRAM_BOT_TOKEN="$2"
-      shift 2
-      ;;
+      TELEGRAM_BOT_TOKEN="$2"; shift 2 ;;
+    --install-dir)
+      INSTALL_DIR="$2"
+      COMPOSE_FILE="$INSTALL_DIR/docker-compose.prod.yml"
+      ENV_FILE="$INSTALL_DIR/.env.prod"
+      NGINX_AUTH_DIR="$INSTALL_DIR/nginx/auth"
+      NGINX_AUTH_FILE="$NGINX_AUTH_DIR/.htpasswd"
+      shift 2 ;;
+    --compose-url)
+      COMPOSE_FILE_URL="$2"; shift 2 ;;
+    --basic-auth-user)
+      BASIC_AUTH_USER="$2"; shift 2 ;;
+    --basic-auth-password)
+      BASIC_AUTH_PASSWORD="$2"; shift 2 ;;
     *)
-      echo "Unknown option: $1"; exit 1
-      ;;
+      echo "Unknown option: $1"; exit 1 ;;
   esac
 done
 
@@ -66,113 +88,155 @@ random_b64() {
   fi
 }
 
+random_string() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 16
+  else
+    tr -dc 'a-f0-9' </dev/urandom | head -c 32
+  fi
+}
+
 # Ensure apt and basic tools
 ensure_prereqs() {
   if ! command -v apt-get >/dev/null 2>&1; then
     echo "apt-get not found. This script targets Ubuntu/Debian."; exit 1
   fi
-  sudo apt-get update -y
-  sudo apt-get install -y ca-certificates curl gnupg
+  sudo apt-get update -y || true
+  sudo apt-get install -y ca-certificates curl gnupg || true
 }
 
-install_docker() {
-  if command -v docker >/dev/null 2>&1; then
-    echo "Docker found."
-  else
-    echo "Installing Docker..."
-    sudo apt-get install -y docker.io
+install_docker_if_needed() {
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "Docker не найден. Устанавливаю через get.docker.com..."
+    curl -fsSL https://get.docker.com | sh
+    sudo usermod -aG docker "${SUDO_USER:-$USER}" || true
+  fi
+
+  # Try compose plugin v2
+  if ! docker compose version >/dev/null 2>&1; then
+    if command -v apt-get >/dev/null 2>&1; then
+      sudo apt-get update -y || true
+      sudo apt-get install -y docker-compose-plugin || true
+    fi
+  fi
+
+  # Fallback to standalone docker-compose (v2)
+  if ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then
+    echo "Ставлю standalone docker-compose..."
+    sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
   fi
 }
 
-install_compose() {
+detect_compose_cmd() {
   if docker compose version >/dev/null 2>&1; then
-    echo "Docker Compose plugin found."
+    DOCKER_COMPOSE_CMD="docker compose"
+  elif docker-compose version >/dev/null 2>&1; then
+    DOCKER_COMPOSE_CMD="docker-compose"
   else
-    echo "Installing Docker Compose plugin..."
-    sudo apt-get install -y docker-compose-plugin
+    echo "Docker Compose не найден. Проверь установку Docker/Compose."
+    exit 1
   fi
 }
 
-# Create required directories
-prepare_dirs() {
-  mkdir -p storage/logs storage/uploads
+ensure_compose_file() {
+  mkdir -p "$(dirname "$COMPOSE_FILE")"
 
-  # Allow container user (uid=1001) to write; fallback to permissive if chown fails
-  sudo chown -R 1001:1001 storage/logs storage/uploads || echo "Warning: chown failed, falling back to permissive mode"
-
-  # Group-writable for shared access; fallback to 777 if chown failed
-  chmod -R 775 storage/logs storage/uploads || chmod -R 777 storage/logs storage/uploads
-}
-
-# Generate .env.prod if not exists
-generate_env() {
-  if [[ -f ".env.prod" ]]; then
-    echo ".env.prod already exists, skipping generation."
+  if [ -f "$COMPOSE_FILE" ]; then
+    echo "Compose-файл найден: $COMPOSE_FILE"
     return
   fi
 
-  echo "Generating .env.prod..."
-  DB_PASSWORD="$(random_b64)"
-  REDIS_PASSWORD="$(random_b64)"
-  NEXTAUTH_SECRET="$(random_b64)"
-  ENCRYPTION_KEY="$(random_b64)"
-  PROM_PASSWORD="$(random_b64 | sed 's/[^a-zA-Z0-9]/_/g')"
-  HANDSHAKE_KEY="$(random_b64)"
+  if [ -z "$COMPOSE_FILE_URL" ]; then
+    echo "COMPOSE_FILE_URL не задан, а $COMPOSE_FILE отсутствует."
+    exit 1
+  fi
 
-  cat > .env.prod <<EOF
-# Base URLs
+  echo "Скачиваю compose-файл из $COMPOSE_FILE_URL ..."
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$COMPOSE_FILE_URL" -o "$COMPOSE_FILE"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$COMPOSE_FILE" "$COMPOSE_FILE_URL"
+  else
+    echo "Нужен curl или wget для скачивания COMPOSE_FILE_URL."
+    exit 1
+  fi
+
+  if [ ! -f "$COMPOSE_FILE" ]; then
+    echo "Не удалось получить $COMPOSE_FILE."
+    exit 1
+  fi
+}
+
+ensure_env_file() {
+  mkdir -p "$INSTALL_DIR"
+  if [ -f "$ENV_FILE" ]; then
+    echo ".env.prod найден: $ENV_FILE"
+    return
+  fi
+
+  echo "Генерирую $ENV_FILE ..."
+  POSTGRES_USER="${POSTGRES_USER:-hw}"
+  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(random_string)}"
+  POSTGRES_DB="${POSTGRES_DB:-hw}"
+  POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+  REDIS_PASSWORD="${REDIS_PASSWORD:-$(random_string)}"
+
+  DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_container:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public"
+
+  cat > "$ENV_FILE" <<EOF
+# Autogenerated by install.sh
+POSTGRES_USER=${POSTGRES_USER}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+POSTGRES_DB=${POSTGRES_DB}
+POSTGRES_PORT=${POSTGRES_PORT}
+REDIS_PASSWORD=${REDIS_PASSWORD}
+DATABASE_URL=${DATABASE_URL}
+
+# Base URLs (optional)
 NEXTAUTH_URL=https://${SERVER_IP}
 NEXT_PUBLIC_URL=https://${SERVER_IP}
 
 # Admin
 ADMIN_EMAIL=${ADMIN_EMAIL}
-
-# Redis
-REDIS_URL=redis://redis:6379
-REDIS_PASSWORD=
-
-# Prometheus
-PROMETHEUS_PROXY_URL=http://nginx-proxy:8080
-PROMETHEUS_AUTH_PASSWORD=${PROM_PASSWORD}
-
-# Storage
-NEXT_PUBLIC_STORAGE_URL=http://nginx-storage:8082
-NEXT_PUBLIC_UPLOADS_BASE_URL=http://nginx-storage:8082/uploads
-
-# SMTP (optional) - fill later if needed
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASSWORD=
-SMTP_FROM_EMAIL=
-SMTP_FROM_NAME="NITRINOnet Monitoring System"
-
-# Licensing (optional)
-LICD_URL=http://licd:8085
-LICENSING_ENABLED=false
-LICENSE_CHECK_INTERVAL=3600
 EOF
+}
 
-  echo ".env.prod generated."
-  echo "Admin account:"
-  echo "  ADMIN_EMAIL=${ADMIN_EMAIL}"
-  echo "Note: No admin password is generated by this installer."
-  echo "DB password and other secrets are generated; check .env.prod if needed."
+prepare_dirs() {
+  mkdir -p "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads"
+  sudo chown -R 1001:65533 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" 2>/dev/null || true
+  sudo chmod -R 775 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" || true
+  sudo chmod -R 777 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" || true
+}
+
+ensure_nginx_auth() {
+  mkdir -p "$NGINX_AUTH_DIR"
+  if [ -f "$NGINX_AUTH_FILE" ]; then
+    echo ".htpasswd найден: $NGINX_AUTH_FILE"
+    return
+  fi
+
+  echo "Создаю .htpasswd (basic auth для nginx)..."
+  local hash
+  hash=$(openssl passwd -crypt "$BASIC_AUTH_PASSWORD")
+  echo "${BASIC_AUTH_USER}:${hash}" > "$NGINX_AUTH_FILE"
 }
 
 compose_up() {
+  ensure_prereqs
+  install_docker_if_needed
+  detect_compose_cmd
+  ensure_compose_file
+  ensure_env_file
+  prepare_dirs
+  ensure_nginx_auth
+
   echo "Pulling images and starting services..."
-  sudo docker compose -f docker-compose.prod.yml pull || true
-  sudo docker compose -f docker-compose.prod.yml up -d
+  sudo ${DOCKER_COMPOSE_CMD} -f "$COMPOSE_FILE" pull || true
+  sudo ${DOCKER_COMPOSE_CMD} -f "$COMPOSE_FILE" up -d
 }
 
 main() {
-  ensure_prereqs
-  install_docker
-  install_compose
-  prepare_dirs
-  generate_env
   compose_up
 
   echo "Done."
@@ -180,24 +244,17 @@ main() {
   echo "  Next.js:    http://${SERVER_IP}:3000"
   echo "  Nginx:      http://${SERVER_IP}:80"
   echo "  Prometheus: http://${SERVER_IP}:8080"
-  echo "Check logs with: sudo docker compose -f docker-compose.prod.yml logs -f"
+  echo "Check logs with: sudo ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" logs -f"
   echo "------------------------------------------------------------"
   echo "Installed with:"
   echo "  SERVER_IP=${SERVER_IP}"
-  echo "  NEXTAUTH_URL=https://${SERVER_IP}"
-  echo "  NEXT_PUBLIC_URL=https://${SERVER_IP}"
-  echo "  ADMIN_EMAIL=${ADMIN_EMAIL}"
-  echo "  PROMETHEUS_PROXY_URL=http://nginx-proxy:8080"
-  echo "  NEXT_PUBLIC_STORAGE_URL=http://nginx-storage:8082"
+  echo "  INSTALL_DIR=${INSTALL_DIR}"
+  echo "  COMPOSE_FILE=${COMPOSE_FILE}"
+  echo "  ENV_FILE=${ENV_FILE}"
+  echo "  NGINX_AUTH_FILE=${NGINX_AUTH_FILE}"
   echo "------------------------------------------------------------"
-  echo "SMTP is not configured yet."
-  echo "Please set SMTP_* in .env.prod and restart services."
-  echo "Without SMTP, registration and email notifications will not work."
-  echo "Steps:"
-  echo "  1) Edit .env.prod: set SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER,"
-  echo "     SMTP_PASSWORD, SMTP_FROM_EMAIL, SMTP_FROM_NAME"
-  echo "  2) Restart: docker compose -f docker-compose.prod.yml down && \\" 
-  echo "              docker compose -f docker-compose.prod.yml up -d"
+  echo "If you need to change SMTP or other settings, edit $ENV_FILE and restart:"
+  echo "  ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" down && ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" up -d"
 }
 
 main "$@"
