@@ -46,18 +46,18 @@ services:
         volumes:
             - ./storage/logs:/app/storage/logs
             - ./storage/uploads:/app/storage/uploads
-            - nextjs_prometheus_config:/shared-config
+            - nextjs_prometheus_config:/app/prometheus
 
     prometheus-config-init:
         image: deymonster/hw-monitor:v1.0.0-alpha.8 # Обновить версию
         container_name: prometheus_config_init
         user: root
         command: >
-            sh -c "mkdir -p /shared-config && 
-                   chmod 777 /shared-config &&
-                   cp -r /app/prometheus/* /shared-config/ && 
-                   chown -R 65534:65534 /shared-config &&
-                   chmod -R 755 /shared-config"
+            sh -c 'mkdir -p /shared-config/alerts;
+                   cp -r /app/prometheus/* /shared-config/;
+                   chown -R 1001:65533 /shared-config;
+                   find /shared-config -type d -print0 | xargs -0 chmod 775;
+                   find /shared-config -type f -print0 | xargs -0 chmod 664'
         volumes:
             - nextjs_prometheus_config:/shared-config
         restart: 'no'
