@@ -3,8 +3,14 @@ set -euo pipefail
 
 # =========================
 # HW Monitor Installer (Ubuntu/Debian)
-# Fully autonomous: downloads compose file, prepares env, directories, htpasswd, installs Docker/Compose, starts services.
+# Simplified version — automatic Docker & Compose installation via get.docker.com
 # =========================
+
+# Требуем root-права
+if [[ $EUID -ne 0 ]]; then
+  echo "⚠️  Этот скрипт требует root-доступа. Запусти через: sudo ./install.sh"
+  exit 1
+fi
 
 # Defaults
 SERVER_IP=""
@@ -12,29 +18,28 @@ ADMIN_EMAIL="admin@example.com"
 TELEGRAM_BOT_TOKEN=""
 DOCKER_COMPOSE_CMD=""
 
-# Where to store files on server
 INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
 COMPOSE_FILE="${COMPOSE_FILE:-$INSTALL_DIR/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$INSTALL_DIR/.env.prod}"
 NGINX_AUTH_DIR="${NGINX_AUTH_DIR:-$INSTALL_DIR/nginx/auth}"
 NGINX_AUTH_FILE="${NGINX_AUTH_FILE:-$NGINX_AUTH_DIR/.htpasswd}"
 
-# Direct raw link to docker-compose.prod.yml
 COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://github.com/deymonster/hw_next/raw/refs/heads/main/docker-compose.prod.yml}"
 
-# Basic auth for nginx
 BASIC_AUTH_USER="${BASIC_AUTH_USER:-admin}"
 BASIC_AUTH_PASSWORD="${BASIC_AUTH_PASSWORD:-admin}"
+
+# Per-image tags (can be set to "auto" to fetch latest via Docker Hub if jq is available)
+NEXT_TAG="${NEXT_TAG:-latest}"
+NGINX_TAG="${NGINX_TAG:-v1.0.0-alpha.7}"
+LICD_TAG="${LICD_TAG:-v1.0.0-alpha.7}"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --server-ip)
-      SERVER_IP="$2"; shift 2 ;;
-    --admin-email)
-      ADMIN_EMAIL="$2"; shift 2 ;;
-    --telegram-bot-token)
-      TELEGRAM_BOT_TOKEN="$2"; shift 2 ;;
+    --server-ip) SERVER_IP="$2"; shift 2 ;;
+    --admin-email) ADMIN_EMAIL="$2"; shift 2 ;;
+    --telegram-bot-token) TELEGRAM_BOT_TOKEN="$2"; shift 2 ;;
     --install-dir)
       INSTALL_DIR="$2"
       COMPOSE_FILE="$INSTALL_DIR/docker-compose.prod.yml"
@@ -42,89 +47,73 @@ while [[ $# -gt 0 ]]; do
       NGINX_AUTH_DIR="$INSTALL_DIR/nginx/auth"
       NGINX_AUTH_FILE="$NGINX_AUTH_DIR/.htpasswd"
       shift 2 ;;
-    --compose-url)
-      COMPOSE_FILE_URL="$2"; shift 2 ;;
-    --basic-auth-user)
-      BASIC_AUTH_USER="$2"; shift 2 ;;
-    --basic-auth-password)
-      BASIC_AUTH_PASSWORD="$2"; shift 2 ;;
-    *)
-      echo "Unknown option: $1"; exit 1 ;;
+    --compose-url) COMPOSE_FILE_URL="$2"; shift 2 ;;
+    --basic-auth-user) BASIC_AUTH_USER="$2"; shift 2 ;;
+    --basic-auth-password) BASIC_AUTH_PASSWORD="$2"; shift 2 ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
 
-# Detect server IP if not provided
+# Detect server IP
 detect_ip() {
   if [[ -n "${SERVER_IP}" ]]; then
     echo "${SERVER_IP}"
     return
   fi
-  if command -v hostname >/dev/null 2>&1; then
-    local ip
-    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-    if [[ -n "${ip}" ]]; then
-      echo "${ip}"; return
-    fi
-  fi
-  if command -v curl >/dev/null 2>&1; then
-    local ip
-    ip=$(curl -s http://ifconfig.me || true)
-    if [[ -n "${ip}" ]]; then
-      echo "${ip}"; return
-    fi
-  fi
-  echo "127.0.0.1"
+  ip=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+  [[ -z "$ip" ]] && ip=$(curl -s http://ifconfig.me || echo "127.0.0.1")
+  echo "$ip"
 }
-
 SERVER_IP="$(detect_ip)"
 echo "Using SERVER_IP=${SERVER_IP}"
 
-# Random generators
-random_b64() {
-  if command -v openssl >/dev/null 2>&1; then
-    openssl rand -base64 32
-  else
-    head -c 32 /dev/urandom | base64
-  fi
-}
-
+# Random helpers
 random_string() {
   openssl rand -hex 16 2>/dev/null || cat /dev/urandom | tr -dc 'a-f0-9' | head -c 32
 }
-
-# Ensure apt and basic tools
-ensure_prereqs() {
-  if ! command -v apt-get >/dev/null 2>&1; then
-    echo "apt-get not found. This script targets Ubuntu/Debian."; exit 1
+# helper: генератор длинного hex (64 символа)
+random_hex64() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+  else
+    head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'
   fi
-  sudo apt-get update -y || true
-  sudo apt-get install -y ca-certificates curl gnupg || true
+}
+# helper: случайная base64-строка
+random_b64() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -base64 32 | tr -d '\n'
+  else
+    head -c 32 /dev/urandom | base64 | tr -d '\n'
+  fi
 }
 
+# detect latest tag from Docker Hub (if jq exists)
+detect_latest_tag() {
+  local repo="$1"
+  if command -v jq >/dev/null 2>&1; then
+    local latest
+    latest="$(curl -s "https://hub.docker.com/v2/repositories/${repo}/tags/?page_size=100" \
+      | jq -r '[.results[]] | sort_by(.last_updated) | reverse | .[0].name')"
+    if [ -n "$latest" ] && [ "$latest" != "null" ]; then
+      echo "$latest"
+      return 0
+    fi
+  fi
+  echo ""
+}
+
+# -----------------------------
+# Docker installation (simplified)
+# -----------------------------
 install_docker_if_needed() {
   if ! command -v docker >/dev/null 2>&1; then
-    echo "Docker не найден. Подключаю официальный репозиторий и устанавливаю..."
-    # Подготовка apt и ключей Docker
-    sudo apt-get update -y || true
-    sudo apt-get install -y ca-certificates curl gnupg || true
-    sudo install -m 0755 -d /etc/apt/keyrings || true
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-
-    sudo apt-get update -y
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin || true
+    echo "🚀 Устанавливаю Docker и Compose через официальный скрипт..."
+    curl -fsSL https://get.docker.com | sh
   fi
 
-  # Если Docker поставился, но плагина compose нет — пробуем фолбэк
-  if ! docker compose version >/dev/null 2>&1; then
-    echo "Плагин docker compose недоступен. Ставлю standalone docker-compose v2..."
-    sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-  fi
-
-  # Запуск и добавление пользователя в группу docker (не критично, но полезно)
-  sudo systemctl enable --now docker || true
-  sudo usermod -aG docker "${SUDO_USER:-$USER}" || true
+  systemctl enable --now docker || true
+  usermod -aG docker "${SUDO_USER:-$USER}" || true
 }
 
 detect_compose_cmd() {
@@ -133,113 +122,348 @@ detect_compose_cmd() {
   elif docker-compose version >/dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker-compose"
   else
-    echo "Docker Compose не найден после установки."
+    echo "❌ Docker Compose не найден. Проверь установку Docker."
     exit 1
   fi
 }
 
+# -----------------------------
+# Files & environment setup
+# -----------------------------
 ensure_compose_file() {
-  sudo mkdir -p "$(dirname "$COMPOSE_FILE")"
-
+  mkdir -p "$(dirname "$COMPOSE_FILE")"
   if [ -f "$COMPOSE_FILE" ]; then
     echo "Compose-файл найден: $COMPOSE_FILE"
     return
   fi
 
   echo "Скачиваю compose-файл из $COMPOSE_FILE_URL ..."
-  tmp_file="$(mktemp)"
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$COMPOSE_FILE_URL" -o "$tmp_file"
-  elif command -v wget >/dev/null 2>&1; then
-    wget -qO "$tmp_file" "$COMPOSE_FILE_URL"
-  else
-    echo "Нужен curl или wget для скачивания COMPOSE_FILE_URL."
-    exit 1
-  fi
-  sudo mv "$tmp_file" "$COMPOSE_FILE"
-
-  if [ ! -f "$COMPOSE_FILE" ]; then
-    echo "Не удалось получить $COMPOSE_FILE."
-    exit 1
-  fi
+  curl -fsSL "$COMPOSE_FILE_URL" -o "$COMPOSE_FILE"
 }
 
 ensure_env_file() {
-  if [ -f "$ENV_FILE" ]; then
-    echo ".env.prod найден: $ENV_FILE"
-    return
-  fi
+  # helper: получить значение переменной из существующего .env файла
+  get_env() {
+    local key="$1"
+    if [ -f "$ENV_FILE" ]; then
+      grep -E "^${key}=" "$ENV_FILE" | tail -n1 | cut -d= -f2- || true
+    fi
+  }
 
-  echo "Генерирую $ENV_FILE ..."
+  echo "Синхронизирую $ENV_FILE (добавлю недостающие переменные, существующие сохраню)..."
+
+  # Базовые (сохранение существующих значений)
+  POSTGRES_USER="${POSTGRES_USER:-$(get_env POSTGRES_USER)}"
   POSTGRES_USER="${POSTGRES_USER:-hw}"
-  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(random_string)}"
-  POSTGRES_DB="${POSTGRES_DB:-hw}"
-  POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-  REDIS_PASSWORD="${REDIS_PASSWORD:-$(random_string)}"
-  DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_container:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public"
 
-  sudo tee "$ENV_FILE" >/dev/null <<EOF
+  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(get_env POSTGRES_PASSWORD)}"
+  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(random_string)}"
+
+  POSTGRES_DB="${POSTGRES_DB:-$(get_env POSTGRES_DB)}"
+  POSTGRES_DB="${POSTGRES_DB:-hw}"
+
+  POSTGRES_HOST="${POSTGRES_HOST:-$(get_env POSTGRES_HOST)}"
+  POSTGRES_HOST="${POSTGRES_HOST:-postgres_container}"
+
+  POSTGRES_PORT="${POSTGRES_PORT:-$(get_env POSTGRES_PORT)}"
+  POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+
+  REDIS_PASSWORD="${REDIS_PASSWORD:-$(get_env REDIS_PASSWORD)}"
+  REDIS_PASSWORD="${REDIS_PASSWORD:-$(random_string)}"
+
+  REDIS_HOST="${REDIS_HOST:-$(get_env REDIS_HOST)}"
+  REDIS_HOST="${REDIS_HOST:-redis_container}"
+
+  REDIS_PORT="${REDIS_PORT:-$(get_env REDIS_PORT)}"
+  REDIS_PORT="${REDIS_PORT:-6379}"
+
+  NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-$(get_env NEXT_PUBLIC_BASE_URL)}"
+  NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-http://${SERVER_IP}}"
+
+  NEXT_PUBLIC_SERVER_IP="${NEXT_PUBLIC_SERVER_IP:-$(get_env NEXT_PUBLIC_SERVER_IP)}"
+  NEXT_PUBLIC_SERVER_IP="${NEXT_PUBLIC_SERVER_IP:-${SERVER_IP}}"
+
+  NEXTAUTH_URL="${NEXTAUTH_URL:-$(get_env NEXTAUTH_URL)}"
+  NEXTAUTH_URL="${NEXTAUTH_URL:-http://${SERVER_IP}}"
+
+  NEXT_PUBLIC_URL="${NEXT_PUBLIC_URL:-$(get_env NEXT_PUBLIC_URL)}"
+  NEXT_PUBLIC_URL="${NEXT_PUBLIC_URL:-http://${SERVER_IP}}"
+
+  PROMETHEUS_PORT="${PROMETHEUS_PORT:-$(get_env PROMETHEUS_PORT)}"
+  PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
+
+  NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-$(get_env NODE_EXPORTER_PORT)}"
+  NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-9100}"
+
+  TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-$(get_env TELEGRAM_BOT_TOKEN)}"
+  TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-$(get_env TELEGRAM_CHAT_ID)}"
+  ADMIN_TELEGRAM_CHAT_ID="${ADMIN_TELEGRAM_CHAT_ID:-$(get_env ADMIN_TELEGRAM_CHAT_ID)}"
+
+  ADMIN_USERNAME="${ADMIN_USERNAME:-$(get_env ADMIN_USERNAME)}"
+  ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+
+  ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(get_env ADMIN_PASSWORD)}"
+  ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
+
+  ADMIN_EMAIL="${ADMIN_EMAIL:-$(get_env ADMIN_EMAIL)}"
+  ADMIN_EMAIL="${ADMIN_EMAIL:-admin@example.com}"
+
+  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"
+  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(random_hex64)}"
+
+  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"
+  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-http://nginx-proxy:8080}"
+
+  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"
+  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-False}"
+
+  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"
+  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-./prometheus/targets/windows_targets.json}"
+
+  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"
+  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-admin}"
+
+  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
+  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-13572468Ps}"
+
+  NODE_ENV="${NODE_ENV:-$(get_env NODE_ENV)}"
+  NODE_ENV="${NODE_ENV:-production}"
+
+  SMTP_HOST="${SMTP_HOST:-$(get_env SMTP_HOST)}"
+  SMTP_HOST="${SMTP_HOST:-smtp.example.com}"
+
+  SMTP_PORT="${SMTP_PORT:-$(get_env SMTP_PORT)}"
+  SMTP_PORT="${SMTP_PORT:-587}"
+
+  SMTP_SECURE="${SMTP_SECURE:-$(get_env SMTP_SECURE)}"
+  SMTP_SECURE="${SMTP_SECURE:-false}"
+
+  SMTP_USER="${SMTP_USER:-$(get_env SMTP_USER)}"
+  SMTP_USER="${SMTP_USER:-user}"
+
+  SMTP_PASSWORD="${SMTP_PASSWORD:-$(get_env SMTP_PASSWORD)}"
+  SMTP_PASSWORD="${SMTP_PASSWORD:-password}"
+
+  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"
+  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-noreply@example.com}"
+
+  SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"
+  SMTP_FROM_NAME="${SMTP_FROM_NAME:-NITRINOnet Monitoring System}"
+
+  ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(get_env ENCRYPTION_KEY)}"
+  ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(random_hex64)}"
+
+  NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(get_env NEXTAUTH_SECRET)}"
+  NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(random_b64)}"
+
+  NEXT_PUBLIC_STORAGE_URL="${NEXT_PUBLIC_STORAGE_URL:-$(get_env NEXT_PUBLIC_STORAGE_URL)}"
+  NEXT_PUBLIC_STORAGE_URL="${NEXT_PUBLIC_STORAGE_URL:-http://${SERVER_IP}}"
+
+  NEXT_PUBLIC_UPLOADS_BASE_URL="${NEXT_PUBLIC_UPLOADS_BASE_URL:-$(get_env NEXT_PUBLIC_UPLOADS_BASE_URL)}"
+  NEXT_PUBLIC_UPLOADS_BASE_URL="${NEXT_PUBLIC_UPLOADS_BASE_URL:-http://${SERVER_IP}}"
+
+  PROMETHEUS_SHARED_CONFIG_PATH="${PROMETHEUS_SHARED_CONFIG_PATH:-$(get_env PROMETHEUS_SHARED_CONFIG_PATH)}"
+  PROMETHEUS_SHARED_CONFIG_PATH="${PROMETHEUS_SHARED_CONFIG_PATH:-/shared-config}"
+
+  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-$(get_env PROMETHEUS_INTERNAL_URL)}"
+  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-http://prometheus_container:9090}"
+
+  LICD_URL="${LICD_URL:-$(get_env LICD_URL)}"
+  LICD_URL="${LICD_URL:-http://licd:8081}"
+
+  DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public"
+  REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+
+  tee "$ENV_FILE" >/dev/null <<EOF
 # Autogenerated by install.sh
+# Base URLs
+NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
+NEXT_PUBLIC_SERVER_IP=${NEXT_PUBLIC_SERVER_IP}
+NEXT_PUBLIC_URL=${NEXT_PUBLIC_URL}
+NEXTAUTH_URL=${NEXTAUTH_URL}
+
+# PostgreSQL
 POSTGRES_USER=${POSTGRES_USER}
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 POSTGRES_DB=${POSTGRES_DB}
+POSTGRES_HOST=${POSTGRES_HOST}
 POSTGRES_PORT=${POSTGRES_PORT}
-REDIS_PASSWORD=${REDIS_PASSWORD}
 DATABASE_URL=${DATABASE_URL}
+
+# Prometheus
+PROMETHEUS_PORT=${PROMETHEUS_PORT}
+PROMETHEUS_PROXY_URL=${PROMETHEUS_PROXY_URL}
+PROMETHEUS_USE_SSL=${PROMETHEUS_USE_SSL}
+PROMETHEUS_TARGETS_PATH=${PROMETHEUS_TARGETS_PATH}
+PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
+PROMETHEUS_AUTH_PASSWORD=${PROMETHEUS_AUTH_PASSWORD}
+PROMETHEUS_SHARED_CONFIG_PATH=${PROMETHEUS_SHARED_CONFIG_PATH}
+PROMETHEUS_INTERNAL_URL=${PROMETHEUS_INTERNAL_URL}
+
+# Node Exporter
+NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT}
+
+# Telegram
+TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+ADMIN_TELEGRAM_CHAT_ID=${ADMIN_TELEGRAM_CHAT_ID}
+
+# Admin
+ADMIN_USERNAME=${ADMIN_USERNAME}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ADMIN_EMAIL=${ADMIN_EMAIL}
+
+# Windows agents
+HANDSHAKE_KEY=${HANDSHAKE_KEY}
+
+# Node
+NODE_ENV=${NODE_ENV}
+
+# SMTP
+SMTP_HOST=${SMTP_HOST}
+SMTP_PORT=${SMTP_PORT}
+SMTP_SECURE=${SMTP_SECURE}
+SMTP_USER=${SMTP_USER}
+SMTP_PASSWORD=${SMTP_PASSWORD}
+SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
+SMTP_FROM_NAME=${SMTP_FROM_NAME}
+
+# Encryption
+ENCRYPTION_KEY=${ENCRYPTION_KEY}
+
+# Redis
+REDIS_PASSWORD=${REDIS_PASSWORD}
+REDIS_HOST=${REDIS_HOST}
+REDIS_PORT=${REDIS_PORT}
+REDIS_URL=${REDIS_URL}
+
+# Auth
+NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
+# Storage
+NEXT_PUBLIC_STORAGE_URL=${NEXT_PUBLIC_STORAGE_URL}
+NEXT_PUBLIC_UPLOADS_BASE_URL=${NEXT_PUBLIC_UPLOADS_BASE_URL}
+
+# LICD
+LICD_URL=${LICD_URL}
 EOF
 }
 
 prepare_dirs() {
-  sudo mkdir -p "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads"
-  sudo chown -R 1001:65533 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" 2>/dev/null || true
-  sudo chmod -R 775 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" || true
-  sudo chmod -R 777 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" || true
+  mkdir -p "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads"
+  chown -R 1001:65533 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" 2>/dev/null || true
+  chmod -R 777 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" || true
 }
 
 ensure_nginx_auth() {
-  sudo mkdir -p "$NGINX_AUTH_DIR"
+  mkdir -p "$NGINX_AUTH_DIR"
   if [ -f "$NGINX_AUTH_FILE" ]; then
     echo ".htpasswd найден: $NGINX_AUTH_FILE"
     return
   fi
 
   echo "Создаю .htpasswd (basic auth для nginx)..."
-  HASH=$(openssl passwd -crypt "$BASIC_AUTH_PASSWORD")
-  echo "${BASIC_AUTH_USER}:${HASH}" | sudo tee "$NGINX_AUTH_FILE" >/dev/null
+
+  if command -v openssl >/dev/null 2>&1; then
+    HASH=$(openssl passwd -apr1 "$BASIC_AUTH_PASSWORD")
+  elif command -v htpasswd >/dev/null 2>&1; then
+    # если есть apache2-utils
+    htpasswd -nb "$BASIC_AUTH_USER" "$BASIC_AUTH_PASSWORD" | cut -d: -f2- > "$NGINX_AUTH_FILE"
+    echo "$BASIC_AUTH_FILE готов."
+    return
+  else
+    echo "⚠️  OpenSSL и htpasswd не найдены. Использую fallback (base64)."
+    HASH=$(echo -n "$BASIC_AUTH_PASSWORD" | base64)
+  fi
+
+  echo "${BASIC_AUTH_USER}:${HASH}" > "$NGINX_AUTH_FILE"
 }
 
+# -----------------------------
+# Image tag patching
+# -----------------------------
+patch_compose_image_tags() {
+  # Resolve image tags; support "auto" via Docker Hub
+  NEXT_TAG="${NEXT_TAG:-latest}"
+  NGINX_TAG="${NGINX_TAG:-v1.0.0-alpha.7}"
+  LICD_TAG="${LICD_TAG:-v1.0.0-alpha.7}"
+
+  if [ "$NEXT_TAG" = "auto" ]; then
+    local detected
+    detected="$(detect_latest_tag "deymonster/hw-monitor")"
+    if [ -n "$detected" ]; then
+      NEXT_TAG="$detected"
+    else
+      NEXT_TAG="latest"
+    fi
+  fi
+
+  if [ "$NGINX_TAG" = "auto" ]; then
+    local detected
+    detected="$(detect_latest_tag "deymonster/hw-monitor-nginx-combined")"
+    if [ -n "$detected" ]; then
+      NGINX_TAG="$detected"
+    else
+      NGINX_TAG="v1.0.0-alpha.7"
+    fi
+  fi
+
+  if [ "$LICD_TAG" = "auto" ]; then
+    local detected
+    detected="$(detect_latest_tag "deymonster/hw-monitor-licd")"
+    if [ -n "$detected" ]; then
+      LICD_TAG="$detected"
+    else
+      LICD_TAG="v1.0.0-alpha.7"
+    fi
+  fi
+
+  local tmp
+  tmp="$(mktemp)"
+
+  sed -E \
+    -e "s|(image:\s*deymonster/hw-monitor:)[^[:space:]]+|\1${NEXT_TAG}|g" \
+    -e "s|(image:\s*deymonster/hw-monitor-nginx-combined:)[^[:space:]]+|\1${NGINX_TAG}|g" \
+    -e "s|(image:\s*deymonster/hw-monitor-licd:)[^[:space:]]+|\1${LICD_TAG}|g" \
+    "$COMPOSE_FILE" > "$tmp" && mv "$tmp" "$COMPOSE_FILE"
+}
+
+# -----------------------------
+# Run
+# -----------------------------
 compose_up() {
   install_docker_if_needed
   detect_compose_cmd
   ensure_compose_file
+  patch_compose_image_tags
   ensure_env_file
   prepare_dirs
   ensure_nginx_auth
 
   echo "Pulling images and starting services..."
-  sudo ${DOCKER_COMPOSE_CMD} -f "$COMPOSE_FILE" pull || true
-  sudo ${DOCKER_COMPOSE_CMD} -f "$COMPOSE_FILE" up -d
+  cd "$(dirname "$COMPOSE_FILE")"
+  ${DOCKER_COMPOSE_CMD} --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true
+  ${DOCKER_COMPOSE_CMD} --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
 }
 
 main() {
   compose_up
-
-  echo "Done."
-  echo "Services should be accessible at:"
+  echo "✅ Установка завершена!"
+  echo "------------------------------------------------------------"
+  echo "Сервисы доступны по адресам:"
   echo "  Next.js:    http://${SERVER_IP}:3000"
   echo "  Nginx:      http://${SERVER_IP}:80"
   echo "  Prometheus: http://${SERVER_IP}:8080"
-  echo "Check logs with: sudo ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" logs -f"
   echo "------------------------------------------------------------"
-  echo "Installed with:"
+  echo "Проверка логов:"
+  echo "  ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" logs -f"
+  echo "------------------------------------------------------------"
+  echo "Установлено:"
   echo "  SERVER_IP=${SERVER_IP}"
   echo "  INSTALL_DIR=${INSTALL_DIR}"
-  echo "  COMPOSE_FILE=${COMPOSE_FILE}"
   echo "  ENV_FILE=${ENV_FILE}"
   echo "  NGINX_AUTH_FILE=${NGINX_AUTH_FILE}"
-  echo "------------------------------------------------------------"
-  echo "If you need to change SMTP or other settings, edit $ENV_FILE and restart:"
-  echo "  ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" down && ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" up -d"
 }
 
 main "$@"
+

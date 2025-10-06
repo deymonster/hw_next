@@ -134,17 +134,17 @@ jobs:
 
                   case "$SERVICE" in
                     hw-monitor)
-                      IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor"
+                      IMAGE="deymonster/hw-monitor"
                       DOCKERFILE="./Dockerfile"
                       CONTEXT="."
                       ;;
                     hw-monitor-licd)
-                      IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-licd"
+                      IMAGE="deymonster/hw-monitor-licd"
                       DOCKERFILE="./licd/Dockerfile"
                       CONTEXT="./licd"
                       ;;
                     hw-monitor-nginx-combined)
-                      IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/hw-monitor-nginx-combined"
+                      IMAGE="deymonster/hw-monitor-nginx-combined"
                       DOCKERFILE="./Dockerfile.nginx-combined"
                       CONTEXT="."
                       ;;
@@ -173,6 +173,7 @@ jobs:
                   tags: |
                       ${{ steps.vars.outputs.IMAGE }}:${{ steps.vars.outputs.ALIAS_TAG }}
                       ${{ steps.vars.outputs.IMAGE }}:${{ steps.vars.outputs.VERSION_TAG }}
+                      ${{ steps.vars.outputs.IMAGE }}:v${{ steps.vars.outputs.VERSION }}
                   build-args: |
                       VERSION=${{ steps.vars.outputs.VERSION }}
                       COMMIT=${{ steps.vars.outputs.COMMIT }}
