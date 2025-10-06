@@ -85,18 +85,23 @@ install_docker() {
 }
 
 install_compose() {
-  if command -v docker-compose >/dev/null 2>&1; then
-    echo "Docker Compose found."
+  if docker compose version >/dev/null 2>&1; then
+    echo "Docker Compose plugin found."
   else
-    echo "Installing Docker Compose..."
-    sudo apt-get install -y docker-compose
+    echo "Installing Docker Compose plugin..."
+    sudo apt-get install -y docker-compose-plugin
   fi
 }
 
 # Create required directories
 prepare_dirs() {
   mkdir -p storage/logs storage/uploads
-  chmod -R 755 storage/logs storage/uploads
+
+  # Allow container user (uid=1001) to write; fallback to permissive if chown fails
+  sudo chown -R 1001:1001 storage/logs storage/uploads || echo "Warning: chown failed, falling back to permissive mode"
+
+  # Group-writable for shared access; fallback to 777 if chown failed
+  chmod -R 775 storage/logs storage/uploads || chmod -R 777 storage/logs storage/uploads
 }
 
 # Generate .env.prod if not exists
@@ -158,8 +163,8 @@ EOF
 
 compose_up() {
   echo "Pulling images and starting services..."
-  sudo docker-compose -f docker-compose.prod.yml pull || true
-  sudo docker-compose -f docker-compose.prod.yml up -d
+  sudo docker compose -f docker-compose.prod.yml pull || true
+  sudo docker compose -f docker-compose.prod.yml up -d
 }
 
 main() {
@@ -175,7 +180,7 @@ main() {
   echo "  Next.js:    http://${SERVER_IP}:3000"
   echo "  Nginx:      http://${SERVER_IP}:80"
   echo "  Prometheus: http://${SERVER_IP}:8080"
-  echo "Check logs with: sudo docker-compose -f docker-compose.prod.yml logs -f"
+  echo "Check logs with: sudo docker compose -f docker-compose.prod.yml logs -f"
   echo "------------------------------------------------------------"
   echo "Installed with:"
   echo "  SERVER_IP=${SERVER_IP}"
