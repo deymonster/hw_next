@@ -403,6 +403,43 @@ docker-compose -f docker-compose.prod.yml down
 docker-compose -f docker-compose.prod.yml up --build -d
 ```
 
+## Installer Script (Production)
+
+Run on a clean Ubuntu/Debian host:
+
+```bash
+bash scripts/install.sh --server-ip 192.168.1.10 --admin-email admin@example.com
+```
+
+#### Параметры скрипта установки
+
+- `--server-ip` — IP/домен сервера
+- `--admin-email` — почта администратора
+
+Flags:
+
+- `--server-ip` — публичный IP/хост (используется в `.env.prod`)
+- `--admin-email` — почта администратора
+- `--admin-password` — пароль администратора (если не указан, генерируется)
+- `--telegram-bot-token` — токен бота (опционально)
+
+The script installs Docker/Compose, generates `.env.prod`, prepares storage dirs, and starts `docker-compose.prod`.
+
+### SMTP
+
+Для отправки писем заполните в `.env.prod`:
+
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_smtp_username
+SMTP_PASSWORD=your_smtp_password
+SMTP_FROM="HW Monitor <noreply@example.com>"
+```
+
+Проверьте отправку писем через форму восстановления пароля или регистрацию администратора.
+
 ## 📚 Полезные команды
 
 ### Make команды

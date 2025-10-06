@@ -256,6 +256,25 @@ For production deployment, additional steps are required:
     - Configure reverse proxy
     - Enable gzip compression
 
+### Quick Production Setup (Installer)
+
+To bootstrap a clean Ubuntu/Debian server:
+
+```bash
+bash scripts/install.sh --server-ip 192.168.1.10 --admin-email admin@example.com
+```
+
+This installs Docker/Compose, generates `.env.prod`, creates storage dirs, and starts services. Optional flags: `--admin-password`, `--telegram-bot-token`.
+
+### Quick start (Ubuntu/Debian)
+
+```bash
+bash scripts/install.sh --server-ip <IP> --admin-email <email>
+```
+
+- `--server-ip` — server public IP or domain
+- `--admin-email` — admin contact email
+
 ### Release & Docker Tags (CI/CD)
 
 Docker images are built and pushed only when you push specific git tags. Regular commits to branches do not trigger the build.
@@ -313,6 +332,20 @@ Notes:
 
 - Tags like v1.0.1 (without a service name) do NOT trigger Docker builds — use service tags as shown above.
 - If you need a fixed alpha build number, include it in the git tag: hw-monitor-v1.0.0-alpha.7
+
+## SMTP Configuration
+
+Registration and email notifications require SMTP settings in `.env.prod`:
+
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-username
+SMTP_PASSWORD=your-password
+SMTP_FROM="HW Monitor <no-reply@example.com>"
+SMTP_SECURE=false
+SMTP_TLS=true
+```
 
 ## Installation
 
