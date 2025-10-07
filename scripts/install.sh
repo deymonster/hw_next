@@ -357,26 +357,28 @@ prepare_dirs() {
 
 ensure_nginx_auth() {
   mkdir -p "$NGINX_AUTH_DIR"
+
+  # Используем те же креды, что и Next.js/Prometheus
+  local user="${PROMETHEUS_USERNAME:-$BASIC_AUTH_USER}"
+  local pass="${PROMETHEUS_AUTH_PASSWORD:-$BASIC_AUTH_PASSWORD}"
+
   if [ -f "$NGINX_AUTH_FILE" ]; then
-    echo ".htpasswd найден: $NGINX_AUTH_FILE"
-    return
+    echo ".htpasswd найден: $NGINX_AUTH_FILE (перезапишу для синхронизации с env)"
+  else
+    echo "Создаю .htpasswd (basic auth для nginx)..."
   fi
 
-  echo "Создаю .htpasswd (basic auth для nginx)..."
-
+  # Генерация хеша для Basic Auth
   if command -v openssl >/dev/null 2>&1; then
-    HASH=$(openssl passwd -apr1 "$BASIC_AUTH_PASSWORD")
+    HASH=$(openssl passwd -apr1 "$pass")
   elif command -v htpasswd >/dev/null 2>&1; then
-    # если есть apache2-utils
-    htpasswd -nb "$BASIC_AUTH_USER" "$BASIC_AUTH_PASSWORD" | cut -d: -f2- > "$NGINX_AUTH_FILE"
-    echo "$BASIC_AUTH_FILE готов."
-    return
+    HASH=$(htpasswd -nb "$user" "$pass" | cut -d: -f2-)
   else
     echo "⚠️  OpenSSL и htpasswd не найдены. Использую fallback (base64)."
-    HASH=$(echo -n "$BASIC_AUTH_PASSWORD" | base64)
+    HASH=$(echo -n "$pass" | base64)
   fi
 
-  echo "${BASIC_AUTH_USER}:${HASH}" > "$NGINX_AUTH_FILE"
+  echo "${user}:${HASH}" > "$NGINX_AUTH_FILE"
 }
 
 # -----------------------------

@@ -56,8 +56,8 @@ services:
             sh -c 'mkdir -p /shared-config/alerts;
                    cp -r /app/prometheus/* /shared-config/;
                    chown -R 1001:65533 /shared-config;
-                   find /shared-config -type d -print0 | xargs -0 chmod 775;
-                   find /shared-config -type f -print0 | xargs -0 chmod 664'
+                   find /shared-config -type d -exec chmod 775 {} \;
+                   find /shared-config -type f -exec chmod 664 {} \;'
         volumes:
             - nextjs_prometheus_config:/shared-config
         restart: 'no'
@@ -150,6 +150,7 @@ volumes:
     uploads:
         driver: local
     nextjs_prometheus_config:
+        name: nextjs_prometheus_config
         driver: local
     licd_data:
 
