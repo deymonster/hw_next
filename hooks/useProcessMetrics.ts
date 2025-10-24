@@ -1,3 +1,8 @@
+/**
+ * Хук `useProcessMetrics` устанавливает WebSocket-подключение для получения
+ * данных о процессах устройства, управляя переподключением, кешированием
+ * URL и состояниями соединения.
+ */
 import { useEffect, useRef, useState } from 'react'
 
 import { ProcessListInfo } from '@/services/prometheus/prometheus.interfaces'

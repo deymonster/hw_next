@@ -1,3 +1,8 @@
+/**
+ * Хук `useNotificationSettings` обрабатывает загрузку и обновление настроек
+ * уведомлений пользователя, создавая значения по умолчанию и синхронизируя
+ * их с сервером через actions.
+ */
 import { useSession } from 'next-auth/react'
 import { useCallback, useState } from 'react'
 

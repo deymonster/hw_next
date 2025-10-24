@@ -1,3 +1,8 @@
+/**
+ * Хук `useUserAvatar` управляет загрузкой, обновлением и удалением
+ * аватаров пользователя, синхронизируя изменения с локальным стором
+ * и актуальной сессией NextAuth.
+ */
 import { User } from '@prisma/client'
 import { useSession } from 'next-auth/react'
 import { useCallback } from 'react'

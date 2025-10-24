@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Хук `useEmployeeDevices` загружает список устройств, закреплённых за
+ * сотрудником, и дополняет их текущим статусом, используя React Query
+ * для кеширования и повторного запроса данных.
+ */
 import { useQuery } from '@tanstack/react-query'
 
 import { getDevices, getDeviceStatus } from '@/app/actions/device'

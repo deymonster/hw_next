@@ -1,3 +1,8 @@
+/**
+ * Хук `useEmployees` обеспечивает загрузку и управление списком сотрудников,
+ * включая создание, обновление и удаление записей с обновлением кеша React
+ * Query и учётом фильтров.
+ */
 import { Employee } from '@prisma/client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 

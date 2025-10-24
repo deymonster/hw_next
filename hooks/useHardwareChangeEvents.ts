@@ -1,3 +1,8 @@
+/**
+ * Хук `useHardwareChangeEvents` отслеживает неподтверждённые события
+ * изменения оборудования для конкретного устройства, поддерживая
+ * автоматическое обновление и ручное перезапрос данных.
+ */
 import { Event } from '@prisma/client'
 import { useCallback, useEffect, useState } from 'react'
 

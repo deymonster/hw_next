@@ -1,3 +1,8 @@
+/**
+ * Хук `useDepartment` управляет загрузкой отделов и их связанных сущностей,
+ * предоставляя операции создания, обновления, удаления и обновления состава
+ * устройств с использованием React Query.
+ */
 import { Department, Device } from '@prisma/client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 

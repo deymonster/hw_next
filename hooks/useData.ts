@@ -1,3 +1,7 @@
+/**
+ * Хук-обёртка `useData` обеспечивает безопасное получение данных через SWR,
+ * учитывая состояние аутентификации и подключая middleware авторизации.
+ */
 import useSWR from 'swr'
 
 import { useAuth } from './useAuth'

@@ -1,3 +1,7 @@
+/**
+ * Хук `useSmtpSettings` отвечает за конфигурацию SMTP: загрузку, обновление
+ * и верификацию параметров почтового сервера, а также переключение провайдеров.
+ */
 import type { SmtpProvider, SmtpSettings } from '@prisma/client'
 import { useSession } from 'next-auth/react'
 import { useCallback, useState } from 'react'

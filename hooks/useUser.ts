@@ -1,3 +1,8 @@
+/**
+ * Хук `useUser` объединяет серверные действия по управлению профилем:
+ * изменение имени, почты, пароля и аватара с синхронизацией Zustand
+ * и сессии NextAuth.
+ */
 import { useSession } from 'next-auth/react'
 import { useCallback } from 'react'
 
