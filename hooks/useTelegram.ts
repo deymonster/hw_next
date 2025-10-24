@@ -1,3 +1,8 @@
+/**
+ * Хук `useTelegram` управляет настройкой Telegram-бота: загрузкой параметров,
+ * проверкой доступности, запуском бота и отправкой тестовых сообщений с учётом
+ * состояний загрузки.
+ */
 import { TelegramSettings } from '@prisma/client'
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useState } from 'react'

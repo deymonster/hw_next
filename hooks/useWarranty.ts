@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Хук `useWarranty` обрабатывает гарантийные параметры устройств: точечное и
+ * массовое обновление дат, вычисление остатка гарантии и синхронизацию стора
+ * устройств после серверных вызовов.
+ */
 import { Device } from '@prisma/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'

@@ -1,3 +1,8 @@
+/**
+ * Хук `useCurrentSession` предоставляет удобный доступ к данным текущей
+ * сессии NextAuth, возвращая пользователя, статус загрузки и признак
+ * успешной аутентификации.
+ */
 import { useSession } from 'next-auth/react'
 
 export function useCurrentSession() {

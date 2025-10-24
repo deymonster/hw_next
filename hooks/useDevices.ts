@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Хук `useDevices` управляет списком устройств в контексте приложения,
+ * предоставляя функции загрузки, фильтрации, статистики и обновления
+ * статусов с учётом ошибок и индикаторов загрузки.
+ */
 import { DeviceStatus, DeviceType } from '@prisma/client'
 import { useCallback, useState } from 'react'
 

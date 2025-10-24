@@ -1,3 +1,8 @@
+/**
+ * Хук `useAuth` связывает NextAuth с локальным стором авторизации,
+ * предоставляя методы входа, выхода, проверки текущего пользователя
+ * и синхронизации состояния аутентификации.
+ */
 import { signOut as nextAuthSignOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'

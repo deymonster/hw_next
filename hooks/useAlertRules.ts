@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Хук `useAlertRules` инкапсулирует CRUD-операции над правилами алертов
+ * Prometheus, включая импорт и экспорт YAML, и синхронизирует состояние
+ * с кешем React Query.
+ */
 import { AlertRule } from '@prisma/client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 

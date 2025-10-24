@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Хук `useDepartmentDevices` формирует список устройств выбранных отделов,
+ * дополняя их информацией о доступности агента и поддерживая повторную
+ * загрузку через React Query.
+ */
 import { Device } from '@prisma/client'
 import { useQuery } from '@tanstack/react-query'
 

@@ -1,3 +1,7 @@
+/**
+ * Хук `useSidebar` предоставляет доступ к стору боковой панели,
+ * позволяя управлять состоянием сворачивания меню из компонентов.
+ */
 import { sidebarStore } from '@/store/sidebar/sidebar.store'
 
 export function useSidebar() {

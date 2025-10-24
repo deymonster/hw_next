@@ -1,3 +1,8 @@
+/**
+ * Хук `useSessionManager` управляет сессиями пользователя: загружает активные
+ * подключения, определяет текущую сессию и позволяет завершать отдельные
+ * сеансы с учётом ошибок и состояния загрузки.
+ */
 import { useSession } from 'next-auth/react'
 import { useCallback, useEffect, useState } from 'react'
 

@@ -1,3 +1,7 @@
+/**
+ * Хук `useMediaQuery` отслеживает соответствие медиа-запросу и возвращает
+ * логический признак, автоматически подписываясь на изменения viewport.
+ */
 import { useEffect, useState } from 'react'
 
 export function useMediaQuery(query: string) {

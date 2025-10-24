@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Хук `useDeviceStatus` периодически проверяет доступность агента
+ * для переданного устройства и синхронизирует статус с кешем React Query,
+ * инициируя обновление списка устройств при изменении состояния.
+ */
 import { Device } from '@prisma/client'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { usePathname } from 'next/navigation'

@@ -1,3 +1,8 @@
+/**
+ * Хук `useDeviceAllMetrics` агрегирует метрики устройства из потоков SSE
+ * и WebSocket, объединяя системные показатели и данные о процессах в
+ * единый объект для использования в интерфейсе.
+ */
 import { useEffect } from 'react'
 
 import { useDeviceMetrics } from './useDeviceMetrics'

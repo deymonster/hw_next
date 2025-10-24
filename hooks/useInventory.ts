@@ -1,5 +1,10 @@
 'use client'
 
+/**
+ * Хук `useInventory` координирует процессы инвентаризации: получение списков,
+ * создание актов, управление позициями и экспорт данных в Excel с помощью
+ * React Query и серверных действий.
+ */
 import { Department, Device, Employee, Inventory } from '@prisma/client'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as XLSX from 'xlsx'
