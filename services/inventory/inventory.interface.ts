@@ -1,4 +1,4 @@
-import { Inventory, InventoryItem } from '@prisma/client'
+import { Department, Inventory, InventoryItem, User } from '@prisma/client'
 
 import { IBaseRepository } from '../base.interfaces'
 
@@ -59,7 +59,9 @@ export interface IInventoryRepository
 		string
 	> {
 	// Специфичные методы для инвентаризации
-	findWithItems(id: string): Promise<Inventory & { items: InventoryItem[] }>
+        findWithItems(
+                id: string
+        ): Promise<Inventory & { items: InventoryItem[]; departments: Department[]; user: User }>
 	addItem(
 		inventoryId: string,
 		item: IInventoryItemCreateInput
