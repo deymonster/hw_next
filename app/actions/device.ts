@@ -1,8 +1,15 @@
 'use server'
 
-import { Device, DeviceStatus, DeviceType } from '@prisma/client'
+import {
+	Device,
+	DeviceStatus,
+	DeviceType,
+	EventSeverity,
+	EventType
+} from '@prisma/client'
 
 import { getAgentStatuses } from './prometheus.actions'
+import { logAuditEvent } from './utils/audit-events'
 
 import { DeviceFilterOptions } from '@/services/device/device.interfaces'
 import { IDeviceCreateInput } from '@/services/device/device.interfaces'
@@ -41,6 +48,19 @@ export async function createDevice(data: IDeviceCreateInput): Promise<{
 			'info',
 			`[CREATE_DEVICE] Device created successfully: ${newDevice.id}`
 		)
+
+		await logAuditEvent({
+			type: EventType.DEVICE,
+			severity: EventSeverity.MEDIUM,
+			title: 'Добавлено устройство',
+			message: `Устройство "${newDevice.name}" с IP ${newDevice.ipAddress} добавлено в систему.`,
+			deviceId: newDevice.id,
+			metadata: {
+				ipAddress: newDevice.ipAddress,
+				agentKey: newDevice.agentKey,
+				type: newDevice.type
+			}
+		})
 
 		return {
 			success: true,
@@ -201,6 +221,20 @@ export async function deleteDeviceById(id: string) {
 			'info',
 			`[DELETE_DEVICE] Deleted from database: ${deletedDevice.name}`
 		)
+
+		await logAuditEvent({
+			type: EventType.DEVICE,
+			severity: EventSeverity.HIGH,
+			title: 'Удалено устройство',
+			message: `Устройство "${device.name}" (${device.ipAddress}) удалено из системы.`,
+			deviceId: deletedDevice.id,
+			metadata: {
+				ipAddress: device.ipAddress,
+				agentKey: device.agentKey,
+				type: device.type,
+				status: device.status
+			}
+		})
 
 		return deletedDevice
 	} catch (error) {
