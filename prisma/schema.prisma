@@ -38,13 +38,13 @@ model Event {
   message   String
   isRead    Boolean       @default(false)
   userId    String
-  user      User          @relation(fields: [userId], references: [id])
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   metadata  Json?
-  
+
   deviceId  String?
   hardwareChangeConfirmed Boolean @default(false)
-  device    Device?       @relation(fields: [deviceId], references: [id])
+  device    Device?       @relation(fields: [deviceId], references: [id], onDelete: SetNull)
   @@index([userId])
   @@index([type])
   @@index([createdAt])
@@ -119,8 +119,8 @@ model Device {
   activationSig     String?
   activationKeyVer  Int?
   activatedAt       DateTime?
-  department        Department?    @relation("DepartmentDevices", fields: [departmentId], references: [id])
-  employee          Employee?    @relation(fields: [employeeId], references: [id]) 
+  department        Department? @relation("DepartmentDevices", fields: [departmentId], references: [id], onDelete: SetNull)
+  employee          Employee?   @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   inventoryItems    InventoryItem[]
   events            Event[]
 
@@ -177,10 +177,10 @@ model InventoryItem {
   id           String     @id @default(uuid())
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  deviceId     String
-  device       Device   @relation(fields: [deviceId], references: [id])
+  deviceId     String?
+  device       Device?    @relation(fields: [deviceId], references: [id], onDelete: SetNull)
   inventoryId  String
-  inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  inventory    Inventory  @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
 
   // Данные об устройстве (если устройство доступно)
   processor     String?

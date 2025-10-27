@@ -227,8 +227,9 @@ export async function deleteDeviceById(id: string) {
 			severity: EventSeverity.HIGH,
 			title: 'Удалено устройство',
 			message: `Устройство "${device.name}" (${device.ipAddress}) удалено из системы.`,
-			deviceId: deletedDevice.id,
+			// deviceId: удаляем, чтобы избежать FK-ошибки при удалении
 			metadata: {
+				deviceId: device.id,
 				ipAddress: device.ipAddress,
 				agentKey: device.agentKey,
 				type: device.type,

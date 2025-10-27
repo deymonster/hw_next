@@ -345,39 +345,16 @@ export class DeviceService
 	 */
 	async deleteDevice(id: string): Promise<Device> {
 		const device = await this.model.findUnique({
-			where: { id },
-			include: {
-				inventoryItems: true,
-				events: true
-			}
+			where: { id }
 		})
 
 		if (!device) {
 			throw new Error('Device not found')
 		}
 
-		// Используем существующий this.prisma из BaseRepository
-		return await this.prisma.$transaction(async tx => {
-			// 1. Удаляем связанные записи инвентаризации
-			if (device.inventoryItems.length > 0) {
-				await tx.inventoryItem.deleteMany({
-					where: { deviceId: id }
-				})
-			}
-
-			// 2. Обнуляем deviceId в событиях (сохраняем историю)
-			if (device.events.length > 0) {
-				await tx.event.updateMany({
-					where: { deviceId: id },
-					data: { deviceId: null }
-				})
-			}
-
-			// 3. Удаляем устройство
-			// Связи с Employee и Department автоматически обнулятся (ON DELETE SET NULL)
-			return await tx.device.delete({
-				where: { id }
-			})
+		// База сама выполнит SetNull/Cascade согласно schema
+		return await this.prisma.device.delete({
+			where: { id }
 		})
 	}
 
