@@ -1,8 +1,12 @@
 'use server'
 
+import { EventSeverity, EventType } from '@prisma/client'
+
 import { TypeCreateAccountSchema } from '@/schemas/auth/create-account.schema'
 import { TypeNewPasswordSchema } from '@/schemas/auth/new-password.schema'
 import { TypeResetPasswordSchema } from '@/schemas/auth/reset-password.shema'
+
+import { logAuditEvent } from './utils/audit-events'
 
 import { auth, signIn, signOut } from '@/auth'
 import { AUTH_ERRORS } from '@/libs/auth/constants'
@@ -21,6 +25,16 @@ export async function updatePasswordWithToken(
 		}
 		// 2. Обновляем пароль пользователя
 		await services.data.user.updatePassword(userId, data.password)
+
+		await logAuditEvent({
+			type: EventType.USER,
+			severity: EventSeverity.HIGH,
+			title: 'Смена пароля',
+			message:
+				'Пароль учетной записи был изменен через ссылку восстановления.',
+			userId
+		})
+
 		return { success: true, message: 'Пароль успешно обновлен' }
 	} catch (error) {
 		console.error('[UPDATE_PASSWORD_ACTION_ERROR]', error)

@@ -1,6 +1,8 @@
 'use server'
 
-import { User } from '@prisma/client'
+import { EventSeverity, EventType, User } from '@prisma/client'
+
+import { logAuditEvent } from './utils/audit-events'
 
 import { services } from '@/services/index'
 import { StorageService } from '@/services/storage/storage.service'
@@ -274,6 +276,15 @@ export async function updateUserPassword(
 				userId,
 				newPassword
 			)
+
+			await logAuditEvent({
+				type: EventType.USER,
+				severity: EventSeverity.HIGH,
+				title: 'Смена пароля',
+				message:
+					'Пароль учетной записи был изменен через настройки профиля.',
+				userId
+			})
 			return updatedUser
 		}
 
