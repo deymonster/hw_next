@@ -1,128 +1,160 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from "next-intl"
+import { type FormEvent, useMemo, useState } from "react"
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { useAuth } from '@/hooks/useAuth'
-import { useWarranty } from '@/hooks/useWarranty'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+        Select,
+        SelectContent,
+        SelectItem,
+        SelectTrigger,
+        SelectValue
+} from "@/components/ui/select"
+import { useAuth } from "@/hooks/useAuth"
+import { useWarranty } from "@/hooks/useWarranty"
+import { WARRANTY_PERIODS } from "@/services/device/device.interfaces"
 
 interface WarrantyEditorProps {
-	deviceId: string
-	initialPurchaseDate?: string | null
-	initialWarrantyPeriod?: number | null
-	onUpdate?: () => void
+        deviceId: string
+        initialPurchaseDate?: string | null
+        initialWarrantyPeriod?: number | null
+        onUpdate?: () => void
 }
 
 export function WarrantyEditor({
-	deviceId,
-	initialPurchaseDate,
-	initialWarrantyPeriod,
-	onUpdate
+        deviceId,
+        initialPurchaseDate,
+        initialWarrantyPeriod,
+        onUpdate
 }: WarrantyEditorProps) {
-	const { user } = useAuth()
-	const { updateWarranty, isLoading } = useWarranty({
-		onSuccess: () => {
-			onUpdate?.()
-		}
-	})
+        const { user } = useAuth()
+        const { updateWarranty, isLoading } = useWarranty({
+                onSuccess: () => {
+                        onUpdate?.()
+                }
+        })
+        const t = useTranslations("dashboard.devices.detail.system.warranty")
+        const locale = useLocale()
 
-	// Локальное состояние: дата покупки + срок гарантии
-	const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(
-		initialPurchaseDate ? new Date(initialPurchaseDate) : undefined
-	)
-	const [warrantyPeriod, setWarrantyPeriod] = useState<number | undefined>(
-		initialWarrantyPeriod ?? undefined
-	)
-	const [endDate, setEndDate] = useState<Date | null>(null)
+        const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(
+                initialPurchaseDate ? new Date(initialPurchaseDate) : undefined
+        )
+        const [warrantyPeriod, setWarrantyPeriod] = useState<number | undefined>(
+                initialWarrantyPeriod ?? undefined
+        )
 
-	useEffect(() => {
-		if (purchaseDate && warrantyPeriod) {
-			const end = new Date(purchaseDate)
-			end.setMonth(end.getMonth() + warrantyPeriod)
-			setEndDate(end)
-		} else {
-			setEndDate(null)
-		}
-	}, [purchaseDate, warrantyPeriod])
+        const endDate = useMemo(() => {
+                if (!purchaseDate || !warrantyPeriod) {
+                        return null
+                }
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault()
-		if (!user?.id) return
+                const calculatedEnd = new Date(purchaseDate)
+                calculatedEnd.setMonth(calculatedEnd.getMonth() + warrantyPeriod)
+                return calculatedEnd
+        }, [purchaseDate, warrantyPeriod])
 
-		await updateWarranty(
-			deviceId,
-			purchaseDate ?? null,
-			warrantyPeriod ?? null,
-			user.id
-		)
-	}
+        const formattedEndDate = useMemo(() => {
+                if (!endDate) return null
 
-	return (
-		<div className='space-y-4'>
-			<div className='space-y-2'>
-				<Label htmlFor='purchase-date'>Дата покупки</Label>
-				<Input
-					id='purchase-date'
-					type='date'
-					value={
-						purchaseDate
-							? purchaseDate.toISOString().split('T')[0]
-							: ''
-					}
-					onChange={e =>
-						setPurchaseDate(
-							e.target.value
-								? new Date(e.target.value)
-								: undefined
-						)
-					}
-					disabled={isLoading}
-					className='w-full'
-				/>
-			</div>
+                return new Intl.DateTimeFormat(locale, {
+                        year: "numeric",
+                        month: "long",
+                        day: "2-digit"
+                }).format(endDate)
+        }, [endDate, locale])
 
-			<div className='space-y-2'>
-				<Label htmlFor='warranty-period'>Срок гарантии (мес.)</Label>
-				<select
-					id='warranty-period'
-					className='h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
-					value={warrantyPeriod?.toString() ?? ''}
-					onChange={e =>
-						setWarrantyPeriod(
-							e.target.value ? Number(e.target.value) : undefined
-						)
-					}
-					disabled={isLoading}
-				>
-					<option value=''>Не задано</option>
-					<option value='12'>12</option>
-					<option value='24'>24</option>
-					<option value='36'>36</option>
-					<option value='48'>48</option>
-					<option value='60'>60</option>
-				</select>
-			</div>
+        const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+                event.preventDefault()
+                if (!user?.id) return
 
-			{endDate && (
-				<div className='rounded-md bg-muted p-3'>
-					<p className='text-sm text-muted-foreground'>
-						Дата окончания гарантии:{' '}
-						<span className='font-medium'>
-							{endDate.toLocaleDateString('ru-RU', {
-								year: 'numeric',
-								month: 'long',
-								day: '2-digit'
-							})}
-						</span>
-					</p>
-				</div>
-			)}
+                await updateWarranty(
+                        deviceId,
+                        purchaseDate ?? null,
+                        warrantyPeriod ?? null,
+                        user.id
+                )
+        }
 
-			<Button onClick={handleSubmit} disabled={isLoading} size='default'>
-				{isLoading ? 'Сохранение...' : 'Сохранить'}
-			</Button>
-		</div>
-	)
+        return (
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                        <div className="space-y-2">
+                                <Label htmlFor="purchase-date">{t("purchaseDateLabel")}</Label>
+                                <Input
+                                        id="purchase-date"
+                                        type="date"
+                                        value={
+                                                purchaseDate
+                                                        ? purchaseDate.toISOString().split("T")[0]
+                                                        : ""
+                                        }
+                                        onChange={event =>
+                                                setPurchaseDate(
+                                                        event.target.value
+                                                                ? new Date(event.target.value)
+                                                                : undefined
+                                                )
+                                        }
+                                        disabled={isLoading}
+                                />
+                        </div>
+
+                        <div className="space-y-2">
+                                <Label htmlFor="warranty-period">
+                                        {t("warrantyPeriodLabel")}
+                                </Label>
+                                <Select
+                                        value={
+                                                typeof warrantyPeriod === "number"
+                                                        ? warrantyPeriod.toString()
+                                                        : undefined
+                                        }
+                                        onValueChange={value => {
+                                                if (value === "none") {
+                                                        setWarrantyPeriod(undefined)
+                                                        return
+                                                }
+
+                                                setWarrantyPeriod(Number(value))
+                                        }}
+                                        disabled={isLoading}
+                                >
+                                        <SelectTrigger id="warranty-period" className="w-full">
+                                                <SelectValue placeholder={t("periodPlaceholder")} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                                <SelectItem value="none">
+                                                        {t("periodPlaceholder")}
+                                                </SelectItem>
+                                                {WARRANTY_PERIODS.map(option => (
+                                                        <SelectItem
+                                                                key={option.value}
+                                                                value={option.value.toString()}
+                                                        >
+                                                                {t("periodOption", {
+                                                                        months: option.value
+                                                                })}
+                                                        </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                </Select>
+                        </div>
+
+                        {formattedEndDate && (
+                                <div className="rounded-md bg-muted p-3">
+                                        <p className="text-sm text-muted-foreground">
+                                                <span className="font-medium">
+                                                        {t("endDate", { date: formattedEndDate })}
+                                                </span>
+                                        </p>
+                                </div>
+                        )}
+
+                        <Button type="submit" disabled={isLoading} size="default">
+                                {isLoading ? t("saving") : t("saveButton")}
+                        </Button>
+                </form>
+        )
 }

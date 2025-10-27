@@ -436,9 +436,16 @@
 					"location": "Location",
 					"osVersion": "OS Version",
 					"serialNumber": "Serial Number",
-					"warranty": {
-						"title": "Warranty Information"
-					}
+                                        "warranty": {
+                                                "title": "Warranty Information",
+                                                "purchaseDateLabel": "Purchase date",
+                                                "warrantyPeriodLabel": "Warranty period (months)",
+                                                "periodPlaceholder": "Not specified",
+                                                "periodOption": "{months} months",
+                                                "endDate": "Warranty end date: {date}",
+                                                "saveButton": "Save",
+                                                "saving": "Saving..."
+                                        }
 				},
 				"hardware": {
 					"storage": "Storage",
