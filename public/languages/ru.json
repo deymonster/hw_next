@@ -492,9 +492,16 @@
 					"serialNumber": "Серийный номер",
 					"deviceTag": "Тег устройства",
 					"location": "Локация",
-					"warranty": {
-						"title": "Информация о гарантии"
-					}
+                                        "warranty": {
+                                                "title": "Информация о гарантии",
+                                                "purchaseDateLabel": "Дата покупки",
+                                                "warrantyPeriodLabel": "Срок гарантии (мес.)",
+                                                "periodPlaceholder": "Не задано",
+                                                "periodOption": "{months} мес.",
+                                                "endDate": "Дата окончания гарантии: {date}",
+                                                "saveButton": "Сохранить",
+                                                "saving": "Сохранение..."
+                                        }
 				}
 			}
 		},
