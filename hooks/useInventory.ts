@@ -317,73 +317,287 @@ export function useInventory(userId?: string): UseInventoryReturn {
 			if (!response.success || !response.data) {
 				throw new Error('Не удалось получить данные инвентаризации')
 			}
-			const inventory = response.data
+                        const inventory = response.data
 
-			const inventoryItems =
-				inventory.items?.map(item => {
-					const motherboard = item.motherboard
-						? JSON.stringify(item.motherboard)
-						: ''
-					const memory = item.memory
-						? JSON.stringify(item.memory)
-						: ''
-					const storage = item.storage
-						? JSON.stringify(item.storage)
-						: ''
-					const networkCards = item.networkCards
-						? JSON.stringify(item.networkCards)
-						: ''
-					const videoCards = item.videoCards
-						? JSON.stringify(item.videoCards)
-						: ''
-					const diskUsage = item.diskUsage
-						? JSON.stringify(item.diskUsage)
-						: ''
+                        const formatDate = (
+                                value: string | Date | null | undefined,
+                                withTime = false
+                        ): string => {
+                                if (!value) {
+                                        return ''
+                                }
 
-					return {
-						'ID устройства': item.id,
-						Название: item.device?.name
-							? item.device.name
-							: 'Неизвестно',
-						'IP адрес': item.device?.ipAddress || '',
-						'Серийный номер': item.device?.serialNumber || '',
-						Процессор: item.processor || '',
-						'Материнская плата': motherboard,
-						Память: memory,
-						Хранилище: storage,
-						'Сетевые карты': networkCards,
-						Видеокарты: videoCards,
-						'Использование диска': diskUsage,
-						Сотрудник: item.employee
-							? `${item.employee.firstName} ${item.employee.lastName}`
-							: '',
-						Отдел: item.department?.name || '',
-						'Дата создания': new Date(
-							item.createdAt
-						).toLocaleString(),
-						'Дата обновления': new Date(
-							item.updatedAt
-						).toLocaleString()
-					}
-				}) || []
+                                const date = value instanceof Date ? value : new Date(value)
 
-			// Создаем рабочую книгу Excel
-			const worksheet = XLSX.utils.json_to_sheet(inventoryItems)
-			const workbook = XLSX.utils.book_new()
+                                if (Number.isNaN(date.getTime())) {
+                                        return ''
+                                }
 
-			// Добавляем лист с данными
-			XLSX.utils.book_append_sheet(workbook, worksheet, 'Инвентаризация')
+                                const options: Intl.DateTimeFormatOptions = {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                }
 
-			// Формируем имя файла
-			const defaultFileName = `Инвентаризация_${new Date(inventory.startDate).toLocaleDateString()}.xlsx`
+                                if (withTime) {
+                                        options.hour = '2-digit'
+                                        options.minute = '2-digit'
+                                }
 
-			// Сохраняем файл
-			XLSX.writeFile(workbook, fileName || defaultFileName)
-		} catch (error) {
-			console.error('Ошибка при экспорте в Excel:', error)
-			throw error
-		}
-	}
+                                return new Intl.DateTimeFormat('ru-RU', options).format(date)
+                        }
+
+                        const addMonths = (date: Date, months: number): Date => {
+                                const result = new Date(date)
+                                result.setMonth(result.getMonth() + months)
+                                return result
+                        }
+
+                        const humanizeKey = (key: string): string =>
+                                key
+                                        .replace(/([A-Z])/g, ' $1')
+                                        .replace(/_/g, ' ')
+                                        .replace(/\s+/g, ' ')
+                                        .trim()
+                                        .replace(/^\w/, char => char.toUpperCase())
+
+                        const formatHardwareEntry = (entry: unknown): string => {
+                                if (!entry) {
+                                        return ''
+                                }
+
+                                if (typeof entry === 'string' || typeof entry === 'number') {
+                                        return String(entry)
+                                }
+
+                                if (typeof entry === 'object' && !Array.isArray(entry)) {
+                                        return Object.entries(entry as Record<string, unknown>)
+                                                .filter(([, value]) =>
+                                                        value !== null && value !== undefined && value !== ''
+                                                )
+                                                .map(([key, value]) => `${humanizeKey(key)}: ${value}`)
+                                                .join(', ')
+                                }
+
+                                if (Array.isArray(entry)) {
+                                        return entry
+                                                .map(value => formatHardwareEntry(value))
+                                                .filter(Boolean)
+                                                .join('\n')
+                                }
+
+                                return ''
+                        }
+
+                        const formatHardwareSpec = (value: unknown): string => {
+                                if (!value) {
+                                        return ''
+                                }
+
+                                if (Array.isArray(value)) {
+                                        return value
+                                                .map(item => formatHardwareEntry(item))
+                                                .filter(Boolean)
+                                                .join('\n')
+                                }
+
+                                return formatHardwareEntry(value)
+                        }
+
+                        const formatResponsible = (
+                                employee?: {
+                                        firstName?: string | null
+                                        lastName?: string | null
+                                }
+                        ): string => {
+                                if (!employee) {
+                                        return ''
+                                }
+
+                                return [employee.lastName, employee.firstName]
+                                        .filter(Boolean)
+                                        .join(' ')
+                        }
+
+                        const formatContacts = (
+                                employee?: {
+                                        email?: string | null
+                                        phone?: string | null
+                                }
+                        ): string => {
+                                if (!employee) {
+                                        return ''
+                                }
+
+                                return [employee.email, employee.phone]
+                                        .filter(contact => contact && contact.trim().length > 0)
+                                        .join(' / ')
+                        }
+
+                        const inventoryItems = inventory.items || []
+                        const now = new Date()
+
+                        const dataRows = inventoryItems.map(item => {
+                                const purchaseDate = item.device?.purchaseDate
+                                        ? new Date(item.device.purchaseDate)
+                                        : null
+                                const warrantyPeriod = item.device?.warrantyPeriod ?? null
+
+                                const warrantyEndDate =
+                                        purchaseDate && warrantyPeriod
+                                                ? addMonths(purchaseDate, warrantyPeriod)
+                                                : null
+
+                                const warrantyStatus = warrantyEndDate
+                                        ? warrantyEndDate >= now
+                                                ? 'Активна'
+                                                : 'Истекла'
+                                        : 'Не указано'
+
+                                return [
+                                        item.id,
+                                        item.device?.name ? item.device.name : 'Неизвестно',
+                                        item.device?.ipAddress || '',
+                                        item.device?.serialNumber || item.serialNumber || '',
+                                        item.department?.name || '',
+                                        formatResponsible(item.employee),
+                                        item.employee?.position || '',
+                                        formatContacts(item.employee),
+                                        item.processor || '',
+                                        formatHardwareSpec(item.motherboard),
+                                        formatHardwareSpec(item.memory),
+                                        formatHardwareSpec(item.storage),
+                                        formatHardwareSpec(item.networkCards),
+                                        formatHardwareSpec(item.videoCards),
+                                        formatHardwareSpec(item.diskUsage),
+                                        formatDate(purchaseDate),
+                                        warrantyPeriod ?? '',
+                                        formatDate(warrantyEndDate),
+                                        warrantyStatus,
+                                        formatDate(item.createdAt, true),
+                                        formatDate(item.updatedAt, true)
+                                ]
+                        })
+
+                        const departmentNames =
+                                inventory.departments?.map(department => department.name).filter(Boolean) || []
+
+                        const fallbackDepartments = Array.from(
+                                new Set(
+                                        inventoryItems
+                                                .map(item => item.department?.name)
+                                                .filter((name): name is string => Boolean(name))
+                                )
+                        )
+
+                        const summaryRows: Array<[string, string]> = [
+                                ['Инвентаризация ID', inventory.id],
+                                ['Дата начала', formatDate(inventory.startDate)],
+                                [
+                                        'Дата формирования отчёта',
+                                        formatDate(new Date(), true)
+                                ],
+                                [
+                                        'Создатель инвентаризации',
+                                        inventory.user?.name || inventory.userId || 'Неизвестно'
+                                ],
+                                [
+                                        'Отделы',
+                                        (departmentNames.length ? departmentNames : fallbackDepartments).join(', ') ||
+                                                'Все отделы'
+                                ],
+                                ['Количество устройств', inventoryItems.length.toString()]
+                        ]
+
+                        const header = [
+                                'ID записи',
+                                'Название устройства',
+                                'IP адрес',
+                                'Серийный номер',
+                                'Отдел',
+                                'Ответственный',
+                                'Должность',
+                                'Контакты',
+                                'Процессор',
+                                'Материнская плата',
+                                'Память',
+                                'Хранилище',
+                                'Сетевые интерфейсы',
+                                'Видеокарты',
+                                'Использование дисков',
+                                'Дата приобретения',
+                                'Срок гарантии (мес.)',
+                                'Гарантия до',
+                                'Статус гарантии',
+                                'Дата добавления',
+                                'Последнее обновление'
+                        ]
+
+                        const worksheetData: Array<Array<string | number>> = [
+                                ...summaryRows,
+                                [],
+                                header,
+                                ...dataRows
+                        ]
+
+                        const worksheet = XLSX.utils.aoa_to_sheet(worksheetData)
+
+                        const headerRowIndex = summaryRows.length + 1
+                        const lastDataRowIndex = dataRows.length
+                                ? headerRowIndex + dataRows.length
+                                : headerRowIndex
+
+                        worksheet['!autofilter'] = {
+                                ref: XLSX.utils.encode_range({
+                                        s: { c: 0, r: headerRowIndex },
+                                        e: { c: header.length - 1, r: lastDataRowIndex }
+                                })
+                        }
+
+                        worksheet['!freeze'] = {
+                                xSplit: 0,
+                                ySplit: headerRowIndex + 1,
+                                topLeftCell: XLSX.utils.encode_cell({
+                                        r: headerRowIndex + 1,
+                                        c: 0
+                                })
+                        }
+
+                        worksheet['!cols'] = [
+                                { wch: 18 },
+                                { wch: 28 },
+                                { wch: 16 },
+                                { wch: 20 },
+                                { wch: 24 },
+                                { wch: 24 },
+                                { wch: 20 },
+                                { wch: 28 },
+                                { wch: 22 },
+                                { wch: 26 },
+                                { wch: 26 },
+                                { wch: 26 },
+                                { wch: 26 },
+                                { wch: 22 },
+                                { wch: 28 },
+                                { wch: 18 },
+                                { wch: 20 },
+                                { wch: 18 },
+                                { wch: 18 },
+                                { wch: 22 },
+                                { wch: 22 }
+                        ]
+
+                        const workbook = XLSX.utils.book_new()
+                        XLSX.utils.book_append_sheet(workbook, worksheet, 'Инвентаризация')
+
+                        const defaultFileName = `Инвентаризация_${formatDate(inventory.startDate)}.xlsx`
+
+                        XLSX.writeFile(workbook, fileName || defaultFileName)
+                } catch (error) {
+                        console.error('Ошибка при экспорте в Excel:', error)
+                        throw error
+                }
+        }
 
 	return {
 		exportToExcel,
