@@ -1,3 +1,5 @@
+import { useTranslations } from 'next-intl'
+
 import { Progress } from '@/components/ui/progress'
 import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces'
 
@@ -6,9 +8,11 @@ interface DiskMetricsProps {
 }
 
 export function DiskMetrics({ metrics }: DiskMetricsProps) {
-	if (!metrics || !Array.isArray(metrics) || metrics.length === 0) {
-		return <div>No disk data available</div>
-	}
+        const t = useTranslations('dashboard.devices.detail.performance')
+
+        if (!metrics || !Array.isArray(metrics) || metrics.length === 0) {
+                return <div>{t('noDiskData')}</div>
+        }
 
 	const formatDiskSpace = (value: number): string => {
 		if (value >= 1024) {
@@ -23,65 +27,65 @@ export function DiskMetrics({ metrics }: DiskMetricsProps) {
 				<div key={disk.disk} className='space-y-4'>
 					{index > 0 && <hr className='my-4' />}
 
-					<div className='mb-2 flex items-center justify-between'>
-						<h4 className='text-sm font-semibold'>
-							Disk {disk.disk}
-						</h4>
-					</div>
+                                        <div className='mb-2 flex items-center justify-between'>
+                                                <h4 className='text-sm font-semibold'>
+                                                        {t('diskLabel', { disk: disk.disk })}
+                                                </h4>
+                                        </div>
 
-					<div className='space-y-2'>
-						<div className='flex items-center justify-between'>
-							<p className='text-sm font-medium'>Used Space</p>
-							<p className='text-sm text-muted-foreground'>
-								{disk.usage.percent.toFixed(1)}%
-							</p>
+                                        <div className='space-y-2'>
+                                                <div className='flex items-center justify-between'>
+                                                        <p className='text-sm font-medium'>{t('usedSpace')}</p>
+                                                        <p className='text-sm text-muted-foreground'>
+                                                                {disk.usage.percent.toFixed(1)}%
+                                                        </p>
 						</div>
 						<Progress value={disk.usage.percent} className='h-2' />
 					</div>
 
 					<div className='grid grid-cols-3 gap-4'>
-						<div className='space-y-1'>
-							<p className='text-sm font-medium text-muted-foreground'>
-								Total
-							</p>
-							<p className='text-lg font-medium'>
-								{formatDiskSpace(disk.usage.total)}
+                                                <div className='space-y-1'>
+                                                        <p className='text-sm font-medium text-muted-foreground'>
+                                                                {t('total')}
+                                                        </p>
+                                                        <p className='text-lg font-medium'>
+                                                                {formatDiskSpace(disk.usage.total)}
+                                                        </p>
+                                                </div>
+                                                <div className='space-y-1'>
+                                                        <p className='text-sm font-medium text-muted-foreground'>
+                                                                {t('used')}
+                                                        </p>
+                                                        <p className='text-lg font-medium'>
+                                                                {formatDiskSpace(disk.usage.used)}
 							</p>
 						</div>
-						<div className='space-y-1'>
-							<p className='text-sm font-medium text-muted-foreground'>
-								Used
-							</p>
-							<p className='text-lg font-medium'>
-								{formatDiskSpace(disk.usage.used)}
-							</p>
-						</div>
-						<div className='space-y-1'>
-							<p className='text-sm font-medium text-muted-foreground'>
-								Free
-							</p>
-							<p className='text-lg font-medium'>
-								{formatDiskSpace(disk.usage.free)}
+                                                <div className='space-y-1'>
+                                                        <p className='text-sm font-medium text-muted-foreground'>
+                                                                {t('free')}
+                                                        </p>
+                                                        <p className='text-lg font-medium'>
+                                                                {formatDiskSpace(disk.usage.free)}
 							</p>
 						</div>
 					</div>
 
 					<div className='mt-4 grid grid-cols-2 gap-4'>
-						<div className='space-y-1'>
-							<p className='text-sm font-medium text-muted-foreground'>
-								Read Speed
-							</p>
-							<p className='text-lg font-medium'>
-								{disk.performance.read.value}{' '}
+                                                <div className='space-y-1'>
+                                                        <p className='text-sm font-medium text-muted-foreground'>
+                                                                {t('readSpeed')}
+                                                        </p>
+                                                        <p className='text-lg font-medium'>
+                                                                {disk.performance.read.value}{' '}
 								{disk.performance.read.unit}
 							</p>
 						</div>
-						<div className='space-y-1'>
-							<p className='text-sm font-medium text-muted-foreground'>
-								Write Speed
-							</p>
-							<p className='text-lg font-medium'>
-								{disk.performance.write.value}{' '}
+                                                <div className='space-y-1'>
+                                                        <p className='text-sm font-medium text-muted-foreground'>
+                                                                {t('writeSpeed')}
+                                                        </p>
+                                                        <p className='text-lg font-medium'>
+                                                                {disk.performance.write.value}{' '}
 								{disk.performance.write.unit}
 							</p>
 						</div>
