@@ -18,11 +18,11 @@ import { LoggerService } from '@/services/logger/logger.interface'
 import { logAction } from '@/utils/logger'
 
 export async function createDevice(data: IDeviceCreateInput): Promise<{
-	success: boolean
-	device?: Device
-	error?: string
+        success: boolean
+        device?: Device
+        error?: string
 }> {
-	await logAction(
+        await logAction(
 		LoggerService.DEVICE_SERVICE,
 		'info',
 		`createDevice - Creating new device: ${data.name}`
@@ -37,15 +37,13 @@ export async function createDevice(data: IDeviceCreateInput): Promise<{
 			'info',
 			`[CREATE_DEVICE] Creating device: ${data.name} (${data.ipAddress})`
 		)
-		const newDevice = await services.data.device.create({
-			name: data.name,
-			ipAddress: data.ipAddress,
-			agentKey: data.agentKey,
-			type: data.type || DeviceType.WINDOWS
-		})
-		await logAction(
-			LoggerService.DEVICE_SERVICE,
-			'info',
+                const newDevice = await services.data.device.create({
+                        ...data,
+                        type: data.type || DeviceType.WINDOWS
+                })
+                await logAction(
+                        LoggerService.DEVICE_SERVICE,
+                        'info',
 			`[CREATE_DEVICE] Device created successfully: ${newDevice.id}`
 		)
 
@@ -55,14 +53,16 @@ export async function createDevice(data: IDeviceCreateInput): Promise<{
 			title: 'Добавлено устройство',
 			message: `Устройство "${newDevice.name}" с IP ${newDevice.ipAddress} добавлено в систему.`,
 			deviceId: newDevice.id,
-			metadata: {
-				ipAddress: newDevice.ipAddress,
-				agentKey: newDevice.agentKey,
-				type: newDevice.type
-			}
-		})
+                                metadata: {
+                                        ipAddress: newDevice.ipAddress,
+                                        agentKey: newDevice.agentKey,
+                                        type: newDevice.type,
+                                        departmentId: newDevice.departmentId,
+                                        employeeId: newDevice.employeeId
+                                }
+                })
 
-		return {
+                return {
 			success: true,
 			device: newDevice
 		}
@@ -319,11 +319,11 @@ export async function getDeviceStatus(id: string): Promise<{
 }
 
 export async function updateDepartmentDevices({
-	id,
-	deviceIds
+        id,
+        deviceIds
 }: {
-	id: string
-	deviceIds: string[]
+        id: string
+        deviceIds: string[]
 }): Promise<void> {
 	try {
 		await services.data.device.updateDepartmentDevices(id, deviceIds)
@@ -336,6 +336,82 @@ export async function updateDepartmentDevices({
 		)
 		throw error
 	}
+}
+
+export async function assignDevicesToEmployee({
+        departmentId,
+        employeeId,
+        deviceIds
+}: {
+        departmentId: string
+        employeeId: string
+        deviceIds: string[]
+}): Promise<{ success: boolean; error?: string }> {
+        try {
+                if (!deviceIds.length) {
+                        return { success: true }
+                }
+
+                const employee = await services.data.employee.findById(employeeId)
+
+                if (!employee) {
+                        return { success: false, error: 'Employee not found' }
+                }
+
+                if (employee.departmentId !== departmentId) {
+                        return { success: false, error: 'Employee does not belong to this department' }
+                }
+
+                await services.data.device.assignDevicesToEmployee({
+                        departmentId,
+                        employeeId,
+                        deviceIds
+                })
+
+                const devices = await services.data.device.findMany({
+                        where: { id: { in: deviceIds } } as any
+                })
+
+                await Promise.all(
+                        devices.map(device =>
+                                logAuditEvent({
+                                        type: EventType.DEVICE,
+                                        severity: EventSeverity.MEDIUM,
+                                        title: 'Устройство назначено сотруднику',
+                                        message: `Устройство "${device.name}" назначено сотруднику ${employee.firstName} ${
+                                                employee.lastName
+                                        }.`,
+                                        deviceId: device.id,
+                                        metadata: {
+                                                departmentId,
+                                                employeeId,
+                                                device: {
+                                                        id: device.id,
+                                                        name: device.name,
+                                                        ipAddress: device.ipAddress
+                                                }
+                                        }
+                                })
+                        )
+                )
+
+                return { success: true }
+        } catch (error) {
+                await logAction(
+                        LoggerService.DEVICE_SERVICE,
+                        'error',
+                        '[ASSIGN_DEVICES_TO_EMPLOYEE] Error:',
+                        error
+                )
+
+                return {
+                        success: false,
+                        error:
+                                error instanceof Error
+                                        ? error.message
+                                        : 'Failed to assign devices to employee'
+                }
+        }
 }
 
 /**

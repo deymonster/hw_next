@@ -12,7 +12,6 @@ import {
 	getDepartmentsWithCounts,
 	updateDepartment
 } from '@/app/actions/department'
-import { updateDepartmentDevices } from '@/app/actions/device'
 import { IDepartmentCreateInput } from '@/services/department/department.interface'
 
 export type DepartmentWithCounts = Department & {
@@ -71,20 +70,13 @@ export function useDepartment() {
 
 	// Обновление отдела
 	const updateMutation = useMutation({
-		mutationFn: ({
-			id,
-			data
-		}: {
-			id: string
-			data: Partial<IDepartmentCreateInput>
-		}) => {
-			// Если есть устройства для обновления, сначала обновляем их
-			if (data.devices?.set) {
-				const deviceIds = data.devices.set.map(d => d.id)
-				updateDepartmentDevices({ id, deviceIds })
-			}
-			return updateDepartment(id, data)
-		},
+                mutationFn: ({
+                        id,
+                        data
+                }: {
+                        id: string
+                        data: Partial<IDepartmentCreateInput>
+                }) => updateDepartment(id, data),
 		onSuccess: updatedDepartment => {
 			// Обновляем все связанные запросы
 			queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })

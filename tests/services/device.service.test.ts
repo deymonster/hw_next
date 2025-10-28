@@ -79,12 +79,53 @@ describe('DeviceService', () => {
                         activatedAt: null
                 })
 
+                context.state.devices[0].employeeId = 'employee-1'
+
                 await service.updateDepartmentDevices('dept-1', ['device-2'])
 
                 const deviceOne = context.state.devices.find(device => device.id === 'device-1')
                 const deviceTwo = context.state.devices.find(device => device.id === 'device-2')
                 assert.strictEqual(deviceOne?.departmentId, null)
+                assert.strictEqual(deviceOne?.employeeId, null)
                 assert.strictEqual(deviceTwo?.departmentId, 'dept-1')
+        })
+
+        it('assigns devices to employees and department in bulk', async () => {
+                context.state.devices.push({
+                        id: 'device-3',
+                        name: 'Router',
+                        ipAddress: '10.1.0.4',
+                        agentKey: 'agent-4',
+                        serialNumber: null,
+                        purchaseDate: null,
+                        warrantyPeriod: null,
+                        lastUpdate: now,
+                        status: DeviceStatus.ACTIVE,
+                        type: DeviceType.WINDOWS,
+                        departmentId: null,
+                        employeeId: null,
+                        deviceTag: null,
+                        createdAt: now,
+                        updatedAt: now,
+                        lastSeen: now,
+                        activationSig: null,
+                        activationKeyVer: null,
+                        activatedAt: null
+                })
+
+                await service.assignDevicesToEmployee({
+                        departmentId: 'dept-2',
+                        employeeId: 'employee-2',
+                        deviceIds: ['device-1', 'device-3']
+                })
+
+                const firstDevice = context.state.devices.find(device => device.id === 'device-1')
+                const thirdDevice = context.state.devices.find(device => device.id === 'device-3')
+
+                assert.strictEqual(firstDevice?.departmentId, 'dept-2')
+                assert.strictEqual(firstDevice?.employeeId, 'employee-2')
+                assert.strictEqual(thirdDevice?.departmentId, 'dept-2')
+                assert.strictEqual(thirdDevice?.employeeId, 'employee-2')
         })
 
         it('calculates device statistics grouped by status and type', async () => {

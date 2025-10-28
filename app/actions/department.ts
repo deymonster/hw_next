@@ -87,7 +87,13 @@ export async function getDepartmentDevicesCount(id: string): Promise<number> {
 }
 
 export async function getDepartmentsWithCounts(): Promise<
-	DepartmentWithCounts[]
+        DepartmentWithCounts[]
 > {
-	return await services.data.department.findAllWithCounts()
+        return await services.data.department.findAllWithCounts()
+}
+
+export async function getDepartmentForManagement(
+        id: string
+): Promise<DepartmentWithCounts | null> {
+        return await services.data.department.findByIdWithCounts(id)
 }
