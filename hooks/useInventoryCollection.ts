@@ -106,7 +106,7 @@ export function useInventoryCollection() {
 				storage: hardwareInfo?.disks || null,
 				networkCards: hardwareInfo?.networkInterfaces || null,
 				videoCards: hardwareInfo?.gpus || null,
-				diskUsage: null, // У нас нет этой информации из getDeviceInfo
+                                diskUsage: hardwareInfo?.diskUsage || null,
 				departmentId: device.departmentId || null,
 				employeeId: device.employeeId || null,
 				serialNumber: systemInfo?.serialNumber || null

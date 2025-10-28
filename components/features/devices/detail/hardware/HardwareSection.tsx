@@ -2,7 +2,7 @@ import { CircuitBoard, Cpu, HardDrive, MonitorSmartphone } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import { Card, CardContent } from '@/components/ui/card'
-import { DeviceMetrics } from '@/services/prometheus/prometheus.interfaces'
+import { DeviceMetrics, DiskInfo } from '@/services/prometheus/prometheus.interfaces'
 
 interface HardwareSectionProps {
 	hardwareInfo: DeviceMetrics['hardwareInfo'] | null | undefined
@@ -11,15 +11,21 @@ interface HardwareSectionProps {
 export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 	const t = useTranslations('dashboard.devices.detail.hardware')
 
-	if (!hardwareInfo) return null
+        if (!hardwareInfo) return null
 
-	const formatSize = (size: string): string => {
-		const sizeInBytes = parseInt(size)
-		if (isNaN(sizeInBytes)) return size
+        const formatDiskSize = (disk: DiskInfo): string => {
+                if (typeof disk.sizeGb === 'number' && !Number.isNaN(disk.sizeGb)) {
+                        return `${disk.sizeGb.toFixed(2)} ГБ`
+                }
 
-		const sizeInGB = sizeInBytes / (1024 * 1024 * 1024)
-		return `${sizeInGB.toFixed(2)} ГБ`
-	}
+                const sizeInBytes = Number(disk.size)
+                if (!Number.isNaN(sizeInBytes) && sizeInBytes > 0) {
+                        const sizeInGB = sizeInBytes / (1024 * 1024 * 1024)
+                        return `${sizeInGB.toFixed(2)} ГБ`
+                }
+
+                return disk.size
+        }
 
 	return (
 		<div className='grid gap-4 md:grid-cols-2'>
@@ -83,23 +89,42 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 							<div>
 								<h4 className='font-medium'>{t('memory')}</h4>
 								<div className='space-y-2'>
-									{hardwareInfo.memory.modules.map(
-										(module, index) => (
-											<div
-												key={index}
-												className='text-sm text-muted-foreground'
-											>
-												{module.capacity} {module.speed}
-												<div className='text-xs opacity-75'>
-													S/N: {module.serial_number}{' '}
-													• P/N: {module.part_number}
-												</div>
-											</div>
-										)
-									)}
-								</div>
-							</div>
-						</div>
+                                                                        {hardwareInfo.memory.modules.map(
+                                                                                (module, index) => {
+                                                                                        const details = [
+                                                                                                module.capacity,
+                                                                                                module.type,
+                                                                                                module.speed
+                                                                                        ]
+                                                                                                .filter(Boolean)
+                                                                                                .join(' ')
+
+                                                                                        const extraParts: string[] = []
+                                                                                        if (module.serialNumber) {
+                                                                                                extraParts.push(`S/N: ${module.serialNumber}`)
+                                                                                        }
+                                                                                        if (module.partNumber) {
+                                                                                                extraParts.push(`P/N: ${module.partNumber}`)
+                                                                                        }
+
+                                                                                        return (
+                                                                                                <div
+                                                                                                        key={index}
+                                                                                                        className='text-sm text-muted-foreground'
+                                                                                                >
+                                                                                                        {details}
+                                                                                                        {extraParts.length > 0 && (
+                                                                                                                <div className='text-xs opacity-75'>
+                                                                                                                        {extraParts.join(' • ')}
+                                                                                                                </div>
+                                                                                                        )}
+                                                                                                </div>
+                                                                                        )
+                                                                                }
+                                                                        )}
+                                                                </div>
+                                                        </div>
+                                                </div>
 					</div>
 				</CardContent>
 			</Card>
@@ -113,19 +138,19 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 							<div>
 								<h4 className='font-medium'>{t('storage')}</h4>
 								<div className='space-y-2'>
-									{hardwareInfo.disks.map((disk, index) => (
-										<div
-											key={index}
-											className='text-sm text-muted-foreground'
-										>
-											{t('model')}: {disk.model}
-											<div className='text-xs opacity-75'>
-												{formatSize(disk.size)} •{' '}
-												{t('type')}: {disk.type} •{' '}
-												{t('health')}: {disk.health}
-											</div>
-										</div>
-									))}
+                                                                        {hardwareInfo.disks.map((disk, index) => (
+                                                                                <div
+                                                                                        key={index}
+                                                                                        className='text-sm text-muted-foreground'
+                                                                                >
+                                                                                        {t('model')}: {disk.model}
+                                                                                        <div className='text-xs opacity-75'>
+                                                                                                {formatDiskSize(disk)} •{' '}
+                                                                                                {t('type')}: {disk.type} •{' '}
+                                                                                                {t('health')}: {disk.health}
+                                                                                        </div>
+                                                                                </div>
+                                                                        ))}
 								</div>
 							</div>
 						</div>
@@ -136,43 +161,112 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 							<div>
 								<h4 className='font-medium'>{t('graphics')}</h4>
 								<div className='space-y-2'>
-									{hardwareInfo.gpus.map((gpu, index) => (
-										<div
-											key={index}
-											className='text-sm text-muted-foreground'
-										>
-											{gpu.name}
-											<div className='text-xs opacity-75'>
-												{t('graphicsMemory')}:{' '}
-												{gpu.memory.total} Мб
-											</div>
-										</div>
-									))}
-								</div>
-							</div>
-						</div>
+                                                                        {hardwareInfo.gpus.map((gpu, index) => {
+                                                                                const memoryValue =
+                                                                                        typeof gpu.memoryGB === 'number' &&
+                                                                                        !Number.isNaN(gpu.memoryGB)
+                                                                                                ? `${gpu.memoryGB.toFixed(2)} ГБ`
+                                                                                                : typeof gpu.memoryMB === 'number' &&
+                                                                                                  !Number.isNaN(gpu.memoryMB)
+                                                                                                ? `${gpu.memoryMB.toFixed(0)} МБ`
+                                                                                                : null
 
-						{/* Сеть */}
-						<div className='flex items-start space-x-3'>
-							<MonitorSmartphone className='mt-1 h-5 w-5 text-muted-foreground' />
-							<div>
-								<h4 className='font-medium'>
-									{t('networkAdapters')}
-								</h4>
-								<div className='space-y-2'>
-									{hardwareInfo.network.map(
-										(adapter, index) => (
-											<div
-												key={index}
-												className='text-sm text-muted-foreground'
-											>
-												{adapter.name}
-											</div>
-										)
-									)}
-								</div>
-							</div>
-						</div>
+                                                                                return (
+                                                                                <div
+                                                                                        key={index}
+                                                                                        className='text-sm text-muted-foreground'
+                                                                                >
+                                                                                        {gpu.name}
+                                                                                        {memoryValue && (
+                                                                                                <div className='text-xs opacity-75'>
+                                                                                                        {t('graphicsMemory')}: {memoryValue}
+                                                                                                </div>
+                                                                                        )}
+                                                                                </div>
+                                                                                )
+                                                                        })}
+                                                                </div>
+                                                        </div>
+                                                </div>
+
+                                                {/* Сеть */}
+                                                <div className='flex items-start space-x-3'>
+                                                        <MonitorSmartphone className='mt-1 h-5 w-5 text-muted-foreground' />
+                                                        <div>
+                                                                <h4 className='font-medium'>
+                                                                        {t('networkAdapters')}
+                                                                </h4>
+                                                                <div className='space-y-2'>
+                                                                        {hardwareInfo.networkInterfaces.map(
+                                                                                (adapter, index) => {
+                                                                                        const performance = adapter.performance
+                                                                                        const performanceDetails: string[] = []
+
+                                                                                        if (
+                                                                                                performance?.rx?.value !==
+                                                                                                        undefined &&
+                                                                                                !Number.isNaN(performance.rx.value)
+                                                                                        ) {
+                                                                                                performanceDetails.push(
+                                                                                                        `Rx: ${performance.rx.value} ${
+                                                                                                                performance.rx.unit ?? ''
+                                                                                                        }`.trim()
+                                                                                                )
+                                                                                        }
+
+                                                                                        if (
+                                                                                                performance?.tx?.value !==
+                                                                                                        undefined &&
+                                                                                                !Number.isNaN(performance.tx.value)
+                                                                                        ) {
+                                                                                                performanceDetails.push(
+                                                                                                        `Tx: ${performance.tx.value} ${
+                                                                                                                performance.tx.unit ?? ''
+                                                                                                        }`.trim()
+                                                                                                )
+                                                                                        }
+
+                                                                                        return (
+                                                                                                <div
+                                                                                                        key={index}
+                                                                                                        className='text-sm text-muted-foreground'
+                                                                                                >
+                                                                                                        {adapter.name}
+                                                                                                        {adapter.status && (
+                                                                                                                <span className='ml-1 text-xs uppercase opacity-75'>
+                                                                                                                        [{adapter.status}]
+                                                                                                                </span>
+                                                                                                        )}
+                                                                                                        {(performanceDetails.length > 0 ||
+                                                                                                                adapter.errors !== undefined ||
+                                                                                                                adapter.droppedPackets !== undefined) && (
+                                                                                                                <div className='text-xs opacity-75'>
+                                                                                                                        {performanceDetails.join(' • ')}
+                                                                                                                        {(adapter.errors !== undefined ||
+                                                                                                                                adapter.droppedPackets !==
+                                                                                                                                        undefined) &&
+                                                                                                                                performanceDetails.length > 0
+                                                                                                                                ? ' • '
+                                                                                                                                : ''}
+                                                                                                                        {adapter.errors !== undefined
+                                                                                                                                ? `Err: ${adapter.errors}`
+                                                                                                                                : ''}
+                                                                                                                        {adapter.errors !== undefined &&
+                                                                                                                        adapter.droppedPackets !== undefined
+                                                                                                                                ? ' '
+                                                                                                                                : ''}
+                                                                                                                        {adapter.droppedPackets !== undefined
+                                                                                                                                ? `Drop: ${adapter.droppedPackets}`
+                                                                                                                                : ''}
+                                                                                                                </div>
+                                                                                                        )}
+                                                                                                </div>
+                                                                                        )
+                                                                                }
+                                                                        )}
+                                                                </div>
+                                                        </div>
+                                                </div>
 					</div>
 				</CardContent>
 			</Card>

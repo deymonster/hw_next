@@ -361,6 +361,241 @@ export function useInventory(userId?: string): UseInventoryReturn {
                                         .trim()
                                         .replace(/^\w/, char => char.toUpperCase())
 
+                        const parseSizeToGb = (raw: unknown): number | undefined => {
+                                if (raw === null || raw === undefined) {
+                                        return undefined
+                                }
+
+                                if (typeof raw === 'number') {
+                                        if (Number.isNaN(raw) || raw <= 0) {
+                                                return undefined
+                                        }
+                                        return Number(raw.toFixed(2))
+                                }
+
+                                if (typeof raw !== 'string' || raw.trim().length === 0) {
+                                        return undefined
+                                }
+
+                                const numericValue = Number(raw)
+                                if (!Number.isNaN(numericValue) && numericValue > 0) {
+                                        if (numericValue > 1024 * 1024 * 1024) {
+                                                return Number(
+                                                        (numericValue / (1024 * 1024 * 1024)).toFixed(2)
+                                                )
+                                        }
+                                        return Number(numericValue.toFixed(2))
+                                }
+
+                                const match = raw.match(/([\d.,]+)/)
+                                if (!match) {
+                                        return undefined
+                                }
+
+                                const parsed = Number(match[1].replace(',', '.'))
+                                if (Number.isNaN(parsed)) {
+                                        return undefined
+                                }
+
+                                if (/tb/i.test(raw)) {
+                                        return Number((parsed * 1024).toFixed(2))
+                                }
+
+                                return Number(parsed.toFixed(2))
+                        }
+
+                        const formatMotherboard = (entry: Record<string, unknown>): string | null => {
+                                const manufacturer = (entry.manufacturer || entry.vendor) as
+                                        | string
+                                        | undefined
+                                const product = entry.product as string | undefined
+                                const serial =
+                                        (entry.serialNumber || entry.serial_number) as
+                                                | string
+                                                | undefined
+                                const version = entry.version as string | undefined
+
+                                const base = [manufacturer, product]
+                                        .filter(Boolean)
+                                        .join(' ')
+                                        .trim()
+
+                                const extra = [
+                                        serial ? `S/N ${serial}` : null,
+                                        version ? `Ver. ${version}` : null
+                                ].filter(Boolean)
+
+                                const parts = [...(base ? [base] : []), ...extra]
+                                return parts.length ? parts.join(' ') : null
+                        }
+
+                        const formatMemoryModule = (
+                                entry: Record<string, unknown>
+                        ): string | null => {
+                                const capacity = entry.capacity as string | undefined
+                                const type =
+                                        (entry.type || entry.memoryType || entry.memory_type) as
+                                                | string
+                                                | undefined
+                                const speed = entry.speed as string | undefined
+                                const base = [capacity, type, speed]
+                                        .filter(Boolean)
+                                        .join(' ')
+                                        .trim()
+
+                                const serial =
+                                        (entry.serialNumber || entry.serial_number) as
+                                                | string
+                                                | undefined
+                                const partNumber =
+                                        (entry.partNumber || entry.part_number) as
+                                                | string
+                                                | undefined
+
+                                const extra = [
+                                        serial ? `S/N ${serial}` : null,
+                                        partNumber ? `P/N ${partNumber}` : null
+                                ].filter(Boolean)
+
+                                const sections = [...(base ? [base] : []), ...extra]
+                                return sections.length ? sections.join(' • ') : null
+                        }
+
+                        const formatGpu = (entry: Record<string, unknown>): string | null => {
+                                const name = entry.name as string | undefined
+                                const memoryGB = Number(entry.memoryGB)
+                                const memoryMB = Number(
+                                        entry.memoryMB ?? (entry.memory as any)?.total
+                                )
+
+                                let memoryLabel: string | null = null
+                                if (!Number.isNaN(memoryGB) && memoryGB > 0) {
+                                        memoryLabel = `${memoryGB.toFixed(2)} ГБ`
+                                } else if (!Number.isNaN(memoryMB) && memoryMB > 0) {
+                                        if (memoryMB >= 1024) {
+                                                memoryLabel = `${(memoryMB / 1024).toFixed(2)} ГБ`
+                                        } else {
+                                                memoryLabel = `${memoryMB.toFixed(0)} МБ`
+                                        }
+                                }
+
+                                const parts = [name, memoryLabel ? `(${memoryLabel})` : null]
+                                        .filter(Boolean)
+                                        .join(' ')
+
+                                return parts.length ? parts : null
+                        }
+
+                        const formatDisk = (entry: Record<string, unknown>): string | null => {
+                                const model =
+                                        (entry.model || entry.name || entry.id) as string | undefined
+                                const sizeGbValue = parseSizeToGb(entry.sizeGb ?? entry.size)
+                                const sizeLabel =
+                                        typeof sizeGbValue === 'number'
+                                                ? `${sizeGbValue.toFixed(2)} ГБ`
+                                                : (entry.size as string | undefined)
+                                const meta = [entry.type as string | undefined, entry.health as string | undefined]
+                                        .filter(Boolean)
+
+                                const base = [model, sizeLabel]
+                                        .filter(Boolean)
+                                        .join(' — ')
+                                        .trim()
+
+                                if (!base && meta.length === 0) {
+                                        return null
+                                }
+
+                                return [base, meta.length ? `(${meta.join(', ')})` : null]
+                                        .filter(Boolean)
+                                        .join(' ')
+                        }
+
+                        const formatNetwork = (
+                                entry: Record<string, unknown>
+                        ): string | null => {
+                                const name = (entry.name || entry.interface) as string | undefined
+                                const status = entry.status as string | undefined
+                                const rx = (entry.performance as any)?.rx as
+                                        | { value?: number; unit?: string }
+                                        | undefined
+                                const tx = (entry.performance as any)?.tx as
+                                        | { value?: number; unit?: string }
+                                        | undefined
+
+                                const perfParts = [
+                                        rx?.value ? `Rx ${rx.value} ${rx.unit ?? ''}`.trim() : null,
+                                        tx?.value ? `Tx ${tx.value} ${tx.unit ?? ''}`.trim() : null
+                                ].filter(Boolean)
+
+                                const meta = [status, perfParts.length ? perfParts.join(', ') : null]
+                                        .filter(Boolean)
+
+                                if (!name && meta.length === 0) {
+                                        return null
+                                }
+
+                                return [name, meta.length ? `(${meta.join('; ')})` : null]
+                                        .filter(Boolean)
+                                        .join(' ')
+                        }
+
+                        const formatDiskUsageEntry = (
+                                entry: Record<string, unknown>
+                        ): string | null => {
+                                const disk = (entry.disk || entry.name) as string | undefined
+                                const usage = entry.usage as
+                                        | {
+                                                total?: number
+                                                used?: number
+                                                free?: number
+                                                percent?: number
+                                        }
+                                        | undefined
+
+                                if (!disk && !usage) {
+                                        return null
+                                }
+
+                                const parts: string[] = []
+
+                                if (usage?.total !== undefined && !Number.isNaN(usage.total)) {
+                                        parts.push(`Всего ${usage.total.toFixed(2)} ГБ`)
+                                }
+                                if (usage?.used !== undefined && !Number.isNaN(usage.used)) {
+                                        parts.push(`Исп. ${usage.used.toFixed(2)} ГБ`)
+                                }
+                                if (usage?.percent !== undefined && !Number.isNaN(usage.percent)) {
+                                        parts.push(`${usage.percent.toFixed(1)}%`)
+                                }
+
+                                const details = parts.join(', ')
+                                return [disk, details].filter(Boolean).join(' — ')
+                        }
+
+                        const formatGenericObject = (
+                                entry: Record<string, unknown>
+                        ): string =>
+                                Object.entries(entry)
+                                        .map(([key, value]) => {
+                                                if (
+                                                        value === null ||
+                                                        value === undefined ||
+                                                        value === ''
+                                                ) {
+                                                        return null
+                                                }
+
+                                                const formattedValue = formatHardwareEntry(value)
+                                                if (!formattedValue) {
+                                                        return null
+                                                }
+
+                                                return `${humanizeKey(key)}: ${formattedValue}`
+                                        })
+                                        .filter((value): value is string => Boolean(value))
+                                        .join(', ')
+
                         const formatHardwareEntry = (entry: unknown): string => {
                                 if (!entry) {
                                         return ''
@@ -370,20 +605,54 @@ export function useInventory(userId?: string): UseInventoryReturn {
                                         return String(entry)
                                 }
 
-                                if (typeof entry === 'object' && !Array.isArray(entry)) {
-                                        return Object.entries(entry as Record<string, unknown>)
-                                                .filter(([, value]) =>
-                                                        value !== null && value !== undefined && value !== ''
-                                                )
-                                                .map(([key, value]) => `${humanizeKey(key)}: ${value}`)
-                                                .join(', ')
-                                }
-
                                 if (Array.isArray(entry)) {
                                         return entry
                                                 .map(value => formatHardwareEntry(value))
                                                 .filter(Boolean)
                                                 .join('\n')
+                                }
+
+                                if (typeof entry === 'object') {
+                                        const record = entry as Record<string, unknown>
+
+                                        const motherboard = formatMotherboard(record)
+                                        if (motherboard) {
+                                                return motherboard
+                                        }
+
+                                        const memoryModule = formatMemoryModule(record)
+                                        if (memoryModule) {
+                                                return memoryModule
+                                        }
+
+                                        if (Array.isArray(record.modules)) {
+                                                return record.modules
+                                                        .map(item => formatHardwareEntry(item))
+                                                        .filter(Boolean)
+                                                        .join('\n')
+                                        }
+
+                                        const gpu = formatGpu(record)
+                                        if (gpu) {
+                                                return gpu
+                                        }
+
+                                        const disk = formatDisk(record)
+                                        if (disk) {
+                                                return disk
+                                        }
+
+                                        const network = formatNetwork(record)
+                                        if (network) {
+                                                return network
+                                        }
+
+                                        const diskUsageEntry = formatDiskUsageEntry(record)
+                                        if (diskUsageEntry) {
+                                                return diskUsageEntry
+                                        }
+
+                                        return formatGenericObject(record)
                                 }
 
                                 return ''
@@ -454,11 +723,22 @@ export function useInventory(userId?: string): UseInventoryReturn {
                                                 : 'Истекла'
                                         : 'Не указано'
 
+                                const rawSerial: string =
+                                        typeof (item as { serialNumber?: string }).serialNumber === 'string'
+                                                ? (item as { serialNumber?: string }).serialNumber!
+                                                : ''
+
+                                const serialNumber: string =
+                                        item.device?.serialNumber &&
+                                        typeof item.device.serialNumber === 'string'
+                                                ? item.device.serialNumber
+                                                : rawSerial
+
                                 return [
                                         item.id,
                                         item.device?.name ? item.device.name : 'Неизвестно',
                                         item.device?.ipAddress || '',
-                                        item.device?.serialNumber || item.serialNumber || '',
+                                        serialNumber,
                                         item.department?.name || '',
                                         formatResponsible(item.employee),
                                         item.employee?.position || '',
@@ -521,7 +801,7 @@ export function useInventory(userId?: string): UseInventoryReturn {
                                 'Процессор',
                                 'Материнская плата',
                                 'Память',
-                                'Хранилище',
+                                'Накопители',
                                 'Сетевые интерфейсы',
                                 'Видеокарты',
                                 'Использование дисков',

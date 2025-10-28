@@ -281,34 +281,59 @@ export class PrometheusParser {
 		const networkInterfaces =
 			await this.findMetrics<NetworkStatus>('network_status')
 
-		const gpuInfo = await Promise.all(
-			gpus.map(async gpu => {
-				const name = gpu.name
-				const memoryBytes = await this.getMetricValue(
-					'gpu_memory_bytes',
-					{ name }
-				)
+                const gpuInfo = await Promise.all(
+                        gpus.map(async gpu => {
+                                const name = gpu.name
+                                const memoryBytes = await this.getMetricValue(
+                                        'gpu_memory_bytes',
+                                        { name }
+                                )
 
-				return {
-					name,
-					memory: {
-						total: this.bytesToMB(memoryBytes)
-					}
-				}
-			})
-		)
+                                const memoryMB = this.bytesToMB(memoryBytes)
+                                const memoryGB = Number((memoryMB / 1024).toFixed(2))
 
-		const networkInfo = await Promise.all(
-			networkInterfaces.map(async iface => ({
-				name: iface.interface,
-				status:
-					(await this.getMetricValue('network_status', {
-						interface: iface.interface
-					})) === 1
-						? 'up'
-						: 'down'
-			}))
-		)
+                                return {
+                                        name,
+                                        memoryMB,
+                                        memoryGB: Number.isFinite(memoryGB) ? memoryGB : undefined
+                                }
+                        })
+                )
+
+                const networkInfo = await Promise.all(
+                        networkInterfaces.map(async iface => {
+                                const labels = { interface: iface.interface }
+                                const statusMetric = await this.getMetricValue(
+                                        'network_status',
+                                        labels
+                                )
+                                const rxBytes = await this.getMetricValue(
+                                        'network_rx_bytes_per_second',
+                                        labels
+                                )
+                                const txBytes = await this.getMetricValue(
+                                        'network_tx_bytes_per_second',
+                                        labels
+                                )
+
+                                const rx = this.formatBytesPerSecond(rxBytes)
+                                const tx = this.formatBytesPerSecond(txBytes)
+
+                                return {
+                                        name: iface.interface,
+                                        status: statusMetric === 1 ? 'up' : 'down',
+                                        performance: {
+                                                rx: { value: rx.value, unit: rx.unit },
+                                                tx: { value: tx.value, unit: tx.unit }
+                                        },
+                                        errors: await this.getMetricValue('network_errors', labels),
+                                        droppedPackets: await this.getMetricValue(
+                                                'network_dropped_packets',
+                                                labels
+                                        )
+                                }
+                        })
+                )
 
 		return {
 			cpu: {
@@ -325,25 +350,30 @@ export class PrometheusParser {
 				version: bios?.version,
 				date: bios?.release_date
 			},
-			memory: {
-				modules: memoryModules.map(module => ({
-					capacity: module.capacity,
-					manufacturer: module.manufacturer,
-					partNumber: module.part_number,
-					serialNumber: module.serial_number,
-					speed: module.speed
-				}))
-			},
-			disks: disks.map(disk => ({
-				model: disk.disk,
-				type: disk.type || 'Unknown',
-				size: disk.size || '0',
-				health: disk.status || 'Unknown'
-			})),
-			gpus: gpuInfo,
-			network: networkInfo
-		}
-	}
+                        memory: {
+                                modules: memoryModules.map(module => ({
+                                        capacity: module.capacity,
+                                        manufacturer: module.manufacturer,
+                                        partNumber: module.part_number,
+                                        serialNumber: module.serial_number,
+                                        speed: module.speed,
+                                        type: (module as unknown as { type?: string }).type
+                                }))
+                        },
+                        disks: disks.map(disk => {
+                                const identifier = disk.disk || 'Unknown'
+                                return {
+                                        id: identifier,
+                                        model: identifier,
+                                        type: disk.type || 'Unknown',
+                                        size: disk.size || '0',
+                                        health: disk.status || 'Unknown'
+                                }
+                        }),
+                        gpus: gpuInfo,
+                        networkInterfaces: networkInfo
+                }
+        }
 
 	/**
 	 * Получает метрики процессора

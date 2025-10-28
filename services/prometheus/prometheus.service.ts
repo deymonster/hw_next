@@ -80,19 +80,89 @@ export class PrometheusService {
 			return cached.data
 		}
 
-		// Получаем новые данные
-		// Получаем только статические метрики
-		const response = await this.getMetricsByIp(deviceId, MetricType.STATIC)
-		const parser = new PrometheusParser(response)
-		const data = {
-			systemInfo: await parser.getSystemInfo(),
-			hardwareInfo: await parser.getHardwareInfo()
-		}
+                const [staticResponse, dynamicResponse] = await Promise.all([
+                        this.getMetricsByIp(deviceId, MetricType.STATIC),
+                        this.getMetricsByIp(deviceId, MetricType.DYNAMIC)
+                ])
 
-		// Обновляем кэш
-		this.staticDataCache.set(deviceId, {
-			lastUpdate: now,
-			data
+                const staticParser = new PrometheusParser(staticResponse)
+                const dynamicParser = new PrometheusParser(dynamicResponse)
+
+                const [systemInfo, baseHardwareInfo, diskUsage, networkMetrics] =
+                        await Promise.all([
+                                staticParser.getSystemInfo(),
+                                staticParser.getHardwareInfo(),
+                                dynamicParser.getDiskMetrics(),
+                                dynamicParser.getNetworkMetrics()
+                        ])
+
+                const parseSizeToGb = (value?: string): number | undefined => {
+                        if (!value) {
+                                return undefined
+                        }
+
+                        const numericValue = Number(value)
+                        if (!Number.isNaN(numericValue) && numericValue > 0) {
+                                if (numericValue > 1024 * 1024 * 1024) {
+                                        return Number(
+                                                (numericValue / (1024 * 1024 * 1024)).toFixed(2)
+                                        )
+                                }
+                                return Number(numericValue.toFixed(2))
+                        }
+
+                        const match = value.match(/([\d.,]+)/)
+                        if (!match) {
+                                return undefined
+                        }
+
+                        const parsed = Number(match[1].replace(',', '.'))
+                        if (Number.isNaN(parsed)) {
+                                return undefined
+                        }
+
+                        if (/tb/i.test(value)) {
+                                return Number((parsed * 1024).toFixed(2))
+                        }
+
+                        return Number(parsed.toFixed(2))
+                }
+
+                const normalize = (val?: string) => val?.toLowerCase().replace(/\s+/g, '')
+
+                const disks = (baseHardwareInfo?.disks || []).map(disk => {
+                        const matchedUsage = diskUsage.find(
+                                metric =>
+                                        normalize(metric.disk) === normalize(disk.id) ||
+                                        normalize(metric.disk) === normalize(disk.model)
+                        )
+
+                        return {
+                                ...disk,
+                                sizeGb: matchedUsage?.usage.total ?? parseSizeToGb(disk.size),
+                                usage: matchedUsage?.usage
+                        }
+                })
+
+                const hardwareInfo = {
+                        ...baseHardwareInfo,
+                        disks,
+                        diskUsage,
+                        networkInterfaces:
+                                networkMetrics.length > 0
+                                        ? networkMetrics
+                                        : baseHardwareInfo?.networkInterfaces || []
+                }
+
+                const data = {
+                        systemInfo,
+                        hardwareInfo
+                }
+
+                // Обновляем кэш
+                this.staticDataCache.set(deviceId, {
+                        lastUpdate: now,
+                        data
 		})
 
 		return data
