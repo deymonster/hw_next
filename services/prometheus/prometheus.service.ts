@@ -5,6 +5,7 @@ import { Logger } from '../logger/logger.service'
 import { MetricType, PROMETHEUS_METRICS } from './metrics'
 import {
 	AgentStatus,
+	DiskInfo,
 	MetricTimeSeries,
 	PrometheusApiResponse,
 	PrometheusServiceConfig,
@@ -75,97 +76,173 @@ export class PrometheusService {
 		const cached = this.staticDataCache.get(deviceId)
 		const now = Date.now()
 
-		// Проверяем актуальность кэша
+		// Проверяем актуальность только статического кэша
 		if (cached && now - cached.lastUpdate < this.staticDataMaxAge) {
-			return cached.data
+			// Попробуем дополнить ответ актуальной динамикой,
+			// но если она недоступна — вернём кэшированную статику
+			try {
+				const dynamicResponse = await this.getMetricsByIp(
+					deviceId,
+					MetricType.DYNAMIC
+				)
+				const dynamicParser = new PrometheusParser(dynamicResponse)
+
+				const [diskUsage, networkMetrics] = await Promise.all([
+					dynamicParser.getDiskMetrics(),
+					dynamicParser.getNetworkMetrics()
+				])
+
+				const parseSizeToGb = (value?: string): number | undefined => {
+					if (!value) return undefined
+					const numericValue = Number(value)
+					if (!Number.isNaN(numericValue) && numericValue > 0) {
+						if (numericValue > 1024 * 1024 * 1024) {
+							return Number(
+								(numericValue / (1024 * 1024 * 1024)).toFixed(2)
+							)
+						}
+						return Number(numericValue.toFixed(2))
+					}
+					const match = value.match(/([\d.,]+)/)
+					if (!match) return undefined
+					const parsed = Number(match[1].replace(',', '.'))
+					if (Number.isNaN(parsed)) return undefined
+					if (/tb/i.test(value))
+						return Number((parsed * 1024).toFixed(2))
+					return Number(parsed.toFixed(2))
+				}
+				const normalize = (val?: string) =>
+					val?.toLowerCase().replace(/\s+/g, '')
+
+				const baseHardwareInfo = cached.data.hardwareInfo
+				const disks = (baseHardwareInfo?.disks || []).map(
+					(disk: DiskInfo) => {
+						const matchedUsage = diskUsage.find(
+							metric =>
+								normalize(metric.disk) === normalize(disk.id) ||
+								normalize(metric.disk) === normalize(disk.model)
+						)
+						return {
+							...disk,
+							sizeGb:
+								matchedUsage?.usage.total ??
+								parseSizeToGb(disk.size),
+							usage: matchedUsage?.usage
+						}
+					}
+				)
+
+				return {
+					systemInfo: cached.data.systemInfo,
+					hardwareInfo: {
+						...baseHardwareInfo,
+						disks,
+						diskUsage,
+						networkInterfaces:
+							networkMetrics.length > 0
+								? networkMetrics
+								: baseHardwareInfo?.networkInterfaces || []
+					}
+				}
+			} catch {
+				// Динамика недоступна — возвращаем чисто статический кэш
+				return cached.data
+			}
 		}
 
-                const [staticResponse, dynamicResponse] = await Promise.all([
-                        this.getMetricsByIp(deviceId, MetricType.STATIC),
-                        this.getMetricsByIp(deviceId, MetricType.DYNAMIC)
-                ])
+		// 1) Получаем только статические метрики и парсим
+		const staticResponse = await this.getMetricsByIp(
+			deviceId,
+			MetricType.STATIC
+		)
+		const staticParser = new PrometheusParser(staticResponse)
+		const [systemInfo, baseHardwareInfo] = await Promise.all([
+			staticParser.getSystemInfo(),
+			staticParser.getHardwareInfo()
+		])
 
-                const staticParser = new PrometheusParser(staticResponse)
-                const dynamicParser = new PrometheusParser(dynamicResponse)
+		const staticData = {
+			systemInfo,
+			hardwareInfo: baseHardwareInfo
+		}
 
-                const [systemInfo, baseHardwareInfo, diskUsage, networkMetrics] =
-                        await Promise.all([
-                                staticParser.getSystemInfo(),
-                                staticParser.getHardwareInfo(),
-                                dynamicParser.getDiskMetrics(),
-                                dynamicParser.getNetworkMetrics()
-                        ])
-
-                const parseSizeToGb = (value?: string): number | undefined => {
-                        if (!value) {
-                                return undefined
-                        }
-
-                        const numericValue = Number(value)
-                        if (!Number.isNaN(numericValue) && numericValue > 0) {
-                                if (numericValue > 1024 * 1024 * 1024) {
-                                        return Number(
-                                                (numericValue / (1024 * 1024 * 1024)).toFixed(2)
-                                        )
-                                }
-                                return Number(numericValue.toFixed(2))
-                        }
-
-                        const match = value.match(/([\d.,]+)/)
-                        if (!match) {
-                                return undefined
-                        }
-
-                        const parsed = Number(match[1].replace(',', '.'))
-                        if (Number.isNaN(parsed)) {
-                                return undefined
-                        }
-
-                        if (/tb/i.test(value)) {
-                                return Number((parsed * 1024).toFixed(2))
-                        }
-
-                        return Number(parsed.toFixed(2))
-                }
-
-                const normalize = (val?: string) => val?.toLowerCase().replace(/\s+/g, '')
-
-                const disks = (baseHardwareInfo?.disks || []).map(disk => {
-                        const matchedUsage = diskUsage.find(
-                                metric =>
-                                        normalize(metric.disk) === normalize(disk.id) ||
-                                        normalize(metric.disk) === normalize(disk.model)
-                        )
-
-                        return {
-                                ...disk,
-                                sizeGb: matchedUsage?.usage.total ?? parseSizeToGb(disk.size),
-                                usage: matchedUsage?.usage
-                        }
-                })
-
-                const hardwareInfo = {
-                        ...baseHardwareInfo,
-                        disks,
-                        diskUsage,
-                        networkInterfaces:
-                                networkMetrics.length > 0
-                                        ? networkMetrics
-                                        : baseHardwareInfo?.networkInterfaces || []
-                }
-
-                const data = {
-                        systemInfo,
-                        hardwareInfo
-                }
-
-                // Обновляем кэш
-                this.staticDataCache.set(deviceId, {
-                        lastUpdate: now,
-                        data
+		// 2) Кэшируем только статическую часть на 24 часа
+		this.staticDataCache.set(deviceId, {
+			lastUpdate: now,
+			data: staticData
 		})
 
-		return data
+		// 3) Пытаемся получить динамику, но она не влияет на кэш и не блокирует ответ
+		try {
+			const dynamicResponse = await this.getMetricsByIp(
+				deviceId,
+				MetricType.DYNAMIC
+			)
+			const dynamicParser = new PrometheusParser(dynamicResponse)
+			const [diskUsage, networkMetrics] = await Promise.all([
+				dynamicParser.getDiskMetrics(),
+				dynamicParser.getNetworkMetrics()
+			])
+
+			const parseSizeToGb = (value?: string): number | undefined => {
+				if (!value) return undefined
+				const numericValue = Number(value)
+				if (!Number.isNaN(numericValue) && numericValue > 0) {
+					if (numericValue > 1024 * 1024 * 1024) {
+						return Number(
+							(numericValue / (1024 * 1024 * 1024)).toFixed(2)
+						)
+					}
+					return Number(numericValue.toFixed(2))
+				}
+				const match = value.match(/([\d.,]+)/)
+				if (!match) return undefined
+				const parsed = Number(match[1].replace(',', '.'))
+				if (Number.isNaN(parsed)) return undefined
+				if (/tb/i.test(value)) return Number((parsed * 1024).toFixed(2))
+				return Number(parsed.toFixed(2))
+			}
+			const normalize = (val?: string) =>
+				val?.toLowerCase().replace(/\s+/g, '')
+
+			const disks = (baseHardwareInfo?.disks || []).map(
+				(disk: DiskInfo) => {
+					const matchedUsage = diskUsage.find(
+						metric =>
+							normalize(metric.disk) === normalize(disk.id) ||
+							normalize(metric.disk) === normalize(disk.model)
+					)
+					return {
+						...disk,
+						sizeGb:
+							matchedUsage?.usage.total ??
+							parseSizeToGb(disk.size),
+						usage: matchedUsage?.usage
+					}
+				}
+			)
+
+			return {
+				systemInfo,
+				hardwareInfo: {
+					...baseHardwareInfo,
+					disks,
+					diskUsage,
+					networkInterfaces:
+						networkMetrics.length > 0
+							? networkMetrics
+							: baseHardwareInfo?.networkInterfaces || []
+				}
+			}
+		} catch (error) {
+			// Если динамика упала/таймаут — возвращаем только статику
+			await this.log(
+				'warn',
+				`[STATIC_DATA] Dynamic metrics unavailable for ${deviceId}, returning static only`,
+				error
+			)
+			return staticData
+		}
 	}
 
 	/**
@@ -945,17 +1022,13 @@ export class PrometheusService {
 	}
 
 	/**
-	 * Получает временные ряды основных метрик
-	 * @param ipAddress IP-адрес устройства
+	 * Получает временные ряды метрик за период, с подсказкой оптимального шага.
+	 *
+	 * @param ipAddress IP‑адрес устройства
 	 * @param metricName Имя метрики
-	 * @param timeRange Параметры временного диапазона:
-	 *   - start: начальное время (unix timestamp)
-	 *   - end: конечное время (unix timestamp)
-	 *   - range: предустановленный период (например, "5m")
-	 *   - step: шаг для точек данных (например, "15s")
-	 * @param additionalLabels Дополнительные лейблы для фильтрации метрик
-	 * @returns Массив временных рядов с метриками
-	 * @throws Error при ошибке получения данных
+	 * @param timeRange Параметры диапазона (`{ range: '5m' }`)
+	 * @param additionalLabels Дополнительные лейблы для селектора
+	 * @returns Массив временных рядов, готовых к визуализации
 	 */
 	async getMetricsTimeSeries(
 		ipAddress: string,
@@ -1050,17 +1123,12 @@ export class PrometheusService {
 	}
 
 	/**
-	 * Рассчитывает оптимальный шаг для временного ряда
-	 * Правила выбора шага:
-	 * - до 5 минут: 15 секунд
-	 * - до 15 минут: 30 секунд
-	 * - до 1 часа: 1 минута
-	 * - до 4 часов: 5 минут
-	 * - до 24 часов: 15 минут
-	 * - более 24 часов: 1 час
-	 * @param start Начальное время
-	 * @param end Конечное время
-	 * @returns Строка с оптимальным шагом
+	 * Вычисляет оптимальный шаг выборки на основе длительности периода.
+	 * Балансирует точность и объем данных.
+	 * @param start Начало периода (Unix‑timestamp, мс)
+	 * @param end Конец периода (Unix‑timestamp, мс)
+	 * @returns Строка шага (например, `'15s'`)
+	 * @private
 	 */
 	private calculateOptimalStep(start: number, end: number): string {
 		const duration = end - start
@@ -1075,14 +1143,12 @@ export class PrometheusService {
 	}
 
 	/**
-	 * Получает последние метрики за указанный период
-	 * Это удобный метод-обертка над getMetricsTimeSeries для получения
-	 * последних метрик с предустановленным периодом
-	 * @param ipAddress IP-адрес устройства
+	 * Получает последние значения метрик за короткий период (по умолчанию `'5m'`).
+	 * @param ipAddress IP‑адрес устройства
 	 * @param metricName Имя метрики
-	 * @param range Временной период (по умолчанию "5m")
-	 * @param additionalLabels Дополнительные лейблы
-	 * @returns Массив временных рядов с метриками
+	 * @param range Диапазон (например, `'5m'`)
+	 * @param additionalLabels Дополнительные лейблы для селектора
+	 * @returns Массив последних точек временных рядов
 	 */
 	async getLastMetrics(
 		ipAddress: string,

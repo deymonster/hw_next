@@ -1,13 +1,19 @@
 {
-        "$schema": "https://json.schemastore.org/tsconfig",
-        "extends": "./tsconfig.json",
-        "compilerOptions": {
-                "noEmit": false,
-                "declaration": false,
-                "emitDeclarationOnly": false,
-                "outDir": "dist-tests",
-                "module": "commonjs",
-                "target": "ES2019"
-        },
-        "include": ["tests/**/*.ts"]
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noEmit": false,
+		"declaration": false,
+		"emitDeclarationOnly": false,
+		"outDir": "dist-tests",
+		"module": "commonjs",
+		"target": "ES2019",
+		"baseUrl": "."
+	},
+	"include": [
+		"tests/**/*.ts",
+		"tests/**/*.tsx",
+		"services/**/*.ts",
+		"services/**/*.tsx"
+	]
 }

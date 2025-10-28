@@ -5,6 +5,7 @@ import { headers } from 'next/headers'
 import { AUTH_ERRORS, AUTH_ROUTES, SESSION_CONFIG } from './constants'
 import { providers } from './providers'
 import { CustomSession, CustomUser } from './types'
+import { CustomJWT } from './types'
 
 import { getRedisService } from '@/services/redis/redis.service'
 
@@ -112,7 +113,8 @@ export const authConfig: NextAuthConfig = {
 				let sessionId: string | undefined
 
 				if ('token' in message) {
-					sessionId = message.token?.sessionId
+					const token = message.token as CustomJWT | null
+					sessionId = token?.sessionId
 				} else if ('session' in message) {
 					// Для database стратегии получаем sessionId из Redis по sessionToken
 					const sessionToken = message.session?.sessionToken
