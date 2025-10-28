@@ -6,6 +6,10 @@
  * @module InventoryPrometheus
  */
 import { services } from '@/services'
+import {
+        DiskMetrics,
+        MemoryModuleSummary
+} from '@/services/prometheus/prometheus.interfaces'
 
 /**
  * Интерфейс для статических данных устройства
@@ -22,43 +26,50 @@ interface DeviceStaticData {
 		location?: string
 		serialNumber?: string
 	}
-	hardwareInfo: {
-		bios?: {
-			manufacturer?: string
-			date?: string
-			version?: string
-		}
-		cpu?: {
-			model?: string
-		}
-		motherboard?: {
-			manufacturer?: string
-			product?: string
-			serialNumber?: string
-			version?: string
-		}
-		memory?: Array<{
-			capacity?: string
-			manufacturer?: string
-			partNumber?: string
-			serialNumber?: string
-			speed?: string
-		}>
-		gpus?: Array<{
-			name?: string
-			memory?: number
-		}>
-		disks?: Array<{
-			model?: string
-			health?: string
-			size?: string
-			type?: string
-		}>
-		networkInterfaces?: Array<{
-			name?: string
-			status?: string
-		}>
-	}
+        hardwareInfo: {
+                bios?: {
+                        manufacturer?: string
+                        date?: string
+                        version?: string
+                }
+                cpu?: {
+                        model?: string
+                }
+                motherboard?: {
+                        manufacturer?: string
+                        product?: string
+                        serialNumber?: string
+                        version?: string
+                }
+                memory?: {
+                        modules?: MemoryModuleSummary[]
+                }
+                gpus?: Array<{
+                        name?: string
+                        memoryMB?: number
+                        memoryGB?: number
+                }>
+                disks?: Array<{
+                        id?: string
+                        model?: string
+                        health?: string
+                        size?: string
+                        type?: string
+                        sizeGb?: number
+                        usage?: DiskMetrics['usage']
+                }>
+                networkInterfaces?: Array<{
+                        name?: string
+                        status?: string
+                        performance?: {
+                                rx?: { value?: number; unit?: string }
+                                tx?: { value?: number; unit?: string }
+                        }
+                        errors?: number
+                        droppedPackets?: number
+                }>
+                diskUsage?: DiskMetrics[]
+        }
 }
 
 /**
