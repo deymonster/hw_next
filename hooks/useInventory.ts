@@ -494,21 +494,25 @@ export function useInventory(userId?: string): UseInventoryReturn {
                                         typeof sizeGbValue === 'number'
                                                 ? `${sizeGbValue.toFixed(2)} ГБ`
                                                 : (entry.size as string | undefined)
-                                const meta = [entry.type as string | undefined, entry.health as string | undefined]
-                                        .filter(Boolean)
+                                const type = entry.type as string | undefined
+                                const health = entry.health as string | undefined
 
-                                const base = [model, sizeLabel]
-                                        .filter(Boolean)
-                                        .join(' — ')
-                                        .trim()
+                                const meta = [
+                                        sizeLabel,
+                                        type ? `Тип: ${type}` : null,
+                                        health ? `Состояние: ${health}` : null
+                                ].filter((value): value is string => Boolean(value))
 
-                                if (!base && meta.length === 0) {
+                                const lines = [
+                                        model ? `Модель: ${model}` : null,
+                                        meta.length ? meta.join(' • ') : null
+                                ].filter((value): value is string => Boolean(value))
+
+                                if (lines.length === 0) {
                                         return null
                                 }
 
-                                return [base, meta.length ? `(${meta.join(', ')})` : null]
-                                        .filter(Boolean)
-                                        .join(' ')
+                                return lines.join('\n')
                         }
 
                         const formatNetwork = (
