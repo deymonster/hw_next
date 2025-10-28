@@ -118,4 +118,29 @@ describe('DeviceService', () => {
                 assert.strictEqual(stats.byType.WINDOWS, 1)
                 assert.strictEqual(stats.byType.LINUX, 1)
         })
+
+        it('preserves createdAt when updating device metadata', async () => {
+                const originalDevice = context.state.devices[0]
+                assert.ok(originalDevice)
+
+                const originalCreatedAt = originalDevice.createdAt
+                const originalUpdatedAt = originalDevice.updatedAt
+
+                const updateAttemptDate = new Date(originalCreatedAt.getTime() + 60_000)
+
+                const updated = await service.update(originalDevice.id, {
+                        name: 'Scanner v2',
+                        createdAt: updateAttemptDate
+                })
+
+                assert.strictEqual(updated.name, 'Scanner v2')
+                assert.strictEqual(updated.createdAt.getTime(), originalCreatedAt.getTime())
+                assert.notStrictEqual(updated.updatedAt.getTime(), originalUpdatedAt.getTime())
+
+                const storedDevice = context.state.devices.find(
+                        device => device.id === originalDevice.id
+                )
+                assert.ok(storedDevice)
+                assert.strictEqual(storedDevice!.createdAt.getTime(), originalCreatedAt.getTime())
+        })
 })

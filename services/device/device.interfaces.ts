@@ -64,8 +64,13 @@ export interface IDeviceRepository {
 }
 
 export interface IDeviceUpdateInput {
-	purchaseDate?: Date
-	warrantyPeriod?: number
+        purchaseDate?: Date
+        warrantyPeriod?: number
+}
+
+export type IDeviceUpdateData = Partial<Omit<Device, 'id'>> & {
+        createdAt?: Date
+        updatedAt?: Date
 }
 
 // Добавляем константы для периодов гарантии

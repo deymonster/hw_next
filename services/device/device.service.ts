@@ -9,11 +9,12 @@ import {
 
 import { BaseRepository } from '../base.service'
 import {
-	DeviceActivationUpdateInput,
-	DeviceFilterOptions,
-	IDeviceCreateInput,
-	IDeviceFindManyArgs,
-	IDeviceRepository
+        DeviceActivationUpdateInput,
+        DeviceFilterOptions,
+        IDeviceCreateInput,
+        IDeviceFindManyArgs,
+        IDeviceRepository,
+        IDeviceUpdateData
 } from './device.interfaces'
 
 /**
@@ -313,15 +314,30 @@ export class DeviceService
 	 * })
 	 * ```
 	 */
-	async create(data: IDeviceCreateInput): Promise<Device> {
-		return await this.model.create({
-			data: {
-				...data,
-				lastUpdate: new Date(),
-				lastSeen: new Date()
-			}
-		})
-	}
+        async create(data: IDeviceCreateInput): Promise<Device> {
+                return await this.model.create({
+                        data: {
+                                ...data,
+                                lastUpdate: new Date(),
+                                lastSeen: new Date()
+                        }
+                })
+        }
+
+        /**
+         * Обновление устройства с защитой временных меток
+         *
+         * Гарантирует, что при изменении устройства поле createdAt
+         * остается неизменным, а updatedAt управляется Prisma.
+         */
+        async update(id: string, data: IDeviceUpdateData): Promise<Device> {
+                const { createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = data
+
+                return await this.model.update({
+                        where: { id },
+                        data: updateData as Partial<Device>
+                })
+        }
 
 	/**
 	 * Удаление устройства
