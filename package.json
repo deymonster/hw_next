@@ -8,9 +8,10 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"format": "prettier --write .",
-		"type-check": "tsc --noEmit",
-		"prepare": "husky"
+                "format": "prettier --write .",
+                "type-check": "tsc --noEmit",
+                "test": "rm -rf dist-tests && tsc -p tsconfig.test.json && mkdir -p dist-tests/node_modules/@ && cp -r dist-tests/services dist-tests/node_modules/@/services && node --test dist-tests/tests/**/*.test.js",
+                "prepare": "husky"
 	},
 	"lint-staged": {
 		"**/*": "prettier --write --ignore-unknown"
@@ -93,11 +94,11 @@
 		"javascript-obfuscator": "^4.1.1",
 		"lint-staged": "^16.1.6",
 		"postcss": "^8.4.49",
-		"prettier": "^3.4.2",
-		"prettier-plugin-tailwindcss": "^0.6.9",
-		"tailwindcss": "^3.4.17",
-		"typescript": "5.8.2"
-	},
+                "prettier": "^3.4.2",
+                "prettier-plugin-tailwindcss": "^0.6.9",
+                "tailwindcss": "^3.4.17",
+                "typescript": "5.8.2"
+        },
 	"resolutions": {
 		"@babel/runtime": "^7.26.10",
 		"brace-expansion": "^2.0.2"
