@@ -690,12 +690,13 @@
 				"description": "Manage inventory of your company"
 			},
 			"table": {
-				"columns": {
-					"date": "Inventory Date",
-					"createdBy": "CreatedBy",
-					"devicesCount": "Device count",
-					"departments": "Departments"
-				},
+                                "columns": {
+                                        "number": "No.",
+                                        "date": "Inventory Date",
+                                        "createdBy": "CreatedBy",
+                                        "devicesCount": "Device count",
+                                        "departments": "Departments"
+                                },
 				"loading": "Loading inventories...",
 				"error": "Error while loading inventpries",
 				"empty": "No inventories found",
