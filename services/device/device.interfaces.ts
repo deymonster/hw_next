@@ -13,14 +13,15 @@ export interface DeviceFilterOptions {
 }
 
 export interface IDeviceCreateInput {
-	name: string
-	ipAddress: string
-	agentKey: string
-	type: DeviceType
-	deviceTag?: string
-	departmentId?: string
-	purchaseDate?: Date
-	warrantyPeriod?: number // 12, 24, 36, 48, 60 месяцев
+        name: string
+        ipAddress: string
+        agentKey: string
+        type: DeviceType
+        deviceTag?: string
+        departmentId?: string
+        employeeId?: string
+        purchaseDate?: Date
+        warrantyPeriod?: number // 12, 24, 36, 48, 60 месяцев
 }
 
 export interface IDeviceFindManyArgs {
@@ -57,10 +58,15 @@ export interface IDeviceRepository {
 		id: string,
 		data: DeviceActivationUpdateInput
 	): Promise<Device>
-	updateDepartmentDevices(
-		departmentId: string,
-		deviceIds: string[]
-	): Promise<void>
+        updateDepartmentDevices(
+                departmentId: string,
+                deviceIds: string[]
+        ): Promise<void>
+        assignDevicesToEmployee(params: {
+                departmentId: string
+                employeeId: string
+                deviceIds: string[]
+        }): Promise<void>
 }
 
 export interface IDeviceUpdateInput {

@@ -446,24 +446,43 @@ export class DeviceService
 	 * )
 	 * ```
 	 */
-	async updateDepartmentDevices(
-		departmentId: string,
-		deviceIds: string[]
-	): Promise<void> {
-		// Сначала сбрасываем все существующие связи
-		await this.model.updateMany({
-			where: { departmentId },
-			data: { departmentId: null }
-		})
+        async updateDepartmentDevices(
+                departmentId: string,
+                deviceIds: string[]
+        ): Promise<void> {
+                // Сначала сбрасываем все существующие связи и отвязываем сотрудников
+                await this.model.updateMany({
+                        where: { departmentId },
+                        data: { departmentId: null, employeeId: null }
+                })
 
-		// Затем устанавливаем новые связи
-		if (deviceIds.length > 0) {
-			await this.model.updateMany({
-				where: { id: { in: deviceIds } },
-				data: { departmentId }
-			})
-		}
-	}
+                // Затем устанавливаем новые связи
+                if (deviceIds.length > 0) {
+                        await this.model.updateMany({
+                                where: { id: { in: deviceIds } },
+                                data: { departmentId }
+                        })
+                }
+        }
+
+        async assignDevicesToEmployee({
+                departmentId,
+                employeeId,
+                deviceIds
+        }: {
+                departmentId: string
+                employeeId: string
+                deviceIds: string[]
+        }): Promise<void> {
+                if (!deviceIds.length) {
+                        return
+                }
+
+                await this.model.updateMany({
+                        where: { id: { in: deviceIds } },
+                        data: { departmentId, employeeId }
+                })
+        }
 
 	/**
 	 * Подтверждение смены оборудования на агенте
