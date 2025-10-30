@@ -1,187 +1,228 @@
-import { beforeEach, describe, it } from 'node:test'
-import assert from 'node:assert/strict'
 import { DeviceStatus, DeviceType, PrismaClient } from '@prisma/client'
+import assert from 'node:assert/strict'
+import { beforeEach, describe, it } from 'node:test'
 
 import { DeviceService } from '../../services/device/device.service'
 import { createMockPrisma } from '../utils/mockPrisma'
 
 describe('DeviceService', () => {
-        const now = new Date()
-        let context: ReturnType<typeof createMockPrisma>
-        let service: DeviceService
+	const now = new Date()
+	let context: ReturnType<typeof createMockPrisma>
+	let service: DeviceService
 
-        beforeEach(() => {
-                context = createMockPrisma({
-                        devices: [
-                                {
-                                        id: 'device-1',
-                                        name: 'Scanner',
-                                        ipAddress: '10.1.0.1',
-                                        agentKey: 'agent-1',
-                                        serialNumber: null,
-                                        purchaseDate: null,
-                                        warrantyPeriod: null,
-                                        lastUpdate: now,
-                                        status: DeviceStatus.ACTIVE,
-                                        type: DeviceType.WINDOWS,
-                                        departmentId: 'dept-1',
-                                        employeeId: null,
-                                        deviceTag: null,
-                                        createdAt: now,
-                                        updatedAt: now,
-                                        lastSeen: now,
-                                        activationSig: null,
-                                        activationKeyVer: null,
-                                        activatedAt: null
-                                }
-                        ]
-                })
-                service = new DeviceService(context.client as unknown as PrismaClient)
-        })
+	beforeEach(() => {
+		context = createMockPrisma({
+			devices: [
+				{
+					id: 'device-1',
+					name: 'Scanner',
+					ipAddress: '10.1.0.1',
+					agentKey: 'agent-1',
+					serialNumber: null,
+					purchaseDate: null,
+					warrantyPeriod: null,
+					lastUpdate: now,
+					status: DeviceStatus.ACTIVE,
+					type: DeviceType.WINDOWS,
+					departmentId: 'dept-1',
+					employeeId: null,
+					deviceTag: null,
+					createdAt: now,
+					updatedAt: now,
+					lastSeen: now,
+					activationSig: null,
+					activationKeyVer: null,
+					activatedAt: null
+				}
+			]
+		})
+		service = new DeviceService(context.client as unknown as PrismaClient)
+	})
 
-        it('creates and deletes devices', async () => {
-                const created = await service.create({
-                        name: 'Laptop',
-                        ipAddress: '10.1.0.2',
-                        agentKey: 'agent-2',
-                        type: DeviceType.WINDOWS,
-                        departmentId: 'dept-1'
-                })
+	it('creates and deletes devices', async () => {
+		const created = await service.create({
+			name: 'Laptop',
+			ipAddress: '10.1.0.2',
+			agentKey: 'agent-2',
+			type: DeviceType.WINDOWS,
+			departmentId: 'dept-1'
+		})
 
-                assert.ok(created.id)
-                assert.strictEqual(context.state.devices.length, 2)
+		assert.ok(created.id)
+		assert.strictEqual(context.state.devices.length, 2)
 
-                const deleted = await service.deleteDevice(created.id)
-                assert.strictEqual(deleted.id, created.id)
-                assert.strictEqual(context.state.devices.length, 1)
-        })
+		const deleted = await service.deleteDevice(created.id)
+		assert.strictEqual(deleted.id, created.id)
+		assert.strictEqual(context.state.devices.length, 1)
+	})
 
-        it('reassigns department devices when updating department mapping', async () => {
-                context.state.devices.push({
-                        id: 'device-2',
-                        name: 'Workstation',
-                        ipAddress: '10.1.0.3',
-                        agentKey: 'agent-3',
-                        serialNumber: null,
-                        purchaseDate: null,
-                        warrantyPeriod: null,
-                        lastUpdate: now,
-                        status: DeviceStatus.ACTIVE,
-                        type: DeviceType.WINDOWS,
-                        departmentId: null,
-                        employeeId: null,
-                        deviceTag: null,
-                        createdAt: now,
-                        updatedAt: now,
-                        lastSeen: now,
-                        activationSig: null,
-                        activationKeyVer: null,
-                        activatedAt: null
-                })
+	it('reassigns department devices when updating department mapping', async () => {
+		context.state.devices.push({
+			id: 'device-2',
+			name: 'Workstation',
+			ipAddress: '10.1.0.3',
+			agentKey: 'agent-3',
+			serialNumber: null,
+			purchaseDate: null,
+			warrantyPeriod: null,
+			lastUpdate: now,
+			status: DeviceStatus.ACTIVE,
+			type: DeviceType.WINDOWS,
+			departmentId: null,
+			employeeId: null,
+			deviceTag: null,
+			createdAt: now,
+			updatedAt: now,
+			lastSeen: now,
+			activationSig: null,
+			activationKeyVer: null,
+			activatedAt: null
+		})
 
-                context.state.devices[0].employeeId = 'employee-1'
+		context.state.devices[0].employeeId = 'employee-1'
 
-                await service.updateDepartmentDevices('dept-1', ['device-2'])
+		await service.updateDepartmentDevices('dept-1', ['device-2'])
 
-                const deviceOne = context.state.devices.find(device => device.id === 'device-1')
-                const deviceTwo = context.state.devices.find(device => device.id === 'device-2')
-                assert.strictEqual(deviceOne?.departmentId, null)
-                assert.strictEqual(deviceOne?.employeeId, null)
-                assert.strictEqual(deviceTwo?.departmentId, 'dept-1')
-        })
+		const deviceOne = context.state.devices.find(
+			device => device.id === 'device-1'
+		)
+		const deviceTwo = context.state.devices.find(
+			device => device.id === 'device-2'
+		)
+		assert.strictEqual(deviceOne?.departmentId, null)
+		assert.strictEqual(deviceOne?.employeeId, null)
+		assert.strictEqual(deviceTwo?.departmentId, 'dept-1')
+	})
 
-        it('assigns devices to employees and department in bulk', async () => {
-                context.state.devices.push({
-                        id: 'device-3',
-                        name: 'Router',
-                        ipAddress: '10.1.0.4',
-                        agentKey: 'agent-4',
-                        serialNumber: null,
-                        purchaseDate: null,
-                        warrantyPeriod: null,
-                        lastUpdate: now,
-                        status: DeviceStatus.ACTIVE,
-                        type: DeviceType.WINDOWS,
-                        departmentId: null,
-                        employeeId: null,
-                        deviceTag: null,
-                        createdAt: now,
-                        updatedAt: now,
-                        lastSeen: now,
-                        activationSig: null,
-                        activationKeyVer: null,
-                        activatedAt: null
-                })
+	it('assigns devices to employees and department in bulk', async () => {
+		context.state.devices.push({
+			id: 'device-3',
+			name: 'Router',
+			ipAddress: '10.1.0.4',
+			agentKey: 'agent-4',
+			serialNumber: null,
+			purchaseDate: null,
+			warrantyPeriod: null,
+			lastUpdate: now,
+			status: DeviceStatus.ACTIVE,
+			type: DeviceType.WINDOWS,
+			departmentId: null,
+			employeeId: null,
+			deviceTag: null,
+			createdAt: now,
+			updatedAt: now,
+			lastSeen: now,
+			activationSig: null,
+			activationKeyVer: null,
+			activatedAt: null
+		})
 
-                await service.assignDevicesToEmployee({
-                        departmentId: 'dept-2',
-                        employeeId: 'employee-2',
-                        deviceIds: ['device-1', 'device-3']
-                })
+		await service.assignDevicesToEmployee({
+			departmentId: 'dept-2',
+			employeeId: 'employee-2',
+			deviceIds: ['device-1', 'device-3']
+		})
 
-                const firstDevice = context.state.devices.find(device => device.id === 'device-1')
-                const thirdDevice = context.state.devices.find(device => device.id === 'device-3')
+		const firstDevice = context.state.devices.find(
+			device => device.id === 'device-1'
+		)
+		const thirdDevice = context.state.devices.find(
+			device => device.id === 'device-3'
+		)
 
-                assert.strictEqual(firstDevice?.departmentId, 'dept-2')
-                assert.strictEqual(firstDevice?.employeeId, 'employee-2')
-                assert.strictEqual(thirdDevice?.departmentId, 'dept-2')
-                assert.strictEqual(thirdDevice?.employeeId, 'employee-2')
-        })
+		assert.strictEqual(firstDevice?.departmentId, 'dept-2')
+		assert.strictEqual(firstDevice?.employeeId, 'employee-2')
+		assert.strictEqual(thirdDevice?.departmentId, 'dept-2')
+		assert.strictEqual(thirdDevice?.employeeId, 'employee-2')
+	})
 
-        it('calculates device statistics grouped by status and type', async () => {
-                context.state.devices.push({
-                        id: 'device-3',
-                        name: 'Server',
-                        ipAddress: '10.1.0.4',
-                        agentKey: 'agent-4',
-                        serialNumber: null,
-                        purchaseDate: null,
-                        warrantyPeriod: null,
-                        lastUpdate: now,
-                        status: DeviceStatus.INACTIVE,
-                        type: DeviceType.LINUX,
-                        departmentId: null,
-                        employeeId: null,
-                        deviceTag: null,
-                        createdAt: now,
-                        updatedAt: now,
-                        lastSeen: now,
-                        activationSig: null,
-                        activationKeyVer: null,
-                        activatedAt: null
-                })
+	it('calculates device statistics grouped by status and type', async () => {
+		context.state.devices.push({
+			id: 'device-3',
+			name: 'Server',
+			ipAddress: '10.1.0.4',
+			agentKey: 'agent-4',
+			serialNumber: null,
+			purchaseDate: null,
+			warrantyPeriod: null,
+			lastUpdate: now,
+			status: DeviceStatus.INACTIVE,
+			type: DeviceType.LINUX,
+			departmentId: null,
+			employeeId: null,
+			deviceTag: null,
+			createdAt: now,
+			updatedAt: now,
+			lastSeen: now,
+			activationSig: null,
+			activationKeyVer: null,
+			activatedAt: null
+		})
 
-                const stats = await service.getDeviceStats()
+		const stats = await service.getDeviceStats()
 
-                assert.strictEqual(stats.total, 2)
-                assert.strictEqual(stats.byStatus.ACTIVE, 1)
-                assert.strictEqual(stats.byStatus.INACTIVE, 1)
-                assert.strictEqual(stats.byType.WINDOWS, 1)
-                assert.strictEqual(stats.byType.LINUX, 1)
-        })
+		assert.strictEqual(stats.total, 2)
+		assert.strictEqual(stats.byStatus.ACTIVE, 1)
+		assert.strictEqual(stats.byStatus.INACTIVE, 1)
+		assert.strictEqual(stats.byType.WINDOWS, 1)
+		assert.strictEqual(stats.byType.LINUX, 1)
+	})
 
-        it('preserves createdAt when updating device metadata', async () => {
-                const originalDevice = context.state.devices[0]
-                assert.ok(originalDevice)
+	it('preserves createdAt when updating device metadata', async () => {
+		const originalDevice = context.state.devices[0]
+		assert.ok(originalDevice)
 
-                const originalCreatedAt = originalDevice.createdAt
-                const originalUpdatedAt = originalDevice.updatedAt
+		const originalCreatedAt = originalDevice.createdAt
+		const originalUpdatedAt = originalDevice.updatedAt
 
-                const updateAttemptDate = new Date(originalCreatedAt.getTime() + 60_000)
+		const updateAttemptDate = new Date(originalCreatedAt.getTime() + 60_000)
 
-                const updated = await service.update(originalDevice.id, {
-                        name: 'Scanner v2',
-                        createdAt: updateAttemptDate
-                })
+		const updated = await service.update(originalDevice.id, {
+			name: 'Scanner v2',
+			createdAt: updateAttemptDate
+		})
 
-                assert.strictEqual(updated.name, 'Scanner v2')
-                assert.strictEqual(updated.createdAt.getTime(), originalCreatedAt.getTime())
-                assert.notStrictEqual(updated.updatedAt.getTime(), originalUpdatedAt.getTime())
+		assert.strictEqual(updated.name, 'Scanner v2')
+		assert.strictEqual(
+			updated.createdAt.getTime(),
+			originalCreatedAt.getTime()
+		)
+		assert.notStrictEqual(
+			updated.updatedAt.getTime(),
+			originalUpdatedAt.getTime()
+		)
 
-                const storedDevice = context.state.devices.find(
-                        device => device.id === originalDevice.id
-                )
-                assert.ok(storedDevice)
-                assert.strictEqual(storedDevice!.createdAt.getTime(), originalCreatedAt.getTime())
-        })
+		const storedDevice = context.state.devices.find(
+			device => device.id === originalDevice.id
+		)
+		assert.ok(storedDevice)
+		assert.strictEqual(
+			storedDevice!.createdAt.getTime(),
+			originalCreatedAt.getTime()
+		)
+	})
+
+	it('reassigns device from one employee to another', async () => {
+		// Назначаем устройство сначала employee-1 в dept-1
+		await service.assignDevicesToEmployee({
+			departmentId: 'dept-1',
+			employeeId: 'employee-1',
+			deviceIds: ['device-1']
+		})
+
+		let device = context.state.devices.find(d => d.id === 'device-1')
+		assert.strictEqual(device?.employeeId, 'employee-1')
+		assert.strictEqual(device?.departmentId, 'dept-1')
+
+		// Переназначаем устройство employee-2 в dept-2
+		await service.assignDevicesToEmployee({
+			departmentId: 'dept-2',
+			employeeId: 'employee-2',
+			deviceIds: ['device-1']
+		})
+
+		device = context.state.devices.find(d => d.id === 'device-1')
+		assert.strictEqual(device?.employeeId, 'employee-2')
+		assert.strictEqual(device?.departmentId, 'dept-2')
+	})
 })

@@ -110,6 +110,17 @@ export async function createEmployee(
 			...(data.devices?.set?.map(device => device.id) ?? [])
 		]
 
+		// Синхронизация отделов для подключаемых устройств
+		if (employee.departmentId && connectIds.length) {
+			await prisma.device.updateMany({
+				where: { id: { in: Array.from(new Set(connectIds)) } },
+				data: {
+					departmentId: employee.departmentId,
+					employeeId: employee.id
+				}
+			})
+		}
+
 		await logDeviceLinkEvents({
 			employeeId: employee.id,
 			employeeName,
@@ -188,6 +199,25 @@ export async function updateEmployee(
 				id => setIds.length > 0 && !setIds.includes(id)
 			)
 		])
+
+		// Синхронизация отделов для новых подключений
+		if (employee.departmentId && effectiveConnectIds.size > 0) {
+			await prisma.device.updateMany({
+				where: { id: { in: Array.from(effectiveConnectIds) } },
+				data: {
+					departmentId: employee.departmentId,
+					employeeId: employee.id
+				}
+			})
+		}
+
+		// Открепление устройств от сотрудника (оставляем device.departmentId как есть)
+		if (effectiveDisconnectIds.size > 0) {
+			await prisma.device.updateMany({
+				where: { id: { in: Array.from(effectiveDisconnectIds) } },
+				data: { employeeId: null }
+			})
+		}
 
 		await logDeviceLinkEvents({
 			employeeId: employee.id,

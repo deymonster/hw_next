@@ -436,16 +436,16 @@
 					"location": "Location",
 					"osVersion": "OS Version",
 					"serialNumber": "Serial Number",
-                                        "warranty": {
-                                                "title": "Warranty Information",
-                                                "purchaseDateLabel": "Purchase date",
-                                                "warrantyPeriodLabel": "Warranty period (months)",
-                                                "periodPlaceholder": "Not specified",
-                                                "periodOption": "{months} months",
-                                                "endDate": "Warranty end date: {date}",
-                                                "saveButton": "Save",
-                                                "saving": "Saving..."
-                                        }
+					"warranty": {
+						"title": "Warranty Information",
+						"purchaseDateLabel": "Purchase date",
+						"warrantyPeriodLabel": "Warranty period (months)",
+						"periodPlaceholder": "Not specified",
+						"periodOption": "{months} months",
+						"endDate": "Warranty end date: {date}",
+						"saveButton": "Save",
+						"saving": "Saving..."
+					}
 				},
 				"hardware": {
 					"storage": "Storage",
@@ -524,23 +524,23 @@
 				"used": "Used",
 				"total": "Total",
 				"diskUsage": "Disk Usage",
-                                "usedSpace": "Used Space",
-                                "diskLabel": "Disk {disk}",
-                                "readSpeed": "Read Speed",
-                                "writeSpeed": "Write Speed",
-                                "networkUsage": "Network Usage",
-                                "download": "Download",
-                                "upload": "Upload",
-                                "noCpuData": "No CPU data available",
-                                "noMemoryData": "No memory data available",
-                                "noDiskData": "No disk data available",
-                                "noNetworkData": "No network data available",
-                                "invalidNetworkData": "Invalid network data format",
-                                "noNetworkInterfaces": "No network interfaces found",
-                                "networkErrors": "Errors",
-                                "droppedPackets": "Dropped Packets",
-                                "networkStatusUp": "Up",
-                                "networkStatusDown": "Down"
+				"usedSpace": "Used Space",
+				"diskLabel": "Disk {disk}",
+				"readSpeed": "Read Speed",
+				"writeSpeed": "Write Speed",
+				"networkUsage": "Network Usage",
+				"download": "Download",
+				"upload": "Upload",
+				"noCpuData": "No CPU data available",
+				"noMemoryData": "No memory data available",
+				"noDiskData": "No disk data available",
+				"noNetworkData": "No network data available",
+				"invalidNetworkData": "Invalid network data format",
+				"noNetworkInterfaces": "No network interfaces found",
+				"networkErrors": "Errors",
+				"droppedPackets": "Dropped Packets",
+				"networkStatusUp": "Up",
+				"networkStatusDown": "Down"
 			},
 			"processes": {
 				"runningProcesses": "Running Processes",
@@ -582,6 +582,56 @@
 					"success": "Department successfully changed",
 					"error": "Error changing department",
 					"submitting": "Updating department..."
+				}
+			},
+			"deviceAssignmentWizard": {
+				"title": "Device Assignment to Employee",
+				"description": "Select a department employee and assign existing devices or register new ones.",
+				"step": "Step",
+				"of": "of",
+				"currentEmployee": "Current employee:",
+				"selectEmployee": "Select employee",
+				"selectEmployeePlaceholder": "Select employee for device assignment",
+				"nextStep": "Next",
+				"previousStep": "Back",
+				"assignDevices": "Assign devices",
+				"assigning": "Assigning...",
+				"departmentDevices": "Department devices",
+				"unassignedDevices": "Unassigned devices",
+				"noDevicesInDepartment": "No devices in the department yet.",
+				"allDevicesAssigned": "All devices are already assigned to departments.",
+				"registerNewDevice": "Register new device",
+				"deviceName": "Device name",
+				"deviceNamePlaceholder": "Enter device name",
+				"ipAddress": "IP address",
+				"ipAddressPlaceholder": "192.168.0.10",
+				"agentKey": "Agent key",
+				"agentKeyPlaceholder": "Unique key",
+				"deviceType": "Device type",
+				"registerDevice": "Register",
+				"registering": "Registering...",
+				"deviceStatus": {
+					"alreadyAssigned": "Already assigned",
+					"assignedTo": "Assigned to",
+					"differentDepartment": "Different department",
+					"available": "Available"
+				},
+				"confirmReassignment": {
+					"title": "Confirm Reassignment",
+					"message": "Device \"{deviceName}\" is already assigned to employee \"{currentEmployee}\"",
+					"departmentMessage": " from department \"{currentDepartment}\"",
+					"question": "Are you sure you want to reassign this device to \"{newEmployee}\"?",
+					"confirm": "Reassign",
+					"cancel": "Cancel"
+				},
+				"errors": {
+					"selectEmployee": "Select employee for device assignment",
+					"deviceRegistration": "Error registering device",
+					"deviceAssignment": "Failed to assign devices"
+				},
+				"success": {
+					"deviceRegistered": "Device successfully registered",
+					"devicesAssigned": "Devices successfully assigned"
 				}
 			},
 			"addDepartment": "Add"
@@ -690,13 +740,13 @@
 				"description": "Manage inventory of your company"
 			},
 			"table": {
-                                "columns": {
-                                        "number": "No.",
-                                        "date": "Inventory Date",
-                                        "createdBy": "CreatedBy",
-                                        "devicesCount": "Device count",
-                                        "departments": "Departments"
-                                },
+				"columns": {
+					"number": "No.",
+					"date": "Inventory Date",
+					"createdBy": "CreatedBy",
+					"devicesCount": "Device count",
+					"departments": "Departments"
+				},
 				"loading": "Loading inventories...",
 				"error": "Error while loading inventpries",
 				"empty": "No inventories found",

@@ -2,536 +2,775 @@
 
 import { Device, DeviceType, Employee } from '@prisma/client'
 import { useQueryClient } from '@tanstack/react-query'
-import { Loader2, Plus, ShieldAlert } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, Loader2, Plus } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 
 import { assignDevicesToEmployee, createDevice } from '@/app/actions/device'
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle
+} from '@/components/ui/alertDialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
-        Dialog,
-        DialogContent,
-        DialogDescription,
-        DialogFooter,
-        DialogHeader,
-        DialogTitle
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-        Select,
-        SelectContent,
-        SelectItem,
-        SelectTrigger,
-        SelectValue
-} from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scrollarea'
-import { Badge } from '@/components/ui/badge'
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { EMPLOYEES_QUERY_KEY } from '@/hooks/useEmployee'
 import { DEPARTMENTS_QUERY_KEY } from '@/hooks/useDepartment'
+import { EMPLOYEES_QUERY_KEY } from '@/hooks/useEmployee'
 import { cn } from '@/utils/tw-merge'
 
 interface DeviceAssignmentWizardProps {
-        open: boolean
-        onClose: () => void
-        departmentId: string
-        employees: Employee[]
-        devices: Device[]
-        onDevicesRefresh?: () => Promise<void> | void
-        onEmployeesRefresh?: () => Promise<void> | void
+	open: boolean
+	onClose: () => void
+	departmentId: string
+	employees: (Employee & { department?: { name: string } })[]
+	devices: Device[]
+	onDevicesRefresh?: () => Promise<void> | void
+	onEmployeesRefresh?: () => Promise<void> | void
+}
+
+interface DeviceWithEmployee extends Device {
+	employee?: Employee & { department?: { name: string } }
+}
+
+interface ReassignmentConfirmation {
+	device: DeviceWithEmployee
+	newEmployeeId: string
+	show: boolean
 }
 
 const DEVICE_TYPE_LABEL: Record<DeviceType, string> = {
-        WINDOWS: 'Windows',
-        LINUX: 'Linux'
+	WINDOWS: 'Windows',
+	LINUX: 'Linux'
 }
 
+// component
 export function DeviceAssignmentWizard({
-        open,
-        onClose,
-        departmentId,
-        employees,
-        devices,
-        onDevicesRefresh,
-        onEmployeesRefresh
+	open,
+	onClose,
+	departmentId,
+	employees,
+	devices,
+	onDevicesRefresh,
+	onEmployeesRefresh
 }: DeviceAssignmentWizardProps) {
-        const queryClient = useQueryClient()
-        const [step, setStep] = useState(1)
-        const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('')
-        const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(new Set())
-        const [isSubmitting, setIsSubmitting] = useState(false)
-        const [isRegistering, setIsRegistering] = useState(false)
-        const [showRegistrationForm, setShowRegistrationForm] = useState(false)
-        const [hasRegisteredDevice, setHasRegisteredDevice] = useState(false)
-        const [newDeviceData, setNewDeviceData] = useState({
-                name: '',
-                ipAddress: '',
-                agentKey: '',
-                type: DeviceType.WINDOWS as DeviceType
-        })
+	const t = useTranslations('dashboard.departments.deviceAssignmentWizard')
+	const queryClient = useQueryClient()
+	const [step, setStep] = useState(1)
+	const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('')
+	const [selectedDeviceIds, setSelectedDeviceIds] = useState<Set<string>>(
+		new Set()
+	)
+	const [isSubmitting, setIsSubmitting] = useState(false)
+	const [isRegistering, setIsRegistering] = useState(false)
+	const [showRegistrationForm, setShowRegistrationForm] = useState(false)
+	const [reassignmentConfirmation, setReassignmentConfirmation] =
+		useState<ReassignmentConfirmation>({
+			device: {} as DeviceWithEmployee,
+			newEmployeeId: '',
+			show: false
+		})
+	const [newDeviceData, setNewDeviceData] = useState({
+		name: '',
+		ipAddress: '',
+		agentKey: '',
+		type: DeviceType.WINDOWS as DeviceType
+	})
 
-        const employeeMap = useMemo(
-                () => new Map(employees.map(employee => [employee.id, employee])),
-                [employees]
-        )
+	const employeeMap = useMemo(
+		() => new Map(employees.map(employee => [employee.id, employee])),
+		[employees]
+	)
 
-        const departmentDevices = useMemo(
-                () => devices.filter(device => device.departmentId === departmentId),
-                [devices, departmentId]
-        )
+	const devicesWithEmployees = useMemo(() => {
+		return devices.map(device => ({
+			...device,
+			employee: device.employeeId
+				? employeeMap.get(device.employeeId)
+				: undefined
+		})) as DeviceWithEmployee[]
+	}, [devices, employeeMap])
 
-        const unassignedDevices = useMemo(
-                () => devices.filter(device => !device.departmentId),
-                [devices]
-        )
+	const departmentDevices = useMemo(
+		() =>
+			devicesWithEmployees.filter(
+				device => device.departmentId === departmentId
+			),
+		[devicesWithEmployees, departmentId]
+	)
 
-        useEffect(() => {
-                if (!selectedEmployeeId) {
-                        setSelectedDeviceIds(new Set())
-                        return
-                }
+	const unassignedDevices = useMemo(
+		() => devicesWithEmployees.filter(device => !device.departmentId),
+		[devicesWithEmployees]
+	)
 
-                const assignedToEmployee = devices
-                        .filter(device => device.employeeId === selectedEmployeeId)
-                        .map(device => device.id)
+	const resetState = () => {
+		setStep(1)
+		setSelectedEmployeeId('')
+		setSelectedDeviceIds(new Set())
+		setShowRegistrationForm(false)
+		setReassignmentConfirmation({
+			device: {} as DeviceWithEmployee,
+			newEmployeeId: '',
+			show: false
+		})
+		setNewDeviceData({
+			name: '',
+			ipAddress: '',
+			agentKey: '',
+			type: DeviceType.WINDOWS
+		})
+	}
 
-                setSelectedDeviceIds(new Set(assignedToEmployee))
-        }, [devices, selectedEmployeeId])
+	const handleDeviceToggle = (deviceId: string) => {
+		const device = devicesWithEmployees.find(d => d.id === deviceId)
+		if (!device) return
 
-        useEffect(() => {
-                if (!open) {
-                        resetState()
-                }
-                // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [open])
+		const newSelectedDeviceIds = new Set(selectedDeviceIds)
 
-        const resetState = () => {
-                setStep(1)
-                setSelectedEmployeeId('')
-                setSelectedDeviceIds(new Set())
-                setShowRegistrationForm(false)
-                setHasRegisteredDevice(false)
-                setNewDeviceData({
-                        name: '',
-                        ipAddress: '',
-                        agentKey: '',
-                        type: DeviceType.WINDOWS
-                })
-        }
+		if (newSelectedDeviceIds.has(deviceId)) {
+			newSelectedDeviceIds.delete(deviceId)
+			setSelectedDeviceIds(newSelectedDeviceIds)
+		} else {
+			// confirmation required when reassigning to another employee
+			if (device.employeeId && device.employeeId !== selectedEmployeeId) {
+				setReassignmentConfirmation({
+					device,
+					newEmployeeId: selectedEmployeeId,
+					show: true
+				})
+			} else {
+				newSelectedDeviceIds.add(deviceId)
+				setSelectedDeviceIds(newSelectedDeviceIds)
+			}
+		}
+	}
 
-        const closeWizard = () => {
-                resetState()
-                onClose()
-        }
+	// handleSubmit fix
+	const handleSubmit = async () => {
+		if (!selectedEmployeeId || selectedDeviceIds.size === 0) return
 
-        const toggleDevice = (deviceId: string) => {
-                setSelectedDeviceIds(prev => {
-                        const next = new Set(prev)
-                        if (next.has(deviceId)) {
-                                next.delete(deviceId)
-                        } else {
-                                next.add(deviceId)
-                        }
-                        return next
-                })
-        }
+		setIsSubmitting(true)
+		try {
+			await assignDevicesToEmployee({
+				departmentId,
+				employeeId: selectedEmployeeId,
+				deviceIds: Array.from(selectedDeviceIds)
+			})
 
-        const handleRegisterDevice = async () => {
-                if (!selectedEmployeeId) {
-                        toast.error('Выберите сотрудника перед регистрацией устройства')
-                        return
-                }
+			await queryClient.invalidateQueries({
+				queryKey: [EMPLOYEES_QUERY_KEY]
+			})
+			await queryClient.invalidateQueries({
+				queryKey: [DEPARTMENTS_QUERY_KEY]
+			})
 
-                if (!newDeviceData.name || !newDeviceData.ipAddress || !newDeviceData.agentKey) {
-                        toast.error('Заполните все поля для регистрации устройства')
-                        return
-                }
+			await onDevicesRefresh?.()
+			await onEmployeesRefresh?.()
 
-                try {
-                        setIsRegistering(true)
-                        const result = await createDevice({
-                                ...newDeviceData,
-                                departmentId,
-                                employeeId: selectedEmployeeId
-                        })
+			toast.success(t('assignmentSuccess'))
+			onClose()
+			resetState()
+		} catch (error) {
+			console.error('Ошибка при назначении устройств:', error)
+			toast.error(t('assignmentError'))
+		} finally {
+			setIsSubmitting(false)
+		}
+	}
 
-                        if (!result.success || !result.device) {
-                                throw new Error(result.error || 'Не удалось зарегистрировать устройство')
-                        }
+	const handleRegisterDevice = async () => {
+		if (
+			!newDeviceData.name ||
+			!newDeviceData.ipAddress ||
+			!newDeviceData.agentKey
+		) {
+			toast.error(t('fillAllFields'))
+			return
+		}
 
-                        setSelectedDeviceIds(prev => new Set(prev).add(result.device!.id))
-                        setHasRegisteredDevice(true)
-                        toast.success('Устройство зарегистрировано и назначено сотруднику')
-                        setNewDeviceData({
-                                name: '',
-                                ipAddress: '',
-                                agentKey: '',
-                                type: DeviceType.WINDOWS
-                        })
-                        await onDevicesRefresh?.()
-                        await onEmployeesRefresh?.()
-                        queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
-                        queryClient.invalidateQueries({ queryKey: EMPLOYEES_QUERY_KEY })
-                        queryClient.invalidateQueries({ queryKey: ['department-devices'] })
-                } catch (error) {
-                        console.error('register-device', error)
-                        toast.error('Ошибка при регистрации устройства')
-                } finally {
-                        setIsRegistering(false)
-                }
-        }
+		setIsRegistering(true)
+		try {
+			await createDevice({
+				...newDeviceData,
+				departmentId
+			})
 
-        const handleSubmit = async () => {
-                if (!selectedEmployeeId) {
-                        toast.error('Выберите сотрудника для назначения устройств')
-                        return
-                }
+			await queryClient.invalidateQueries({
+				queryKey: [DEPARTMENTS_QUERY_KEY]
+			})
+			await onDevicesRefresh?.()
 
-                try {
-                        setIsSubmitting(true)
-                        const currentAssignments = devices.filter(
-                                device => device.employeeId === selectedEmployeeId
-                        )
-                        const currentIds = new Set(currentAssignments.map(device => device.id))
-                        const deviceIdsToAssign = Array.from(selectedDeviceIds).filter(
-                                deviceId => !currentIds.has(deviceId)
-                        )
+			toast.success(t('deviceRegistrationSuccess'))
+			setShowRegistrationForm(false)
+			setNewDeviceData({
+				name: '',
+				ipAddress: '',
+				agentKey: '',
+				type: DeviceType.WINDOWS
+			})
+		} catch (error) {
+			console.error('Ошибка при регистрации устройства:', error)
+			toast.error(t('deviceRegistrationError'))
+		} finally {
+			setIsRegistering(false)
+		}
+	}
 
-                        if (deviceIdsToAssign.length > 0) {
-                                const result = await assignDevicesToEmployee({
-                                        departmentId,
-                                        employeeId: selectedEmployeeId,
-                                        deviceIds: deviceIdsToAssign
-                                })
+	const handleConfirmReassignment = () => {
+		const newSelectedDeviceIds = new Set(selectedDeviceIds)
+		newSelectedDeviceIds.add(reassignmentConfirmation.device.id)
+		setSelectedDeviceIds(newSelectedDeviceIds)
+		setReassignmentConfirmation(prev => ({ ...prev, show: false }))
+	}
 
-                                if (!result.success) {
-                                        throw new Error(result.error || 'Не удалось назначить устройства')
-                                }
-                        }
+	const handleCancelReassignment = () => {
+		setReassignmentConfirmation(prev => ({ ...prev, show: false }))
+	}
 
-                        await onDevicesRefresh?.()
-                        await onEmployeesRefresh?.()
-                        queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
-                        queryClient.invalidateQueries({ queryKey: EMPLOYEES_QUERY_KEY })
-                        queryClient.invalidateQueries({ queryKey: ['department-devices'] })
+	return (
+		<Dialog open={open} onOpenChange={open => !open && onClose()}>
+			<DialogContent>
+				{step === 1 && (
+					<>
+						<DialogHeader>
+							<DialogTitle>{t('title')}</DialogTitle>
+							<DialogDescription>
+								{t('step1Description', { step, total: 2 })}
+							</DialogDescription>
+						</DialogHeader>
 
-                        if (deviceIdsToAssign.length === 0 && !hasRegisteredDevice) {
-                                toast.info('Назначенные устройства не изменились')
-                        } else {
-                                toast.success('Назначение устройств обновлено')
-                        }
+						<div className='space-y-4'>
+							<div>
+								<Label htmlFor='employee-select'>
+									{t('selectEmployee')}
+								</Label>
+								<Select
+									value={selectedEmployeeId}
+									onValueChange={setSelectedEmployeeId}
+								>
+									<SelectTrigger>
+										<SelectValue
+											placeholder={t(
+												'selectEmployeePlaceholder'
+											)}
+										/>
+									</SelectTrigger>
+									<SelectContent>
+										{employees.map(employee => (
+											<SelectItem
+												key={employee.id}
+												value={employee.id}
+											>
+												{employee.firstName}{' '}
+												{employee.lastName}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
 
-                        closeWizard()
-                } catch (error) {
-                        console.error('assign-devices', error)
-                        toast.error('Ошибка при назначении устройств')
-                } finally {
-                        setIsSubmitting(false)
-                }
-        }
+						<DialogFooter>
+							<Button variant='outline' onClick={onClose}>
+								{t('cancel')}
+							</Button>
+							<Button
+								onClick={() => setStep(2)}
+								disabled={!selectedEmployeeId}
+							>
+								{t('next')}
+							</Button>
+						</DialogFooter>
+					</>
+				)}
 
-        const renderDeviceRow = (device: Device) => {
-                        const assignedEmployee =
-                                device.employeeId && employeeMap.get(device.employeeId)
-                        const isSelected = selectedDeviceIds.has(device.id)
+				{step === 2 && (
+					<>
+						<DialogHeader>
+							<DialogTitle>{t('title')}</DialogTitle>
+							<DialogDescription>
+								{t('step2Description', { step, total: 2 })}
+							</DialogDescription>
+						</DialogHeader>
 
-                        return (
-                                <div
-                                        key={device.id}
-                                        className={cn(
-                                                'flex items-start justify-between rounded-lg border p-3 transition-colors',
-                                                isSelected && 'border-primary bg-primary/5'
-                                        )}
-                                >
-                                        <div className='flex items-start space-x-3'>
-                                                <Checkbox
-                                                        id={`device-${device.id}`}
-                                                        checked={isSelected}
-                                                        onCheckedChange={() => toggleDevice(device.id)}
-                                                />
-                                                <div>
-                                                        <label
-                                                                htmlFor={`device-${device.id}`}
-                                                                className='cursor-pointer font-medium'
-                                                        >
-                                                                {device.name}
-                                                        </label>
-                                                        <div className='text-sm text-muted-foreground'>
-                                                                {device.ipAddress}
-                                                        </div>
-                                                        <div className='mt-1 flex flex-wrap gap-2 text-xs'>
-                                                                <Badge variant='outline'>
-                                                                        {DEVICE_TYPE_LABEL[device.type]}
-                                                                </Badge>
-                                                                {assignedEmployee && (
-                                                                        <Badge variant='secondary'>
-                                                                                Назначено {assignedEmployee.firstName}{' '}
-                                                                                {assignedEmployee.lastName}
-                                                                        </Badge>
-                                                                )}
-                                                        </div>
-                                                </div>
-                                        </div>
-                                </div>
-                        )
-        }
+						<div className='space-y-4'>
+							{/* удалён некорректный комментарий */}
+							<div className='flex items-center justify-between'>
+								<h3 className='text-lg font-medium'>
+									{t('departmentDevices')}
+								</h3>
+								<Button
+									variant='outline'
+									onClick={() =>
+										setShowRegistrationForm(true)
+									}
+								>
+									<Plus className='mr-2 h-4 w-4' />
+									{t('registerNew')}
+								</Button>
+							</div>
 
-        return (
-                <Dialog open={open} onOpenChange={openState => !openState && closeWizard()}>
-                        <DialogContent className='max-w-3xl'>
-                                <DialogHeader>
-                                        <DialogTitle>Назначение устройств сотруднику</DialogTitle>
-                                        <DialogDescription>
-                                                Выберите сотрудника отдела и закрепите за ним существующие
-                                                устройства или зарегистрируйте новые.
-                                        </DialogDescription>
-                                </DialogHeader>
+							<ScrollArea className='h-48 rounded-md border p-4'>
+								{departmentDevices.length === 0 ? (
+									<p className='py-8 text-center text-muted-foreground'>
+										{t('noDevicesInDepartment')}
+									</p>
+								) : (
+									<div className='space-y-2'>
+										{departmentDevices.map(device => {
+											const isAssigned =
+												!!device.employeeId
+											const isDifferentEmployee =
+												isAssigned &&
+												device.employeeId !==
+													selectedEmployeeId
 
-                                <div className='mb-4 flex items-center justify-between text-sm text-muted-foreground'>
-                                        <span>Шаг {step} из 2</span>
-                                        {selectedEmployeeId && (
-                                                <span>
-                                                        Текущий сотрудник:{' '}
-                                                        <span className='font-medium text-foreground'>
-                                                                {employeeMap.get(selectedEmployeeId)?.firstName}{' '}
-                                                                {employeeMap.get(selectedEmployeeId)?.lastName}
-                                                        </span>
-                                                </span>
-                                        )}
-                                </div>
+											return (
+												<div
+													key={device.id}
+													className={cn(
+														'flex items-center space-x-2 rounded-md p-2 transition-colors',
+														isAssigned &&
+															'border border-yellow-200 bg-yellow-50',
+														isDifferentEmployee &&
+															'border border-orange-200 bg-orange-50'
+													)}
+												>
+													<Checkbox
+														id={device.id}
+														checked={selectedDeviceIds.has(
+															device.id
+														)}
+														onCheckedChange={() =>
+															handleDeviceToggle(
+																device.id
+															)
+														}
+													/>
+													<Label
+														htmlFor={device.id}
+														className='flex-1 cursor-pointer'
+													>
+														<div className='flex items-center justify-between'>
+															<div>
+																<span className='font-medium'>
+																	{
+																		device.name
+																	}
+																</span>
+																<span className='ml-2 text-sm text-muted-foreground'>
+																	{
+																		device.ipAddress
+																	}
+																</span>
+																{isAssigned &&
+																	device.employee && (
+																		<div className='mt-1 text-xs text-muted-foreground'>
+																			{t(
+																				'assignedTo'
+																			)}
+																			:{' '}
+																			{
+																				device
+																					.employee
+																					.firstName
+																			}{' '}
+																			{
+																				device
+																					.employee
+																					.lastName
+																			}
+																			{device
+																				.employee
+																				.department &&
+																				device
+																					.employee
+																					.department
+																					.name !==
+																					employees.find(
+																						e =>
+																							e.id ===
+																							selectedEmployeeId
+																					)
+																						?.department
+																						?.name && (
+																					<span className='ml-1 text-orange-600'>
+																						(
+																						{
+																							device
+																								.employee
+																								.department
+																								.name
+																						}
+																						)
+																					</span>
+																				)}
+																		</div>
+																	)}
+															</div>
+															<div className='flex items-center space-x-2'>
+																<Badge variant='secondary'>
+																	{
+																		DEVICE_TYPE_LABEL[
+																			device
+																				.type
+																		]
+																	}
+																</Badge>
+																{isAssigned && (
+																	<Badge
+																		variant={
+																			isDifferentEmployee
+																				? 'destructive'
+																				: 'outline'
+																		}
+																		className={
+																			isDifferentEmployee
+																				? 'border-orange-300 bg-orange-100 text-orange-800'
+																				: ''
+																		}
+																	>
+																		{isDifferentEmployee
+																			? t(
+																					'assignedToOther'
+																				)
+																			: t(
+																					'alreadyAssigned'
+																				)}
+																	</Badge>
+																)}
+															</div>
+														</div>
+													</Label>
+												</div>
+											)
+										})}
+									</div>
+								)}
+							</ScrollArea>
 
-                                {employees.length === 0 ? (
-                                        <div className='flex items-center space-x-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground'>
-                                                <ShieldAlert className='h-5 w-5 text-destructive' />
-                                                <span>
-                                                        Добавьте сотрудников в отдел, прежде чем назначать им
-                                                        устройства.
-                                                </span>
-                                        </div>
-                                ) : step === 1 ? (
-                                        <div className='space-y-3'>
-                                                <Label htmlFor='employee-select'>Сотрудник</Label>
-                                                <Select
-                                                        value={selectedEmployeeId}
-                                                        onValueChange={value => setSelectedEmployeeId(value)}
-                                                >
-                                                        <SelectTrigger id='employee-select'>
-                                                                <SelectValue placeholder='Выберите сотрудника' />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                                {employees.map(employee => (
-                                                                        <SelectItem key={employee.id} value={employee.id}>
-                                                                                {[employee.firstName, employee.lastName]
-                                                                                        .filter(Boolean)
-                                                                                        .join(' ') ||
-                                                                                        employee.email ||
-                                                                                        'Без имени'}
-                                                                        </SelectItem>
-                                                                ))}
-                                                        </SelectContent>
-                                                </Select>
-                                                <p className='text-sm text-muted-foreground'>
-                                                        Выбор сотрудника автоматически покажет устройства, которые
-                                                        уже закреплены за ним.
-                                                </p>
-                                        </div>
-                                ) : (
-                                        <div className='space-y-6'>
-                                                <div className='space-y-3'>
-                                                        <h3 className='text-sm font-semibold uppercase tracking-wide text-muted-foreground'>
-                                                                Устройства отдела
-                                                        </h3>
-                                                        {departmentDevices.length === 0 ? (
-                                                                <p className='text-sm text-muted-foreground'>
-                                                                        В отделе пока нет устройств.
-                                                                </p>
-                                                        ) : (
-                                                                <ScrollArea className='max-h-60 rounded-lg border p-3'>
-                                                                        <div className='space-y-3'>
-                                                                                {departmentDevices.map(renderDeviceRow)}
-                                                                        </div>
-                                                                </ScrollArea>
-                                                        )}
-                                                </div>
+							<Separator />
 
-                                                <Separator />
+							<div>
+								<h3 className='mb-4 text-lg font-medium'>
+									{t('unassignedDevices')}
+								</h3>
+								<ScrollArea className='h-48 rounded-md border p-4'>
+									{unassignedDevices.length === 0 ? (
+										<p className='py-8 text-center text-muted-foreground'>
+											{t('noUnassignedDevices')}
+										</p>
+									) : (
+										<div className='space-y-2'>
+											{unassignedDevices.map(device => (
+												<div
+													key={device.id}
+													className='flex items-center space-x-2'
+												>
+													<Checkbox
+														id={`unassigned-${device.id}`}
+														checked={selectedDeviceIds.has(
+															device.id
+														)}
+														onCheckedChange={() =>
+															handleDeviceToggle(
+																device.id
+															)
+														}
+													/>
+													<Label
+														htmlFor={`unassigned-${device.id}`}
+														className='flex-1 cursor-pointer'
+													>
+														<div className='flex items-center justify-between'>
+															<div>
+																<span className='font-medium'>
+																	{
+																		device.name
+																	}
+																</span>
+																<span className='ml-2 text-sm text-muted-foreground'>
+																	{
+																		device.ipAddress
+																	}
+																</span>
+															</div>
+															<Badge variant='secondary'>
+																{
+																	DEVICE_TYPE_LABEL[
+																		device
+																			.type
+																	]
+																}
+															</Badge>
+														</div>
+													</Label>
+												</div>
+											))}
+										</div>
+									)}
+								</ScrollArea>
+							</div>
+						</div>
 
-                                                <div className='space-y-3'>
-                                                        <h3 className='text-sm font-semibold uppercase tracking-wide text-muted-foreground'>
-                                                                Не распределённые устройства
-                                                        </h3>
-                                                        {unassignedDevices.length === 0 ? (
-                                                                <p className='text-sm text-muted-foreground'>
-                                                                        Все устройства уже закреплены за отделами.
-                                                                </p>
-                                                        ) : (
-                                                                <ScrollArea className='max-h-60 rounded-lg border p-3'>
-                                                                        <div className='space-y-3'>
-                                                                                {unassignedDevices.map(renderDeviceRow)}
-                                                                        </div>
-                                                                </ScrollArea>
-                                                        )}
-                                                </div>
+						<DialogFooter>
+							<Button
+								variant='outline'
+								onClick={() => setStep(1)}
+							>
+								{t('back')}
+							</Button>
+							<Button variant='outline' onClick={onClose}>
+								{t('cancel')}
+							</Button>
+							<Button
+								onClick={handleSubmit}
+								disabled={
+									selectedDeviceIds.size === 0 || isSubmitting
+								}
+							>
+								{isSubmitting && (
+									<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+								)}
+								{t('assignDevices')}
+							</Button>
+						</DialogFooter>
+					</>
+				)}
 
-                                                <Separator />
+				{showRegistrationForm && (
+					<Dialog
+						open={showRegistrationForm}
+						onOpenChange={setShowRegistrationForm}
+					>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>
+									{t('deviceRegistration')}
+								</DialogTitle>
+								<DialogDescription>
+									{t('deviceRegistrationDescription')}
+								</DialogDescription>
+							</DialogHeader>
 
-                                                <div className='space-y-3 rounded-lg border p-4'>
-                                                        <button
-                                                                type='button'
-                                                                className='flex items-center gap-2 text-sm font-medium text-primary transition hover:underline'
-                                                                onClick={() => setShowRegistrationForm(value => !value)}
-                                                        >
-                                                                <Plus className='h-4 w-4' /> Зарегистрировать новое
-                                                                устройство
-                                                        </button>
-                                                        {showRegistrationForm && (
-                                                                <div className='space-y-3'>
-                                                                        <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
-                                                                                <div className='space-y-2'>
-                                                                                        <Label htmlFor='device-name'>Название</Label>
-                                                                                        <Input
-                                                                                                id='device-name'
-                                                                                                placeholder='Например, Рабочая станция'
-                                                                                                value={newDeviceData.name}
-                                                                                                onChange={event =>
-                                                                                                        setNewDeviceData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                name: event.target.value
-                                                                                                        }))
-                                                                                                }
-                                                                                        />
-                                                                                </div>
-                                                                                <div className='space-y-2'>
-                                                                                        <Label htmlFor='device-ip'>IP адрес</Label>
-                                                                                        <Input
-                                                                                                id='device-ip'
-                                                                                                placeholder='192.168.0.10'
-                                                                                                value={newDeviceData.ipAddress}
-                                                                                                onChange={event =>
-                                                                                                        setNewDeviceData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                ipAddress: event.target.value
-                                                                                                        }))
-                                                                                                }
-                                                                                        />
-                                                                                </div>
-                                                                        </div>
-                                                                        <div className='grid grid-cols-1 gap-3 md:grid-cols-2'>
-                                                                                <div className='space-y-2'>
-                                                                                        <Label htmlFor='device-key'>Ключ агента</Label>
-                                                                                        <Input
-                                                                                                id='device-key'
-                                                                                                placeholder='Уникальный ключ'
-                                                                                                value={newDeviceData.agentKey}
-                                                                                                onChange={event =>
-                                                                                                        setNewDeviceData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                agentKey:
-                                                                                                                        event.target
-                                                                                                                                .value
-                                                                                                        }))
-                                                                                                }
-                                                                                        />
-                                                                                </div>
-                                                                                <div className='space-y-2'>
-                                                                                        <Label htmlFor='device-type'>Тип устройства</Label>
-                                                                                        <Select
-                                                                                                value={newDeviceData.type}
-                                                                                                onValueChange={value =>
-                                                                                                        setNewDeviceData(prev => ({
-                                                                                                                ...prev,
-                                                                                                                type: value as DeviceType
-                                                                                                        }))
-                                                                                                }
-                                                                                        >
-                                                                                                <SelectTrigger id='device-type'>
-                                                                                                        <SelectValue />
-                                                                                                </SelectTrigger>
-                                                                                                <SelectContent>
-                                                                                                        {Object.entries(DEVICE_TYPE_LABEL).map(
-                                                                                                                ([value, label]) => (
-                                                                                                                        <SelectItem
-                                                                                                                                key={value}
-                                                                                                                                value={value}
-                                                                                                                        >
-                                                                                                                                {label}
-                                                                                                                        </SelectItem>
-                                                                                                                )
-                                                                                                        )}
-                                                                                                </SelectContent>
-                                                                                        </Select>
-                                                                                </div>
-                                                                        </div>
-                                                                        <div className='flex justify-end'>
-                                                                                <Button
-                                                                                        onClick={handleRegisterDevice}
-                                                                                        disabled={isRegistering}
-                                                                                >
-                                                                                        {isRegistering ? (
-                                                                                                <span className='flex items-center gap-2'>
-                                                                                                        <Loader2 className='h-4 w-4 animate-spin' />
-                                                                                                        Регистрация...
-                                                                                                </span>
-                                                                                        ) : (
-                                                                                                'Сохранить устройство'
-                                                                                        )}
-                                                                                </Button>
-                                                                        </div>
-                                                                </div>
-                                                        )}
-                                                </div>
-                                        </div>
-                                )}
+							<div className='space-y-4'>
+								<div>
+									<Label htmlFor='device-name'>
+										{t('deviceName')}
+									</Label>
+									<Input
+										id='device-name'
+										value={newDeviceData.name}
+										onChange={e =>
+											setNewDeviceData(prev => ({
+												...prev,
+												name: e.target.value
+											}))
+										}
+										placeholder={t('deviceNamePlaceholder')}
+									/>
+								</div>
 
-                                <DialogFooter>
-                                        <div className='flex w-full flex-col-reverse justify-between gap-3 sm:flex-row sm:items-center'>
-                                                <div>
-                                                        {step === 2 && (
-                                                                <Button
-                                                                        variant='ghost'
-                                                                        onClick={() => setStep(1)}
-                                                                        disabled={isSubmitting || isRegistering}
-                                                                >
-                                                                        Назад
-                                                                </Button>
-                                                        )}
-                                                </div>
-                                                <div className='flex items-center gap-2'>
-                                                        <Button
-                                                                variant='outline'
-                                                                onClick={closeWizard}
-                                                                disabled={isSubmitting || isRegistering}
-                                                        >
-                                                                Отмена
-                                                        </Button>
-                                                        {step === 1 ? (
-                                                                <Button
-                                                                        onClick={() => setStep(2)}
-                                                                        disabled={!selectedEmployeeId}
-                                                                >
-                                                                        Далее
-                                                                </Button>
-                                                        ) : (
-                                                                <Button
-                                                                        onClick={handleSubmit}
-                                                                        disabled={isSubmitting || (!hasRegisteredDevice && selectedDeviceIds.size === 0)}
-                                                                >
-                                                                        {isSubmitting ? (
-                                                                                <span className='flex items-center gap-2'>
-                                                                                        <Loader2 className='h-4 w-4 animate-spin' />
-                                                                                        Назначение...
-                                                                                </span>
-                                                                        ) : (
-                                                                                'Назначить устройства'
-                                                                        )}
-                                                                </Button>
-                                                        )}
-                                                </div>
-                                        </div>
-                                </DialogFooter>
-                        </DialogContent>
-                </Dialog>
-        )
+								<div>
+									<Label htmlFor='device-ip'>
+										{t('ipAddress')}
+									</Label>
+									<Input
+										id='device-ip'
+										value={newDeviceData.ipAddress}
+										onChange={e =>
+											setNewDeviceData(prev => ({
+												...prev,
+												ipAddress: e.target.value
+											}))
+										}
+										placeholder='192.168.1.100'
+									/>
+								</div>
+
+								<div>
+									<Label htmlFor='device-key'>
+										{t('agentKey')}
+									</Label>
+									<Input
+										id='device-key'
+										value={newDeviceData.agentKey}
+										onChange={e =>
+											setNewDeviceData(prev => ({
+												...prev,
+												agentKey: e.target.value
+											}))
+										}
+										placeholder={t('agentKeyPlaceholder')}
+									/>
+								</div>
+
+								<div>
+									<Label htmlFor='device-type'>
+										{t('deviceType')}
+									</Label>
+									<Select
+										value={newDeviceData.type}
+										onValueChange={(value: DeviceType) =>
+											setNewDeviceData(prev => ({
+												...prev,
+												type: value
+											}))
+										}
+									>
+										<SelectTrigger>
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem
+												value={DeviceType.WINDOWS}
+											>
+												Windows
+											</SelectItem>
+											<SelectItem
+												value={DeviceType.LINUX}
+											>
+												Linux
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+
+							<DialogFooter>
+								<Button
+									variant='outline'
+									onClick={() =>
+										setShowRegistrationForm(false)
+									}
+								>
+									{t('cancel')}
+								</Button>
+								<Button
+									onClick={handleRegisterDevice}
+									disabled={isRegistering}
+								>
+									{isRegistering && (
+										<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+									)}
+									{t('register')}
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
+				)}
+
+				{/* Reassignment confirmation dialog */}
+				<AlertDialog
+					open={reassignmentConfirmation.show}
+					onOpenChange={open => !open && handleCancelReassignment()}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle className='flex items-center gap-2'>
+								<AlertTriangle className='h-5 w-5 text-orange-500' />
+								{t('confirmReassignment')}
+							</AlertDialogTitle>
+							<AlertDialogDescription className='space-y-2'>
+								<p>{t('reassignmentWarning')}</p>
+								<div className='rounded-md border border-orange-200 bg-orange-50 p-3'>
+									<p className='text-sm font-medium'>
+										{t('deviceInfo')}:{' '}
+										<span className='font-normal'>
+											{
+												reassignmentConfirmation.device
+													.name
+											}
+										</span>
+									</p>
+									{reassignmentConfirmation.device
+										.employee && (
+										<p className='text-sm text-muted-foreground'>
+											{t('currentlyAssignedTo')}:{' '}
+											{
+												reassignmentConfirmation.device
+													.employee.firstName
+											}{' '}
+											{
+												reassignmentConfirmation.device
+													.employee.lastName
+											}
+											{reassignmentConfirmation.device
+												.employee.department && (
+												<span className='ml-1 text-orange-600'>
+													(
+													{
+														reassignmentConfirmation
+															.device.employee
+															.department.name
+													}
+													)
+												</span>
+											)}
+										</p>
+									)}
+									<p className='text-sm text-muted-foreground'>
+										{t('willBeReassignedTo')}:{' '}
+										{
+											employees.find(
+												e =>
+													e.id ===
+													reassignmentConfirmation.newEmployeeId
+											)?.firstName
+										}{' '}
+										{
+											employees.find(
+												e =>
+													e.id ===
+													reassignmentConfirmation.newEmployeeId
+											)?.lastName
+										}
+									</p>
+								</div>
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel
+								onClick={handleCancelReassignment}
+							>
+								{t('cancel')}
+							</AlertDialogCancel>
+							<AlertDialogAction
+								onClick={handleConfirmReassignment}
+								className='bg-orange-600 hover:bg-orange-700'
+							>
+								{t('confirmReassignmentAction')}
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			</DialogContent>
+		</Dialog>
+	)
 }

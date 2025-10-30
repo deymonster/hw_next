@@ -465,26 +465,26 @@
 					"used": "Использовано",
 					"total": "Всего",
 					"diskUsage": "Использование диска",
-                                        "usedSpace": "Использовано места",
-                                        "diskLabel": "Диск {disk}",
-                                        "diskC": "Диск C:",
-                                        "readSpeed": "Скорость чтения",
-                                        "writeSpeed": "Скорость записи",
-                                        "networkUsage": "Использование сети",
-                                        "download": "Загрузка",
-                                        "upload": "Отправка",
-                                        "noCpuData": "Данные о ЦП недоступны",
-                                        "noMemoryData": "Данные о памяти недоступны",
-                                        "noDiskData": "Данные о дисках недоступны",
-                                        "noNetworkData": "Данные о сети недоступны",
-                                        "invalidNetworkData": "Неверный формат сетевых данных",
-                                        "noNetworkInterfaces": "Сетевые интерфейсы не найдены",
-                                        "free": "Свободно",
-                                        "noDataAvailable": "Данные недоступны",
-                                        "networkErrors": "Ошибки",
-                                        "droppedPackets": "Потерянные пакеты",
-                                        "networkStatusUp": "Активен",
-                                        "networkStatusDown": "Неактивен"
+					"usedSpace": "Использовано места",
+					"diskLabel": "Диск {disk}",
+					"diskC": "Диск C:",
+					"readSpeed": "Скорость чтения",
+					"writeSpeed": "Скорость записи",
+					"networkUsage": "Использование сети",
+					"download": "Загрузка",
+					"upload": "Отправка",
+					"noCpuData": "Данные о ЦП недоступны",
+					"noMemoryData": "Данные о памяти недоступны",
+					"noDiskData": "Данные о дисках недоступны",
+					"noNetworkData": "Данные о сети недоступны",
+					"invalidNetworkData": "Неверный формат сетевых данных",
+					"noNetworkInterfaces": "Сетевые интерфейсы не найдены",
+					"free": "Свободно",
+					"noDataAvailable": "Данные недоступны",
+					"networkErrors": "Ошибки",
+					"droppedPackets": "Потерянные пакеты",
+					"networkStatusUp": "Активен",
+					"networkStatusDown": "Неактивен"
 				},
 				"processes": {
 					"runningProcesses": "Запущенные процессы",
@@ -505,16 +505,16 @@
 					"serialNumber": "Серийный номер",
 					"deviceTag": "Тег устройства",
 					"location": "Локация",
-                                        "warranty": {
-                                                "title": "Информация о гарантии",
-                                                "purchaseDateLabel": "Дата покупки",
-                                                "warrantyPeriodLabel": "Срок гарантии (мес.)",
-                                                "periodPlaceholder": "Не задано",
-                                                "periodOption": "{months} мес.",
-                                                "endDate": "Дата окончания гарантии: {date}",
-                                                "saveButton": "Сохранить",
-                                                "saving": "Сохранение..."
-                                        }
+					"warranty": {
+						"title": "Информация о гарантии",
+						"purchaseDateLabel": "Дата покупки",
+						"warrantyPeriodLabel": "Срок гарантии (мес.)",
+						"periodPlaceholder": "Не задано",
+						"periodOption": "{months} мес.",
+						"endDate": "Дата окончания гарантии: {date}",
+						"saveButton": "Сохранить",
+						"saving": "Сохранение..."
+					}
 				}
 			}
 		},
@@ -583,6 +583,56 @@
 				"offline": "Не в сети",
 				"lastActivity": "Последняя активность",
 				"noData": "Нет данных"
+			},
+			"deviceAssignmentWizard": {
+				"title": "Назначение устройств сотруднику",
+				"description": "Выберите сотрудника отдела и закрепите за ним существующие устройства или зарегистрируйте новые.",
+				"step": "Шаг",
+				"of": "из",
+				"currentEmployee": "Текущий сотрудник:",
+				"selectEmployee": "Выберите сотрудника",
+				"selectEmployeePlaceholder": "Выберите сотрудника для назначения устройств",
+				"nextStep": "Далее",
+				"previousStep": "Назад",
+				"assignDevices": "Назначить устройства",
+				"assigning": "Назначение...",
+				"departmentDevices": "Устройства отдела",
+				"unassignedDevices": "Не распределённые устройства",
+				"noDevicesInDepartment": "В отделе пока нет устройств.",
+				"allDevicesAssigned": "Все устройства уже закреплены за отделами.",
+				"registerNewDevice": "Зарегистрировать новое устройство",
+				"deviceName": "Название устройства",
+				"deviceNamePlaceholder": "Введите название устройства",
+				"ipAddress": "IP адрес",
+				"ipAddressPlaceholder": "192.168.0.10",
+				"agentKey": "Ключ агента",
+				"agentKeyPlaceholder": "Уникальный ключ",
+				"deviceType": "Тип устройства",
+				"registerDevice": "Зарегистрировать",
+				"registering": "Регистрация...",
+				"deviceStatus": {
+					"alreadyAssigned": "Уже привязано",
+					"assignedTo": "Привязано к",
+					"differentDepartment": "Другой отдел",
+					"available": "Доступно"
+				},
+				"confirmReassignment": {
+					"title": "Подтверждение перепривязки",
+					"message": "Устройство «{deviceName}» уже привязано к сотруднику «{currentEmployee}»",
+					"departmentMessage": " из отдела «{currentDepartment}»",
+					"question": "Вы уверены, что хотите перепривязать это устройство к «{newEmployee}»?",
+					"confirm": "Перепривязать",
+					"cancel": "Отмена"
+				},
+				"errors": {
+					"selectEmployee": "Выберите сотрудника для назначения устройств",
+					"deviceRegistration": "Ошибка при регистрации устройства",
+					"deviceAssignment": "Не удалось назначить устройства"
+				},
+				"success": {
+					"deviceRegistered": "Устройство успешно зарегистрировано",
+					"devicesAssigned": "Устройства успешно назначены"
+				}
 			},
 			"addDepartment": "Добавить"
 		},
@@ -690,13 +740,13 @@
 				"description": "Проведение инвентаризации устройств вашей компании"
 			},
 			"table": {
-                                "columns": {
-                                        "number": "№",
-                                        "date": "Дата создания",
-                                        "createdBy": "Ответственный",
-                                        "devicesCount": "Количество устройств",
-                                        "departments": "Отделы"
-                                },
+				"columns": {
+					"number": "№",
+					"date": "Дата создания",
+					"createdBy": "Ответственный",
+					"devicesCount": "Количество устройств",
+					"departments": "Отделы"
+				},
 				"loading": "Загрузка инвентаризаций...",
 				"error": "Ошибка при загрузке инвентаризаций",
 				"empty": "Инвентаризации не найдены",
