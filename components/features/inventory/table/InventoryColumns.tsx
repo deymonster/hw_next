@@ -11,15 +11,15 @@ import { InventoryWithRelations } from '@/hooks/useInventory'
 export function createInventoryColumns(
 	t: (key: string) => string
 ): ColumnDef<InventoryWithRelations>[] {
-        return [
-                {
-                        id: 'index',
-                        header: t('table.columns.number'),
-                        cell: ({ row }) => row.index + 1,
-                        enableSorting: false
-                },
-                {
-                        accessorKey: 'createdAt',
+	return [
+		{
+			id: 'index',
+			header: t('table.columns.number'),
+			cell: ({ row }) => row.index + 1,
+			enableSorting: false
+		},
+		{
+			accessorKey: 'createdAt',
 			header: ({ column }) => {
 				return (
 					<Button
@@ -34,11 +34,11 @@ export function createInventoryColumns(
 					</Button>
 				)
 			},
-                        cell: ({ row }) =>
-                                format(new Date(row.original.createdAt), 'dd MMMM yyyy HH:mm', {
-                                        locale: ru
-                                })
-                },
+			cell: ({ row }) =>
+				format(new Date(row.original.createdAt), 'dd MMMM yyyy HH:mm', {
+					locale: ru
+				})
+		},
 		{
 			accessorKey: 'user.name',
 			header: ({ column }) => {

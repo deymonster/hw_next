@@ -5,7 +5,6 @@
  * оборудовании для актов инвентаризации, фиксируя состояние каждой попытки
  * и предоставляя результаты для интерфейса.
  */
-
 /**
  * @fileoverview Хук для сбора информации об устройствах для инвентаризации
  * @module useInventoryCollection
@@ -106,7 +105,7 @@ export function useInventoryCollection() {
 				storage: hardwareInfo?.disks || null,
 				networkCards: hardwareInfo?.networkInterfaces || null,
 				videoCards: hardwareInfo?.gpus || null,
-                                diskUsage: hardwareInfo?.diskUsage || null,
+				diskUsage: hardwareInfo?.diskUsage || null,
 				departmentId: device.departmentId || null,
 				employeeId: device.employeeId || null,
 				serialNumber: systemInfo?.serialNumber || null

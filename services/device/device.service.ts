@@ -9,12 +9,12 @@ import {
 
 import { BaseRepository } from '../base.service'
 import {
-        DeviceActivationUpdateInput,
-        DeviceFilterOptions,
-        IDeviceCreateInput,
-        IDeviceFindManyArgs,
-        IDeviceRepository,
-        IDeviceUpdateData
+	DeviceActivationUpdateInput,
+	DeviceFilterOptions,
+	IDeviceCreateInput,
+	IDeviceFindManyArgs,
+	IDeviceRepository,
+	IDeviceUpdateData
 } from './device.interfaces'
 
 /**
@@ -314,30 +314,34 @@ export class DeviceService
 	 * })
 	 * ```
 	 */
-        async create(data: IDeviceCreateInput): Promise<Device> {
-                return await this.model.create({
-                        data: {
-                                ...data,
-                                lastUpdate: new Date(),
-                                lastSeen: new Date()
-                        }
-                })
-        }
+	async create(data: IDeviceCreateInput): Promise<Device> {
+		return await this.model.create({
+			data: {
+				...data,
+				lastUpdate: new Date(),
+				lastSeen: new Date()
+			}
+		})
+	}
 
-        /**
-         * Обновление устройства с защитой временных меток
-         *
-         * Гарантирует, что при изменении устройства поле createdAt
-         * остается неизменным, а updatedAt управляется Prisma.
-         */
-        async update(id: string, data: IDeviceUpdateData): Promise<Device> {
-                const { createdAt: _createdAt, updatedAt: _updatedAt, ...updateData } = data
+	/**
+	 * Обновление устройства с защитой временных меток
+	 *
+	 * Гарантирует, что при изменении устройства поле createdAt
+	 * остается неизменным, а updatedAt управляется Prisma.
+	 */
+	async update(id: string, data: IDeviceUpdateData): Promise<Device> {
+		const {
+			createdAt: _createdAt,
+			updatedAt: _updatedAt,
+			...updateData
+		} = data
 
-                return await this.model.update({
-                        where: { id },
-                        data: updateData as Partial<Device>
-                })
-        }
+		return await this.model.update({
+			where: { id },
+			data: updateData as Partial<Device>
+		})
+	}
 
 	/**
 	 * Удаление устройства
@@ -446,43 +450,43 @@ export class DeviceService
 	 * )
 	 * ```
 	 */
-        async updateDepartmentDevices(
-                departmentId: string,
-                deviceIds: string[]
-        ): Promise<void> {
-                // Сначала сбрасываем все существующие связи и отвязываем сотрудников
-                await this.model.updateMany({
-                        where: { departmentId },
-                        data: { departmentId: null, employeeId: null }
-                })
+	async updateDepartmentDevices(
+		departmentId: string,
+		deviceIds: string[]
+	): Promise<void> {
+		// Сначала сбрасываем все существующие связи и отвязываем сотрудников
+		await this.model.updateMany({
+			where: { departmentId },
+			data: { departmentId: null, employeeId: null }
+		})
 
-                // Затем устанавливаем новые связи
-                if (deviceIds.length > 0) {
-                        await this.model.updateMany({
-                                where: { id: { in: deviceIds } },
-                                data: { departmentId }
-                        })
-                }
-        }
+		// Затем устанавливаем новые связи
+		if (deviceIds.length > 0) {
+			await this.model.updateMany({
+				where: { id: { in: deviceIds } },
+				data: { departmentId }
+			})
+		}
+	}
 
-        async assignDevicesToEmployee({
-                departmentId,
-                employeeId,
-                deviceIds
-        }: {
-                departmentId: string
-                employeeId: string
-                deviceIds: string[]
-        }): Promise<void> {
-                if (!deviceIds.length) {
-                        return
-                }
+	async assignDevicesToEmployee({
+		departmentId,
+		employeeId,
+		deviceIds
+	}: {
+		departmentId: string
+		employeeId: string
+		deviceIds: string[]
+	}): Promise<void> {
+		if (!deviceIds.length) {
+			return
+		}
 
-                await this.model.updateMany({
-                        where: { id: { in: deviceIds } },
-                        data: { departmentId, employeeId }
-                })
-        }
+		await this.model.updateMany({
+			where: { id: { in: deviceIds } },
+			data: { departmentId, employeeId }
+		})
+	}
 
 	/**
 	 * Подтверждение смены оборудования на агенте

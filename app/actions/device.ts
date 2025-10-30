@@ -11,6 +11,7 @@ import {
 import { getAgentStatuses } from './prometheus.actions'
 import { logAuditEvent } from './utils/audit-events'
 
+import { prisma } from '@/libs/prisma'
 import { DeviceFilterOptions } from '@/services/device/device.interfaces'
 import { IDeviceCreateInput } from '@/services/device/device.interfaces'
 import { services } from '@/services/index'
@@ -371,8 +372,10 @@ export async function assignDevicesToEmployee({
 			deviceIds
 		})
 
-		const devices = await services.data.device.findMany({
-			where: { id: { in: deviceIds } } as any
+		// заменяем вызов с `as any` на Prisma findMany c нужным select
+		const devices = await prisma.device.findMany({
+			where: { id: { in: deviceIds } },
+			select: { id: true, name: true, ipAddress: true }
 		})
 
 		await Promise.all(
@@ -588,15 +591,16 @@ export async function updateEmployeeDevicesSelection({
 		}
 
 		if (toUnassign.length > 0) {
-			// Обновляем устройства через Prisma напрямую, так как в сервисе нет метода updateMany
-			await services.data.device['model'].updateMany({
+			// заменяем protected доступ к model на Prisma updateMany
+			await prisma.device.updateMany({
 				where: { id: { in: toUnassign } },
-				data: { employeeId: null } // департамент оставляем как есть
+				data: { employeeId: null }
 			})
 		}
 
 		return { success: true }
-	} catch (error) {
+	} catch {
+		// убираем неиспользуемую переменную `error` в catch (ES2019 optional catch binding)
 		return { success: false, error: 'Failed to update employee devices' }
 	}
 }

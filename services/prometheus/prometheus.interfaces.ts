@@ -200,24 +200,24 @@ export interface MotherBoardInfo extends MetricBase {
  * Информация о модуле памяти (статическая)
  */
 export interface MemoryModuleInfo extends MetricBase {
-        __name__: 'memory_module_info'
-        capacity: string
-        manufacturer: string
-        part_number: string
-        serial_number: string
-        speed: string
+	__name__: 'memory_module_info'
+	capacity: string
+	manufacturer: string
+	part_number: string
+	serial_number: string
+	speed: string
 }
 
 /**
  * Нормализованная информация о модуле памяти для отображения в интерфейсе
  */
 export interface MemoryModuleSummary {
-        capacity?: string
-        manufacturer?: string
-        partNumber?: string
-        serialNumber?: string
-        speed?: string
-        type?: string
+	capacity?: string
+	manufacturer?: string
+	partNumber?: string
+	serialNumber?: string
+	speed?: string
+	type?: string
 }
 
 /**
@@ -402,13 +402,13 @@ export interface MemoryMetrics {
  * Статическая информация о диске
  */
 export interface DiskInfo {
-        id: string
-        model: string
-        health: string
-        size: string // из disk_health_status
-        type: string // из disk_health_status
-        sizeGb?: number
-        usage?: DiskMetrics['usage']
+	id: string
+	model: string
+	health: string
+	size: string // из disk_health_status
+	type: string // из disk_health_status
+	sizeGb?: number
+	usage?: DiskMetrics['usage']
 }
 
 /**
@@ -442,42 +442,42 @@ export interface DeviceMetrics {
 		location?: string
 		serialNumber: string
 	}
-        hardwareInfo: {
-                bios: {
-                        manufacturer: string
-                        date: string
-                        version: string
-                }
-                cpu: {
-                        model: string
-                }
-                motherboard: {
-                        manufacturer: string
-                        product: string
-                        serialNumber: string
-                        version: string
-                }
-                memory: {
-                        modules: MemoryModuleSummary[] // статическая информация о модулях
-                }
-                disks: DiskInfo[] // статическая информация о дисках
-                gpus: Array<{
-                        name: string
-                        memoryMB?: number
-                        memoryGB?: number
-                }>
-                networkInterfaces: Array<{
-                        name: string
-                        status: string
-                        performance?: {
-                                rx: { value: number; unit: string }
-                                tx: { value: number; unit: string }
-                        }
-                        errors?: number
-                        droppedPackets?: number
-                }>
-                diskUsage?: DiskMetrics[]
-        }
+	hardwareInfo: {
+		bios: {
+			manufacturer: string
+			date: string
+			version: string
+		}
+		cpu: {
+			model: string
+		}
+		motherboard: {
+			manufacturer: string
+			product: string
+			serialNumber: string
+			version: string
+		}
+		memory: {
+			modules: MemoryModuleSummary[] // статическая информация о модулях
+		}
+		disks: DiskInfo[] // статическая информация о дисках
+		gpus: Array<{
+			name: string
+			memoryMB?: number
+			memoryGB?: number
+		}>
+		networkInterfaces: Array<{
+			name: string
+			status: string
+			performance?: {
+				rx: { value: number; unit: string }
+				tx: { value: number; unit: string }
+			}
+			errors?: number
+			droppedPackets?: number
+		}>
+		diskUsage?: DiskMetrics[]
+	}
 	memoryMetrics: MemoryMetrics // динамическая информация об использовании памяти
 	diskMetrics: DiskMetrics[] // динамическая информация о дисках
 	processorMetrics: {

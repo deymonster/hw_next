@@ -1,4 +1,10 @@
-import { Department, Inventory, InventoryItem, PrismaClient, User } from '@prisma/client'
+import {
+	Department,
+	Inventory,
+	InventoryItem,
+	PrismaClient,
+	User
+} from '@prisma/client'
 
 import { BaseRepository } from '../base.service'
 import {
@@ -22,30 +28,34 @@ export class InventoryService
 		super(prisma, p => p.inventory)
 	}
 
-        async findWithItems(
-                id: string
-        ): Promise<Inventory & { items: InventoryItem[]; departments: Department[]; user: User }> {
-                const inventory = await this.model.findUnique({
-                        where: { id },
-                        include: {
-                                items: {
-                                        include: {
-                                                device: true,
-                                                employee: true,
-                                                department: true
-                                        }
-                                },
-                                departments: true,
-                                user: true
-                        }
-                })
+	async findWithItems(id: string): Promise<
+		Inventory & {
+			items: InventoryItem[]
+			departments: Department[]
+			user: User
+		}
+	> {
+		const inventory = await this.model.findUnique({
+			where: { id },
+			include: {
+				items: {
+					include: {
+						device: true,
+						employee: true,
+						department: true
+					}
+				},
+				departments: true,
+				user: true
+			}
+		})
 
 		if (!inventory) {
 			throw new Error('Инвентаризация не найдена')
 		}
 
-                return inventory
-        }
+		return inventory
+	}
 
 	async findAllWithItems(
 		args: IInventoryFindManyArgs

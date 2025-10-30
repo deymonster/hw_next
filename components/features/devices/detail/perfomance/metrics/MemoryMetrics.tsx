@@ -10,7 +10,7 @@ interface MemoryMetricsProps {
 export function MemoryMetrics({ metrics }: MemoryMetricsProps) {
 	const t = useTranslations('dashboard.devices.detail.performance')
 
-        if (!metrics) return <div>{t('noMemoryData')}</div>
+	if (!metrics) return <div>{t('noMemoryData')}</div>
 
 	const usagePercent = (metrics.used / metrics.total) * 100
 

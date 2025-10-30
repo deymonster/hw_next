@@ -428,6 +428,7 @@ export function DeviceAssignmentWizard({
 																								.department
 																								.name
 																						}
+
 																						)
 																					</span>
 																				)}

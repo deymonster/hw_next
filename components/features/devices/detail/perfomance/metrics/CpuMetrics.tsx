@@ -10,7 +10,7 @@ interface CpuMetricsProps {
 export function CpuMetrics({ metrics }: CpuMetricsProps) {
 	const t = useTranslations('dashboard.devices.detail.performance')
 
-        if (!metrics) return <div>{t('noCpuData')}</div>
+	if (!metrics) return <div>{t('noCpuData')}</div>
 
 	return (
 		<div className='space-y-4'>

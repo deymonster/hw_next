@@ -59,9 +59,13 @@ export interface IInventoryRepository
 		string
 	> {
 	// Специфичные методы для инвентаризации
-        findWithItems(
-                id: string
-        ): Promise<Inventory & { items: InventoryItem[]; departments: Department[]; user: User }>
+	findWithItems(id: string): Promise<
+		Inventory & {
+			items: InventoryItem[]
+			departments: Department[]
+			user: User
+		}
+	>
 	addItem(
 		inventoryId: string,
 		item: IInventoryItemCreateInput

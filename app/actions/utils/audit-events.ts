@@ -48,7 +48,7 @@ export async function logAuditEvent(input: AuditEventInput): Promise<void> {
 			title: input.title,
 			message: input.message,
 			userId,
-                        deviceId: input.deviceId ?? null,
+			deviceId: input.deviceId ?? null,
 			metadata: input.metadata,
 			isRead: false,
 			hardwareChangeConfirmed: false

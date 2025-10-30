@@ -70,13 +70,13 @@ export function useDepartment() {
 
 	// Обновление отдела
 	const updateMutation = useMutation({
-                mutationFn: ({
-                        id,
-                        data
-                }: {
-                        id: string
-                        data: Partial<IDepartmentCreateInput>
-                }) => updateDepartment(id, data),
+		mutationFn: ({
+			id,
+			data
+		}: {
+			id: string
+			data: Partial<IDepartmentCreateInput>
+		}) => updateDepartment(id, data),
 		onSuccess: updatedDepartment => {
 			// Обновляем все связанные запросы
 			queryClient.invalidateQueries({ queryKey: DEPARTMENTS_QUERY_KEY })
