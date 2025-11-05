@@ -82,121 +82,103 @@ This system allows you to monitor multiple workstations in your local network, c
 - Go (for building agents)
 - Yarn package manager
 
-## Environment Setup
+## Quick Start (Docker)
 
-1. Clone the repository
-2. Copy `.env.example` to `.env` and configure:
-    - Database credentials
-    - Prometheus settings
-    - SMTP configuration
-    - Telegram bot token
-    - Redis configuration
+The easiest way to bootstrap a local environment is to run the helper script:
 
-## Detailed Installation Guide
+```bash
+bash scripts/setup-local.sh --start-next
+```
 
-### System Requirements
+What the script does:
 
-1. Operating System:
-    - Linux (Ubuntu 20.04+ recommended)
-    - Windows 10/11 with WSL2
-    - macOS 12+
+- validates that Docker is available (Docker Desktop on Windows/macOS, or Docker Engine on Linux)
+- generates `.env` with sensible development defaults (random secrets, localhost URLs)
+- prepares required folders (`storage/logs`, `storage/uploads`, `nginx/auth/.htpasswd`)
+- builds/starts all Docker Compose services from `docker-compose.dev.yml`
+- installs Node dependencies, generates Prisma client, runs `prisma migrate deploy`
+- optionally starts the Next.js dev server (`--start-next` flag)
 
-### Installing Prerequisites
+Useful flags:
 
-1. **Node.js Installation**:
+- `--host <hostname>` – replace `localhost` in generated URLs (useful when testing from another device)
+- `--admin-email <email>` – seed admin email
+- `--skip-yarn` – skip `yarn install`/migrations (if you manage Node inside containers)
+- omit `--start-next` if you prefer to run `yarn dev` manually
+
+After the script finishes the services are exposed on:
+
+| Service        | URL/Port               |
+| -------------- | ---------------------- |
+| Next.js UI     | http://localhost:3000  |
+| PostgreSQL     | 127.0.0.1:5432         |
+| Redis          | 127.0.0.1:6379         |
+| Prometheus     | http://localhost:9090  |
+| Alertmanager   | http://localhost:9093  |
+| Nginx proxy    | http://localhost:8080  |
+| File storage   | http://localhost:8081  |
+| LICD service   | http://localhost:8082  |
+
+The script creates/updates `.env`. If you customise values later, simply re-run the script to merge changes.
+
+### Required environment variables
+
+Most of the application logic expects the following keys (the script fills them automatically):
+
+- `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_SERVER_IP`, `NEXT_PUBLIC_URL`
+- `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
+- `NEXT_PUBLIC_STORAGE_URL`, `NEXT_PUBLIC_UPLOADS_BASE_URL`, `NEXT_PUBLIC_MEDIA_URL`
+- PostgreSQL block: `POSTGRES_*`, `DATABASE_URL`
+- Redis block: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_URL`
+- Prometheus block: `PROMETHEUS_PROXY_URL`, `PROMETHEUS_USERNAME`, `PROMETHEUS_AUTH_PASSWORD`, `PROMETHEUS_TARGETS_PATH`
+- Admin credentials: `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`
+- Agent shared key: `AGENT_HANDSHAKE_KEY`
+- Encryption/auth secrets: `ENCRYPTION_KEY`, `NEXTAUTH_SECRET`
+- SMTP placeholders (`SMTP_HOST`, `SMTP_PORT`, etc.) – they must exist even if you are not sending emails locally
+
+### Manual Setup (alternative)
+
+If you prefer not to run the script, follow these steps:
+
+1. **Install prerequisites**
+
+    - Docker (with Compose plugin)
+    - Node.js 18+ and Yarn (for running Next.js locally)
+
+2. **Clone and configure**
 
     ```bash
-    # Using Ubuntu
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-
-    # Verify installation
-    node --version  # Should be 20.x or higher
-    npm --version   # Should be 10.x or higher
-    ```
-
-2. **Yarn Installation**:
-
-    ```bash
-    # Install Yarn globally
-    sudo npm install -g yarn
-
-    # Verify installation
-    yarn --version  # Should be 1.22.x or higher
-    ```
-
-3. **Docker Installation**:
-
-    ```bash
-    # Install Docker
-    sudo apt-get update
-    sudo apt-get install -y docker.io
-
-    # Install Docker Compose
-    sudo apt-get install -y docker-compose
-
-    # Add your user to docker group
-    sudo usermod -aG docker $USER
-    newgrp docker
-
-    # Verify installation
-    docker --version
-    docker-compose --version
-    ```
-
-### Project Setup
-
-1. **Clone and Configure**:
-
-    ```bash
-    # Clone repository
     git clone <repository-url>
     cd hw-monitor
-
-    # Copy environment file
     cp .env.example .env
     ```
 
-2. **Configure Environment Variables**:
-   Edit `.env` file and set up:
+3. **Edit `.env`**
 
-    - `DATABASE_URL`: PostgreSQL connection string
-    - `REDIS_URL`: Redis connection string
-    - `NEXT_PUBLIC_API_URL`: API endpoint
-    - `JWT_SECRET`: Secret key for JWT
-    - Other required variables
+    - set the variables listed above
+    - create `storage/logs`, `storage/uploads`, and `nginx/auth/.htpasswd` (use `openssl passwd -apr1 <password>` to populate the file)
 
-3. **Start Docker Services**:
+4. **Start Docker services**
 
     ```bash
-    # Start all required services
-    docker-compose up -d
-
-    # Verify services are running
-    docker ps
+    docker compose -f docker-compose.dev.yml up -d --build
     ```
 
-4. **Install Dependencies and Initialize Database**:
+5. **Install dependencies and apply migrations**
 
     ```bash
-    # Install project dependencies
     yarn install
-
-    # Generate Prisma client
     yarn prisma generate
-
-    # Run database migrations
-    yarn prisma migrate dev
+    yarn prisma migrate deploy
     ```
 
-5. **Start Development Server**:
+6. **Start Next.js**
 
     ```bash
-    # Start the development server
-    yarn dev
+    yarn dev --hostname 0.0.0.0
     ```
 
-    The application will be available at `http://localhost:3000`
+    The UI will be available at `http://localhost:3000`.
 
 ### Troubleshooting
 

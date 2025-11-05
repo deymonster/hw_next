@@ -91,13 +91,66 @@
 
 ## Настройка окружения
 
-1. Клонировать репозиторий
-2. Скопировать `.env.example` в `.env` и настроить:
-    - Учетные данные базы данных
-    - Настройки Prometheus
-    - Конфигурация SMTP
-    - Токен бота Telegram
-    - Конфигурация Redis
+### Быстрый старт для локальной разработки
+
+Для запуска всех сервисов в Docker достаточно выполнить:
+
+```bash
+bash scripts/setup-local.sh --start-next
+```
+
+Скрипт:
+
+- проверяет наличие Docker/Compose
+- генерирует `.env` с локальными значениями (рандомные пароли, `localhost` в URL)
+- создаёт необходимые каталоги (`storage/logs`, `storage/uploads`, `nginx/auth/.htpasswd`)
+- запускает `docker-compose.dev.yml`
+- выполняет `yarn install`, `yarn prisma generate`, `yarn prisma migrate deploy`
+- по флагу `--start-next` автоматически запускает `yarn dev`
+
+Дополнительные флаги:
+
+- `--host <адрес>` — подставляет ваш IP/домен в ссылках (по умолчанию `localhost`)
+- `--admin-email <email>` — email администратора по умолчанию
+- `--skip-yarn` — пропустить установку зависимостей и миграции
+
+После выполнения скрипта сервисы будут доступны по адресам:
+
+| Сервис        | URL/порт                |
+| ------------- | ----------------------- |
+| Next.js UI    | http://localhost:3000   |
+| PostgreSQL    | 127.0.0.1:5432          |
+| Redis         | 127.0.0.1:6379          |
+| Prometheus    | http://localhost:9090   |
+| Alertmanager  | http://localhost:9093   |
+| Nginx proxy   | http://localhost:8080   |
+| Хранилище     | http://localhost:8081   |
+| LICD сервис   | http://localhost:8082   |
+
+Скрипт перезаписывает `.env`, сохраняя уже заданные значения. При необходимости можно запускать его повторно.
+
+### Вручную (альтернатива)
+
+1. Установить Docker (с поддержкой Compose), Node.js 18+ и Yarn
+2. Клонировать репозиторий и скопировать `.env.example` → `.env`
+3. Заполнить переменные окружения (см. список ниже)
+4. Создать каталоги `storage/logs`, `storage/uploads` и файл `nginx/auth/.htpasswd` (пароль можно сгенерировать `openssl passwd -apr1 <password>`)
+5. Запустить инфраструктуру: `docker compose -f docker-compose.dev.yml up -d --build`
+6. Выполнить `yarn install`, `yarn prisma generate`, `yarn prisma migrate deploy`
+7. Запустить Next.js: `yarn dev --hostname 0.0.0.0`
+
+### Ключевые переменные окружения
+
+- `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_SERVER_IP`, `NEXT_PUBLIC_URL`
+- `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
+- `NEXT_PUBLIC_STORAGE_URL`, `NEXT_PUBLIC_UPLOADS_BASE_URL`, `NEXT_PUBLIC_MEDIA_URL`
+- `POSTGRES_*`, `DATABASE_URL`
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_URL`
+- `PROMETHEUS_PROXY_URL`, `PROMETHEUS_USERNAME`, `PROMETHEUS_AUTH_PASSWORD`, `PROMETHEUS_TARGETS_PATH`
+- `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`
+- `AGENT_HANDSHAKE_KEY`
+- `ENCRYPTION_KEY`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
 
 ## Руководство по развертыванию
 
