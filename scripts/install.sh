@@ -460,11 +460,11 @@ ensure_env_file() {
   PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
   PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$BASIC_AUTH_PASSWORD}"
 
-  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"
-  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(random_string)}"
+    AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(get_env AGENT_HANDSHAKE_KEY)}"
+    AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(random_string)}"
 
-  NODE_ENV="${NODE_ENV:-$(get_env NODE_ENV)}"
-  NODE_ENV="${NODE_ENV:-production}"
+    NODE_ENV="${NODE_ENV:-$(get_env NODE_ENV)}"
+    NODE_ENV="${NODE_ENV:-production}"
 
   # SMTP и ADMIN_EMAIL делаем необязательными: не спрашиваем интерактивно, оставляем пустые/существующие
   SMTP_HOST="${SMTP_HOST:-$(get_env SMTP_HOST)}"
