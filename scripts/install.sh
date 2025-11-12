@@ -54,6 +54,41 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# interactive input helpers
+prompt_value() {
+  local label="$1"
+  local def="${2:-}"
+  read -r -p "$label [${def}]: " val
+  printf "%s" "${val:-$def}"
+}
+
+prompt_email() {
+  local label="$1"
+  local def="${2:-}"
+  while true; do
+    local v
+    v="$(prompt_value "$label" "$def")"
+    if [[ "$v" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+      printf "%s" "$v"
+      return 0
+    fi
+    echo "Неверный email, попробуйте снова."
+  done
+}
+
+prompt_bool() {
+  local label="$1"
+  local def="${2:-false}"
+  while true; do
+    local v
+    v="$(prompt_value "$label (true/false)" "$def")"
+    case "${v,,}" in
+      true|false) printf "%s" "${v,,}"; return 0 ;;
+    esac
+    echo "Введите true или false."
+  done
+}
+
 # Detect server IP
 detect_ip() {
   if [[ -n "${SERVER_IP}" ]]; then
