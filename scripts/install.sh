@@ -332,7 +332,7 @@ ensure_env_file() {
 
   echo "Синхронизирую $ENV_FILE (добавлю недостающие переменные, существующие сохраню)..."
 
-  # Базовые (сохранение существующих значений)
+  # Предустановленные значения пользователя/БД, если их нет
   POSTGRES_USER="${POSTGRES_USER:-$(get_env POSTGRES_USER)}"
   POSTGRES_USER="${POSTGRES_USER:-hw}"
 
@@ -356,6 +356,20 @@ ensure_env_file() {
 
   REDIS_PORT="${REDIS_PORT:-$(get_env REDIS_PORT)}"
   REDIS_PORT="${REDIS_PORT:-6379}"
+
+  # Сборка строк подключения (устраняет 'unbound variable' при set -u)
+  DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+  REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+
+  # Fail-fast для критичных пустых значений
+  if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_DB" ]; then
+    echo "❌ Недостаёт POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB для сборки DATABASE_URL"
+    exit 1
+  fi
+  if [ -z "$REDIS_PASSWORD" ]; then
+    echo "❌ REDIS_PASSWORD пуст — Redis не поднимется с requirepass"
+    exit 1
+  fi
 
   NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-$(get_env NEXT_PUBLIC_BASE_URL)}"
   NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-http://${SERVER_IP}}"
@@ -666,6 +680,25 @@ main() {
   echo "  INSTALL_DIR=${INSTALL_DIR}"
   echo "  ENV_FILE=${ENV_FILE}"
   echo "  NGINX_AUTH_FILE=${NGINX_AUTH_FILE}"
+}
+
+# function main() {
+  echo "------------------------------------------------------------"
+  echo "Данные БД:"
+  echo "  POSTGRES_DB=${POSTGRES_DB}"
+  echo "  POSTGRES_USER=${POSTGRES_USER}"
+  echo "  POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+  echo "  DATABASE_URL=${DATABASE_URL}"
+  echo "Redis:"
+  echo "  REDIS_PASSWORD=${REDIS_PASSWORD}"
+  echo "  REDIS_URL=${REDIS_URL}"
+  echo "Секреты (сохраните в безопасном месте):"
+  echo "  NEXTAUTH_SECRET=${NEXTAUTH_SECRET}"
+  echo "  ENCRYPTION_KEY=${ENCRYPTION_KEY}"
+  if [ -n "${AGENT_HANDSHAKE_KEY:-}" ]; then
+    echo "  AGENT_HANDSHAKE_KEY=${AGENT_HANDSHAKE_KEY}"
+  fi
+  echo "------------------------------------------------------------"
 }
 
 main "$@"
