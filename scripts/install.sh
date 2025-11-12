@@ -191,24 +191,44 @@ install_docker_if_needed() {
       echo "⚠️  get.docker.com не завершился успешно. Перехожу к ручной установке (Debian/Astra)."
 
       apt-get update -y
-      apt-get install -y ca-certificates curl gnupg || true
+      apt-get install -y ca-certificates curl gnupg lsb-release || true
 
-      install -m 0755 -d /etc/apt/keyrings || true
-      curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc || true
-      chmod a+r /etc/apt/keyrings/docker.asc || true
-
-      # Определяем архитектуру и кодовое имя, по умолчанию используем buster
+      # Определим, что это Astra
       . /etc/os-release || true
-      codename="${VERSION_CODENAME:-buster}"
-      arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+      is_astra=false
+      if echo "${ID:-} ${NAME:-} ${PRETTY_NAME:-}" | tr '[:upper:]' '[:lower:]' | grep -q 'astra'; then
+        is_astra=true
+      fi
 
-      echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${codename} stable" > /etc/apt/sources.list.d/docker.list
-      apt-get update -y
+      # Определим корректный codename Debian
+      debian_codename=""
+      if command -v lsb_release >/dev/null 2>&1; then
+        debian_codename="$(lsb_release -cs 2>/dev/null || true)"
+      fi
+      if [[ -z "$debian_codename" ]]; then
+        dv="$(cut -d'.' -f1 /etc/debian_version 2>/dev/null || echo '')"
+        case "$dv" in
+          12) debian_codename="bookworm" ;;
+          11) debian_codename="bullseye" ;;
+          10) debian_codename="buster" ;;
+          *) debian_codename="buster" ;;
+        esac
+      fi
 
-      # Пытаемся поставить docker-ce; если недоступно — берем docker.io из дистрибутива
-      if ! apt-get install -y docker-ce docker-ce-cli containerd.io; then
-        echo "ℹ️  Пакеты docker-ce недоступны, ставлю docker.io из репозитория дистрибутива."
+      if [ "$is_astra" = true ]; then
+        echo "ℹ️  Обнаружена Astra Linux; ставлю docker.io из репозиториев дистрибутива."
         apt-get install -y docker.io
+      else
+        echo "ℹ️  Добавляю Docker APT репозиторий для Debian: $debian_codename"
+        install -m 0755 -d /etc/apt/keyrings || true
+        curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc || true
+        chmod a+r /etc/apt/keyrings/docker.asc || true
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${debian_codename} stable" > /etc/apt/sources.list.d/docker.list
+        apt-get update -y
+        if ! apt-get install -y docker-ce docker-ce-cli containerd.io; then
+          echo "ℹ️  Пакеты docker-ce недоступны, ставлю docker.io."
+          apt-get install -y docker.io
+        fi
       fi
     fi
   fi
