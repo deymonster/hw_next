@@ -65,6 +65,9 @@ detect_ip() {
   echo "$ip"
 }
 SERVER_IP="$(detect_ip)"
+if [ -t 0 ]; then
+  SERVER_IP="$(prompt_value "Укажи IP/домен сервера" "$SERVER_IP")"
+fi
 echo "Using SERVER_IP=${SERVER_IP}"
 
 # Random helpers
@@ -86,6 +89,41 @@ random_b64() {
   else
     head -c 32 /dev/urandom | base64 | tr -d '\n'
   fi
+}
+
+# interactive input helpers
+prompt_value() {
+  local label="$1"
+  local def="${2:-}"
+  read -r -p "$label [${def}]: " val
+  printf "%s" "${val:-$def}"
+}
+
+prompt_email() {
+  local label="$1"
+  local def="${2:-}"
+  while true; do
+    local v
+    v="$(prompt_value "$label" "$def")"
+    if [[ "$v" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+      printf "%s" "$v"
+      return 0
+    fi
+    echo "Неверный email, попробуйте снова."
+  done
+}
+
+prompt_bool() {
+  local label="$1"
+  local def="${2:-false}"
+  while true; do
+    local v
+    v="$(prompt_value "$label (true/false)" "$def")"
+    case "${v,,}" in
+      true|false) printf "%s" "${v,,}"; return 0 ;;
+    esac
+    echo "Введите true или false."
+  done
 }
 
 # detect latest tag from Docker Hub (if jq exists)
@@ -206,49 +244,28 @@ ensure_env_file() {
   ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
 
   ADMIN_EMAIL="${ADMIN_EMAIL:-$(get_env ADMIN_EMAIL)}"
-  ADMIN_EMAIL="${ADMIN_EMAIL:-admin@example.com}"
-
-  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"
-  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(random_hex64)}"
-
-  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"
-  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-http://nginx-proxy:8080}"
-
-  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"
-  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-False}"
-
-  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"
-  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-./prometheus/targets/windows_targets.json}"
-
-  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"
-  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-admin}"
-
-  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
-  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-13572468Ps}"
-
-  NODE_ENV="${NODE_ENV:-$(get_env NODE_ENV)}"
-  NODE_ENV="${NODE_ENV:-production}"
+  ADMIN_EMAIL="${ADMIN_EMAIL:-$(prompt_email "Введите email администратора" "admin@example.com")}"
 
   SMTP_HOST="${SMTP_HOST:-$(get_env SMTP_HOST)}"
-  SMTP_HOST="${SMTP_HOST:-smtp.example.com}"
+  SMTP_HOST="${SMTP_HOST:-$(prompt_value "SMTP_HOST" "smtp.example.com")}"
 
   SMTP_PORT="${SMTP_PORT:-$(get_env SMTP_PORT)}"
-  SMTP_PORT="${SMTP_PORT:-587}"
+  SMTP_PORT="${SMTP_PORT:-$(prompt_value "SMTP_PORT" "587")}"
 
   SMTP_SECURE="${SMTP_SECURE:-$(get_env SMTP_SECURE)}"
-  SMTP_SECURE="${SMTP_SECURE:-false}"
+  SMTP_SECURE="${SMTP_SECURE:-$(prompt_bool "SMTP_SECURE" "false")}"
 
   SMTP_USER="${SMTP_USER:-$(get_env SMTP_USER)}"
-  SMTP_USER="${SMTP_USER:-user}"
+  SMTP_USER="${SMTP_USER:-$(prompt_value "SMTP_USER" "user")}"
 
   SMTP_PASSWORD="${SMTP_PASSWORD:-$(get_env SMTP_PASSWORD)}"
-  SMTP_PASSWORD="${SMTP_PASSWORD:-password}"
+  SMTP_PASSWORD="${SMTP_PASSWORD:-$(prompt_value "SMTP_PASSWORD" "password")}"
 
   SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"
-  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-noreply@example.com}"
+  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(prompt_value "SMTP_FROM_EMAIL" "noreply@example.com")}"
 
   SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"
-  SMTP_FROM_NAME="${SMTP_FROM_NAME:-NITRINOnet Monitoring System}"
+  SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(prompt_value "SMTP_FROM_NAME" "NITRINOnet Monitoring System")}"
 
   ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(get_env ENCRYPTION_KEY)}"
   ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(random_hex64)}"
@@ -273,6 +290,19 @@ ensure_env_file() {
 
   DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?schema=public"
   REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+
+  # Interactive prompts for key values (only when running in TTY and defaults are in use)
+  if [ -t 0 ]; then
+    [[ "$ADMIN_EMAIL" == "admin@example.com" ]] && ADMIN_EMAIL="$(prompt_email "Введите email администратора" "$ADMIN_EMAIL")"
+
+    [[ "$SMTP_HOST" == "smtp.example.com" ]] && SMTP_HOST="$(prompt_value "SMTP host" "$SMTP_HOST")"
+    [[ "$SMTP_PORT" == "587" ]] && SMTP_PORT="$(prompt_value "SMTP port" "$SMTP_PORT")"
+    [[ "$SMTP_SECURE" == "false" ]] && SMTP_SECURE="$(prompt_bool "SMTP secure" "$SMTP_SECURE")"
+    [[ "$SMTP_USER" == "user" ]] && SMTP_USER="$(prompt_value "SMTP user" "$SMTP_USER")"
+    [[ "$SMTP_PASSWORD" == "password" ]] && SMTP_PASSWORD="$(prompt_value "SMTP password" "$SMTP_PASSWORD")"
+    [[ "$SMTP_FROM_EMAIL" == "noreply@example.com" ]] && SMTP_FROM_EMAIL="$(prompt_value "SMTP from email" "$SMTP_FROM_EMAIL")"
+    [[ "$SMTP_FROM_NAME" == "NITRINOnet Monitoring System" ]] && SMTP_FROM_NAME="$(prompt_value "SMTP from name" "$SMTP_FROM_NAME")"
+  fi
 
   tee "$ENV_FILE" >/dev/null <<EOF
 # Autogenerated by install.sh
