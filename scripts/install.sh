@@ -180,7 +180,32 @@ detect_latest_tag() {
 # Docker installation (simplified)
 # -----------------------------
 install_docker_if_needed() {
-  if ! command -v docker >/dev/null 2>&1; then
+  if command -v docker >/dev/null 2>&1; then
+    systemctl enable --now docker || true
+    usermod -aG docker "${SUDO_USER:-$USER}" || true
+    return
+  fi
+
+  . /etc/os-release 2>/dev/null || true
+  local distro_string="${ID:-} ${NAME:-} ${PRETTY_NAME:-} ${ID_LIKE:-}"
+  local is_astra=false
+  if echo "$distro_string" | tr '[:upper:]' '[:lower:]' | grep -q 'astra'; then
+    is_astra=true
+  fi
+
+  if [ "$is_astra" = true ]; then
+    echo "ℹ️  Обнаружена Astra Linux — пропускаю get.docker.com и использую репозитории дистрибутива."
+    apt-get update -y
+    apt-get install -y ca-certificates curl gnupg lsb-release || true
+
+    # Для Astra lsb_release -cs возвращает 1.7_x86-64 и т.п., поэтому очищаем возможные некорректные источники
+    if [ -f /etc/apt/sources.list.d/docker.list ]; then
+      mv /etc/apt/sources.list.d/docker.list /etc/apt/sources.list.d/docker.list.disabled 2>/dev/null || true
+    fi
+
+    # Актуальные пакеты Docker доступны как docker.io; docker-compose-plugin присутствует не во всех версиях
+    apt-get install -y docker.io docker-compose-plugin || apt-get install -y docker.io
+  else
     echo "🚀 Устанавливаю Docker и Compose через официальный скрипт..."
     set +e
     curl -fsSL https://get.docker.com | sh
@@ -188,47 +213,38 @@ install_docker_if_needed() {
     set -e
 
     if [ "$rc" -ne 0 ]; then
-      echo "⚠️  get.docker.com не завершился успешно. Перехожу к ручной установке (Debian/Astra)."
+      echo "⚠️  get.docker.com не завершился успешно. Перехожу к ручной установке (Debian-совместимая система)."
 
       apt-get update -y
       apt-get install -y ca-certificates curl gnupg lsb-release || true
 
-      # Определим, что это Astra
-      . /etc/os-release || true
-      is_astra=false
-      if echo "${ID:-} ${NAME:-} ${PRETTY_NAME:-}" | tr '[:upper:]' '[:lower:]' | grep -q 'astra'; then
-        is_astra=true
-      fi
-
-      # Определим корректный codename Debian
-      debian_codename=""
+      # Определяем корректный codename Debian
+      local debian_codename=""
       if command -v lsb_release >/dev/null 2>&1; then
         debian_codename="$(lsb_release -cs 2>/dev/null || true)"
       fi
-      if [[ -z "$debian_codename" ]]; then
+      if [[ -z "$debian_codename" || "$debian_codename" == "n/a" ]]; then
+        local dv
         dv="$(cut -d'.' -f1 /etc/debian_version 2>/dev/null || echo '')"
         case "$dv" in
           12) debian_codename="bookworm" ;;
           11) debian_codename="bullseye" ;;
           10) debian_codename="buster" ;;
-          *) debian_codename="buster" ;;
+          9) debian_codename="stretch" ;;
+          8) debian_codename="jessie" ;;
+          *) debian_codename="bullseye" ;;
         esac
       fi
 
-      if [ "$is_astra" = true ]; then
-        echo "ℹ️  Обнаружена Astra Linux; ставлю docker.io из репозиториев дистрибутива."
+      echo "ℹ️  Добавляю Docker APT репозиторий для Debian: $debian_codename"
+      install -m 0755 -d /etc/apt/keyrings || true
+      curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc || true
+      chmod a+r /etc/apt/keyrings/docker.asc || true
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${debian_codename} stable" > /etc/apt/sources.list.d/docker.list
+      apt-get update -y
+      if ! apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; then
+        echo "ℹ️  Пакеты docker-ce недоступны, ставлю docker.io."
         apt-get install -y docker.io
-      else
-        echo "ℹ️  Добавляю Docker APT репозиторий для Debian: $debian_codename"
-        install -m 0755 -d /etc/apt/keyrings || true
-        curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc || true
-        chmod a+r /etc/apt/keyrings/docker.asc || true
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${debian_codename} stable" > /etc/apt/sources.list.d/docker.list
-        apt-get update -y
-        if ! apt-get install -y docker-ce docker-ce-cli containerd.io; then
-          echo "ℹ️  Пакеты docker-ce недоступны, ставлю docker.io."
-          apt-get install -y docker.io
-        fi
       fi
     fi
   fi
