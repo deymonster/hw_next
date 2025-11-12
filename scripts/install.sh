@@ -182,11 +182,48 @@ detect_latest_tag() {
 install_docker_if_needed() {
   if ! command -v docker >/dev/null 2>&1; then
     echo "🚀 Устанавливаю Docker и Compose через официальный скрипт..."
+    set +e
     curl -fsSL https://get.docker.com | sh
+    rc=$?
+    set -e
+
+    if [ "$rc" -ne 0 ]; then
+      echo "⚠️  get.docker.com не завершился успешно. Перехожу к ручной установке (Debian/Astra)."
+
+      apt-get update -y
+      apt-get install -y ca-certificates curl gnupg || true
+
+      install -m 0755 -d /etc/apt/keyrings || true
+      curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc || true
+      chmod a+r /etc/apt/keyrings/docker.asc || true
+
+      # Определяем архитектуру и кодовое имя, по умолчанию используем buster
+      . /etc/os-release || true
+      codename="${VERSION_CODENAME:-buster}"
+      arch="$(dpkg --print-architecture 2>/dev/null || echo amd64)"
+
+      echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian ${codename} stable" > /etc/apt/sources.list.d/docker.list
+      apt-get update -y
+
+      # Пытаемся поставить docker-ce; если недоступно — берем docker.io из дистрибутива
+      if ! apt-get install -y docker-ce docker-ce-cli containerd.io; then
+        echo "ℹ️  Пакеты docker-ce недоступны, ставлю docker.io из репозитория дистрибутива."
+        apt-get install -y docker.io
+      fi
+    fi
   fi
 
   systemctl enable --now docker || true
   usermod -aG docker "${SUDO_USER:-$USER}" || true
+}
+
+# Фолбэк: ставим docker-compose бинарник, если нет плагина
+install_compose_cli_fallback() {
+  if ! command -v docker-compose >/dev/null 2>&1; then
+    echo "ℹ️  Устанавливаю docker-compose (CLI) как fallback..."
+    curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+  fi
 }
 
 detect_compose_cmd() {
@@ -195,8 +232,13 @@ detect_compose_cmd() {
   elif docker-compose version >/dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker-compose"
   else
-    echo "❌ Docker Compose не найден. Проверь установку Docker."
-    exit 1
+    install_compose_cli_fallback
+    if docker-compose version >/dev/null 2>&1; then
+      DOCKER_COMPOSE_CMD="docker-compose"
+    else
+      echo "❌ Docker Compose не найден. Проверь установку Docker/Compose."
+      exit 1
+    fi
   fi
 }
 
