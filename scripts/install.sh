@@ -177,15 +177,40 @@ detect_latest_tag() {
 }
 
 # -----------------------------
+# Astra Linux 1.7: ensure network repositories
+# -----------------------------
+ensure_astra_repos() {
+  echo "🔧 Настраиваю репозитории Astra Linux 1.7..."
+
+  # Отключаем CD-ROM источники
+  for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do
+    if [ -f "$f" ]; then
+      sed -i 's/^\s*deb\s\+cdrom:/# &/g' "$f" || true
+    fi
+  done
+
+  # Подключаем официальные сетевые репозитории Astra 1.7
+  mkdir -p /etc/apt/sources.list.d
+  tee /etc/apt/sources.list.d/astra.list >/dev/null <<'EOF'
+deb https://dl.astralinux.ru/astra/stable/1.7_x86-64/repository-main/ 1.7_x86-64 main contrib non-free
+deb https://dl.astralinux.ru/astra/stable/1.7_x86-64/repository-update/ 1.7_x86-64 main contrib non-free
+deb https://dl.astralinux.ru/astra/stable/1.7_x86-64/repository-base/ 1.7_x86-64 main contrib non-free
+deb https://dl.astralinux.ru/astra/stable/1.7_x86-64/repository-extended/ 1.7_x86-64 main contrib non-free
+deb https://dl.astralinux.ru/astra/stable/1.7_x86-64/repository-extended/ 1.7_x86-64 astra-ce
+EOF
+
+  # Обновляем индексы и ставим HTTPS поддержку для APT
+  apt-get update -y || true
+  apt-get install -y apt-transport-https ca-certificates || true
+  apt-get update -y || true
+
+  echo "✅ Репозитории Astra 1.7 настроены."
+}
+
+# -----------------------------
 # Docker installation (simplified)
 # -----------------------------
 install_docker_if_needed() {
-  if command -v docker >/dev/null 2>&1; then
-    systemctl enable --now docker || true
-    usermod -aG docker "${SUDO_USER:-$USER}" || true
-    return
-  fi
-
   . /etc/os-release 2>/dev/null || true
   local distro_string="${ID:-} ${NAME:-} ${PRETTY_NAME:-} ${ID_LIKE:-}"
   local is_astra=false
@@ -193,17 +218,15 @@ install_docker_if_needed() {
     is_astra=true
   fi
 
+  if command -v docker >/dev/null 2>&1; then
+    systemctl enable --now docker || true
+    usermod -aG docker "${SUDO_USER:-$USER}" || true
+    return
+  fi
+
   if [ "$is_astra" = true ]; then
-    echo "ℹ️  Обнаружена Astra Linux — пропускаю get.docker.com и использую репозитории дистрибутива."
-    apt-get update -y
-    apt-get install -y ca-certificates curl gnupg lsb-release || true
-
-    # Для Astra lsb_release -cs возвращает 1.7_x86-64 и т.п., поэтому очищаем возможные некорректные источники
-    if [ -f /etc/apt/sources.list.d/docker.list ]; then
-      mv /etc/apt/sources.list.d/docker.list /etc/apt/sources.list.d/docker.list.disabled 2>/dev/null || true
-    fi
-
-    # Актуальные пакеты Docker доступны как docker.io; docker-compose-plugin присутствует не во всех версиях
+    echo "ℹ️  Обнаружена Astra Linux — включаю сетевые репозитории и ставлю docker.io."
+    ensure_astra_repos
     apt-get install -y docker.io docker-compose-plugin || apt-get install -y docker.io
   else
     echo "🚀 Устанавливаю Docker и Compose через официальный скрипт..."
@@ -214,11 +237,10 @@ install_docker_if_needed() {
 
     if [ "$rc" -ne 0 ]; then
       echo "⚠️  get.docker.com не завершился успешно. Перехожу к ручной установке (Debian-совместимая система)."
-
+      rm -f /etc/apt/sources.list.d/docker.list || true
       apt-get update -y
       apt-get install -y ca-certificates curl gnupg lsb-release || true
 
-      # Определяем корректный codename Debian
       local debian_codename=""
       if command -v lsb_release >/dev/null 2>&1; then
         debian_codename="$(lsb_release -cs 2>/dev/null || true)"
@@ -230,13 +252,10 @@ install_docker_if_needed() {
           12) debian_codename="bookworm" ;;
           11) debian_codename="bullseye" ;;
           10) debian_codename="buster" ;;
-          9) debian_codename="stretch" ;;
-          8) debian_codename="jessie" ;;
-          *) debian_codename="bullseye" ;;
+          *)  debian_codename="bullseye" ;;
         esac
       fi
 
-      echo "ℹ️  Добавляю Docker APT репозиторий для Debian: $debian_codename"
       install -m 0755 -d /etc/apt/keyrings || true
       curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc || true
       chmod a+r /etc/apt/keyrings/docker.asc || true
@@ -249,6 +268,7 @@ install_docker_if_needed() {
     fi
   fi
 
+  # Запускаем Docker и добавляем пользователя в группу
   systemctl enable --now docker || true
   usermod -aG docker "${SUDO_USER:-$USER}" || true
 }
@@ -257,8 +277,9 @@ install_docker_if_needed() {
 install_compose_cli_fallback() {
   if ! command -v docker-compose >/dev/null 2>&1; then
     echo "ℹ️  Устанавливаю docker-compose (CLI) как fallback..."
-    curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    curl -fL "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
+    ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
   fi
 }
 
