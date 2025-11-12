@@ -663,6 +663,25 @@ compose_up() {
   ${DOCKER_COMPOSE_CMD} --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
 }
 
+print_summary() {
+  echo "------------------------------------------------------------"
+  echo "Данные БД:"
+  echo "  POSTGRES_DB=${POSTGRES_DB}"
+  echo "  POSTGRES_USER=${POSTGRES_USER}"
+  echo "  POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+  echo "  DATABASE_URL=${DATABASE_URL}"
+  echo "Redis:"
+  echo "  REDIS_PASSWORD=${REDIS_PASSWORD}"
+  echo "  REDIS_URL=${REDIS_URL}"
+  echo "Секреты (сохраните в безопасном месте):"
+  echo "  NEXTAUTH_SECRET=${NEXTAUTH_SECRET}"
+  echo "  ENCRYPTION_KEY=${ENCRYPTION_KEY}"
+  if [ -n "${AGENT_HANDSHAKE_KEY:-}" ]; then
+    echo "  AGENT_HANDSHAKE_KEY=${AGENT_HANDSHAKE_KEY}"
+  fi
+  echo "------------------------------------------------------------"
+}
+
 main() {
   compose_up
   echo "✅ Установка завершена!"
@@ -680,25 +699,7 @@ main() {
   echo "  INSTALL_DIR=${INSTALL_DIR}"
   echo "  ENV_FILE=${ENV_FILE}"
   echo "  NGINX_AUTH_FILE=${NGINX_AUTH_FILE}"
-}
-
-# function main() {
-  echo "------------------------------------------------------------"
-  echo "Данные БД:"
-  echo "  POSTGRES_DB=${POSTGRES_DB}"
-  echo "  POSTGRES_USER=${POSTGRES_USER}"
-  echo "  POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
-  echo "  DATABASE_URL=${DATABASE_URL}"
-  echo "Redis:"
-  echo "  REDIS_PASSWORD=${REDIS_PASSWORD}"
-  echo "  REDIS_URL=${REDIS_URL}"
-  echo "Секреты (сохраните в безопасном месте):"
-  echo "  NEXTAUTH_SECRET=${NEXTAUTH_SECRET}"
-  echo "  ENCRYPTION_KEY=${ENCRYPTION_KEY}"
-  if [ -n "${AGENT_HANDSHAKE_KEY:-}" ]; then
-    echo "  AGENT_HANDSHAKE_KEY=${AGENT_HANDSHAKE_KEY}"
-  fi
-  echo "------------------------------------------------------------"
+  print_summary
 }
 
 main "$@"
