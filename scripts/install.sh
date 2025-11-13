@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
       COMPOSE_FILE="$INSTALL_DIR/docker-compose.prod.yml"
       ENV_FILE="$INSTALL_DIR/.env.prod"
       NGINX_AUTH_DIR="$INSTALL_DIR/nginx/auth"
-      NGINX_AUTH_FILE="$NGINX_AUTH_DIR/.htpasswd"
+      NGINX_AUTH_FILE="$INSTALL_DIR/nginx/auth"
       shift 2 ;;
     --compose-url) COMPOSE_FILE_URL="$2"; shift 2 ;;
     --basic-auth-user) BASIC_AUTH_USER="$2"; shift 2 ;;
@@ -321,125 +321,10 @@ ensure_compose_file() {
   curl -fsSL "$COMPOSE_FILE_URL" -o "$COMPOSE_FILE"
 }
 
-ensure_env_file() {
-  # helper: получить значение переменной из существующего .env файла
-  get_env() {
-    local key="$1"
-    if [ -f "$ENV_FILE" ]; then
-      grep -E "^${key}=" "$ENV_FILE" | tail -n1 | cut -d= -f2- || true
-    fi
-  }
-
-  echo "Синхронизирую $ENV_FILE (добавлю недостающие переменные, существующие сохраню)..."
-
-  # Предустановленные значения пользователя/БД, если их нет
-  POSTGRES_USER="${POSTGRES_USER:-$(get_env POSTGRES_USER)}"
-  POSTGRES_USER="${POSTGRES_USER:-hw}"
-
-  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(get_env POSTGRES_PASSWORD)}"
-  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(random_string)}"
-
-  POSTGRES_DB="${POSTGRES_DB:-$(get_env POSTGRES_DB)}"
-  POSTGRES_DB="${POSTGRES_DB:-hw}"
-
-  POSTGRES_HOST="${POSTGRES_HOST:-$(get_env POSTGRES_HOST)}"
-  POSTGRES_HOST="${POSTGRES_HOST:-postgres_container}"
-
-  POSTGRES_PORT="${POSTGRES_PORT:-$(get_env POSTGRES_PORT)}"
-  POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-
-  REDIS_PASSWORD="${REDIS_PASSWORD:-$(get_env REDIS_PASSWORD)}"
-  REDIS_PASSWORD="${REDIS_PASSWORD:-$(random_string)}"
-
-  REDIS_HOST="${REDIS_HOST:-$(get_env REDIS_HOST)}"
-  REDIS_HOST="${REDIS_HOST:-redis_container}"
-
-  REDIS_PORT="${REDIS_PORT:-$(get_env REDIS_PORT)}"
-  REDIS_PORT="${REDIS_PORT:-6379}"
-
-  # Сборка строк подключения (устраняет 'unbound variable' при set -u)
-  DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
-  REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
-
-  # Fail-fast для критичных пустых значений
-  if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_DB" ]; then
-    echo "❌ Недостаёт POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB для сборки DATABASE_URL"
-    exit 1
-  fi
-  if [ -z "$REDIS_PASSWORD" ]; then
-    echo "❌ REDIS_PASSWORD пуст — Redis не поднимется с requirepass"
-    exit 1
-  fi
-
-  NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-$(get_env NEXT_PUBLIC_BASE_URL)}"
-  NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-http://${SERVER_IP}}"
-
-  NEXT_PUBLIC_SERVER_IP="${NEXT_PUBLIC_SERVER_IP:-$(get_env NEXT_PUBLIC_SERVER_IP)}"
-  NEXT_PUBLIC_SERVER_IP="${NEXT_PUBLIC_SERVER_IP:-${SERVER_IP}}"
-
-  NEXTAUTH_URL="${NEXTAUTH_URL:-$(get_env NEXTAUTH_URL)}"
-  NEXTAUTH_URL="${NEXTAUTH_URL:-http://${SERVER_IP}}"
-
-  NEXT_PUBLIC_URL="${NEXT_PUBLIC_URL:-$(get_env NEXT_PUBLIC_URL)}"
-  NEXT_PUBLIC_URL="${NEXT_PUBLIC_URL:-http://${SERVER_IP}}"
-
-  PROMETHEUS_PORT="${PROMETHEUS_PORT:-$(get_env PROMETHEUS_PORT)}"
-  PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
-
-  NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-$(get_env NODE_EXPORTER_PORT)}"
-  NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-9100}"
-
-  TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-$(get_env TELEGRAM_BOT_TOKEN)}"
-  TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-$(get_env TELEGRAM_CHAT_ID)}"
-  ADMIN_TELEGRAM_CHAT_ID="${ADMIN_TELEGRAM_CHAT_ID:-$(get_env ADMIN_TELEGRAM_CHAT_ID)}"
-
-  ADMIN_USERNAME="${ADMIN_USERNAME:-$(get_env ADMIN_USERNAME)}"
-  ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
-
-  ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(get_env ADMIN_PASSWORD)}"
-  ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin123}"
-
-  ADMIN_EMAIL="${ADMIN_EMAIL:-$(get_env ADMIN_EMAIL)}"
-  ADMIN_EMAIL="${ADMIN_EMAIL:-$(prompt_email "Введите email администратора" "admin@example.com")}"
-
-  SMTP_HOST="${SMTP_HOST:-$(get_env SMTP_HOST)}"
-  SMTP_HOST="${SMTP_HOST:-$(prompt_value "SMTP_HOST" "smtp.example.com")}"
-
-  SMTP_PORT="${SMTP_PORT:-$(get_env SMTP_PORT)}"
-  SMTP_PORT="${SMTP_PORT:-$(prompt_value "SMTP_PORT" "587")}"
-
-  SMTP_SECURE="${SMTP_SECURE:-$(get_env SMTP_SECURE)}"
-  SMTP_SECURE="${SMTP_SECURE:-$(prompt_bool "SMTP_SECURE" "false")}"
-
-  SMTP_USER="${SMTP_USER:-$(get_env SMTP_USER)}"
-  SMTP_USER="${SMTP_USER:-$(prompt_value "SMTP_USER" "user")}"
-
-  SMTP_PASSWORD="${SMTP_PASSWORD:-$(get_env SMTP_PASSWORD)}"
-  SMTP_PASSWORD="${SMTP_PASSWORD:-$(prompt_value "SMTP_PASSWORD" "password")}"
-
-  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"
-  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(prompt_value "SMTP_FROM_EMAIL" "noreply@example.com")}"
-
-  SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"
-  SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(prompt_value "SMTP_FROM_NAME" "NITRINOnet Monitoring System")}"
-
-  ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(get_env ENCRYPTION_KEY)}"
-  ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(random_hex64)}"
-
-  NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(get_env NEXTAUTH_SECRET)}"
-  NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(random_b64)}"
-
-  NEXT_PUBLIC_STORAGE_URL="${NEXT_PUBLIC_STORAGE_URL:-$(get_env NEXT_PUBLIC_STORAGE_URL)}"
-  NEXT_PUBLIC_STORAGE_URL="${NEXT_PUBLIC_STORAGE_URL:-http://${SERVER_IP}}"
-
-  NEXT_PUBLIC_UPLOADS_BASE_URL="${NEXT_PUBLIC_UPLOADS_BASE_URL:-$(get_env NEXT_PUBLIC_UPLOADS_BASE_URL)}"
-  NEXT_PUBLIC_UPLOADS_BASE_URL="${NEXT_PUBLIC_UPLOADS_BASE_URL:-http://${SERVER_IP}}"
-
-  PROMETHEUS_SHARED_CONFIG_PATH="${PROMETHEUS_SHARED_CONFIG_PATH:-$(get_env PROMETHEUS_SHARED_CONFIG_PATH)}"
-  PROMETHEUS_SHARED_CONFIG_PATH="${PROMETHEUS_SHARED_CONFIG_PATH:-/shared-config}"
-
+# ensure_env_file()
+# ... existing code ...
   PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-$(get_env PROMETHEUS_INTERNAL_URL)}"
-  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-http://prometheus_container:9090}"
+  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-http://prometheus:9090}"
 
   LICD_URL="${LICD_URL:-$(get_env LICD_URL)}"
   LICD_URL="${LICD_URL:-http://licd:8081}"
