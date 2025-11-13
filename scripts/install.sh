@@ -652,6 +652,51 @@ patch_compose_image_tags() {
 # -----------------------------
 # Run
 # -----------------------------
+is_installed() {
+  [ -f "$COMPOSE_FILE" ] && [ -f "$ENV_FILE" ] || return 1
+  local ids=""
+  if docker compose version >/dev/null 2>&1; then
+    ids="$(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps -q 2>/dev/null || true)"
+  elif docker-compose version >/dev/null 2>&1; then
+    ids="$(docker-compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps -q 2>/dev/null || true)"
+  fi
+  [ -n "$ids" ]
+}
+
+install_hwctl() {
+  mkdir -p "$INSTALL_DIR"
+  cat > "$INSTALL_DIR/hwctl.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
+ENV_FILE="${ENV_FILE:-$INSTALL_DIR/.env.prod}"
+COMPOSE_FILE="${COMPOSE_FILE:-$INSTALL_DIR/docker-compose.prod.yml}"
+
+if docker compose version >/dev/null 2>&1; then
+  DC="docker compose"
+elif docker-compose version >/dev/null 2>&1; then
+  DC="docker-compose"
+else
+  echo "❌ Docker Compose не найден."
+  exit 1
+fi
+
+action="${1:-}"
+case "$action" in
+  up)      sudo $DC --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d ;;
+  restart) sudo $DC --env-file "$ENV_FILE" -f "$COMPOSE_FILE" restart ;;
+  stop)    sudo $DC --env-file "$ENV_FILE" -f "$COMPOSE_FILE" stop ;;
+  down)    sudo $DC --env-file "$ENV_FILE" -f "$COMPOSE_FILE" down ;;
+  logs)    sudo $DC --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs -f ;;
+  ps)      sudo $DC --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps ;;
+  pull)    sudo $DC --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull ;;
+  *) echo "Usage: hwctl {up|restart|stop|down|logs|ps|pull}"; exit 1 ;;
+esac
+EOF
+  chmod +x "$INSTALL_DIR/hwctl.sh" || true
+  ln -sf "$INSTALL_DIR/hwctl.sh" /usr/local/bin/hwctl 2>/dev/null || true
+}
+
 compose_up() {
   install_docker_if_needed
   detect_compose_cmd
@@ -660,6 +705,7 @@ compose_up() {
   ensure_env_file
   prepare_dirs
   ensure_nginx_auth
+  install_hwctl
 
   echo "Pulling images and starting services..."
   cd "$(dirname "$COMPOSE_FILE")"
@@ -667,26 +713,33 @@ compose_up() {
   ${DOCKER_COMPOSE_CMD} --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
 }
 
-print_summary() {
-  echo "------------------------------------------------------------"
-  echo "Данные БД:"
-  echo "  POSTGRES_DB=${POSTGRES_DB}"
-  echo "  POSTGRES_USER=${POSTGRES_USER}"
-  echo "  POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
-  echo "  DATABASE_URL=${DATABASE_URL}"
-  echo "Redis:"
-  echo "  REDIS_PASSWORD=${REDIS_PASSWORD}"
-  echo "  REDIS_URL=${REDIS_URL}"
-  echo "Секреты (сохраните в безопасном месте):"
-  echo "  NEXTAUTH_SECRET=${NEXTAUTH_SECRET}"
-  echo "  ENCRYPTION_KEY=${ENCRYPTION_KEY}"
-  if [ -n "${AGENT_HANDSHAKE_KEY:-}" ]; then
-    echo "  AGENT_HANDSHAKE_KEY=${AGENT_HANDSHAKE_KEY}"
-  fi
-  echo "------------------------------------------------------------"
-}
-
 main() {
+  # Если уже установлен, не перетираем, даём управление
+  if is_installed; then
+    install_hwctl
+    echo "✅ Сервис уже установлен."
+    echo "------------------------------------------------------------"
+    echo "Расположение:"
+    echo "  INSTALL_DIR=${INSTALL_DIR}"
+    echo "  COMPOSE_FILE=${COMPOSE_FILE}"
+    echo "  ENV_FILE=${ENV_FILE}"
+    echo "Управление:"
+    echo "  Локальный скрипт: ${INSTALL_DIR}/hwctl.sh"
+    echo "  Глобальная команда: hwctl {up|restart|stop|down|logs|ps|pull}"
+    echo "Примеры:"
+    echo "  hwctl ps"
+    echo "  hwctl restart"
+    echo "------------------------------------------------------------"
+    if [ -t 0 ]; then
+      local do_restart
+      do_restart="$(prompt_bool "Перезапустить сейчас?" "false")"
+      if [ "$do_restart" = "true" ]; then
+        hwctl restart || ${DOCKER_COMPOSE_CMD} --env-file "$ENV_FILE" -f "$COMPOSE_FILE" restart
+      fi
+    fi
+    exit 0
+  fi
+
   compose_up
   echo "✅ Установка завершена!"
   echo "------------------------------------------------------------"
@@ -695,15 +748,35 @@ main() {
   echo "  Nginx:      http://${SERVER_IP}:80"
   echo "  Prometheus: http://${SERVER_IP}:8080"
   echo "------------------------------------------------------------"
-  echo "Проверка логов:"
-  echo "  ${DOCKER_COMPOSE_CMD} -f \"$COMPOSE_FILE\" logs -f"
-  echo "------------------------------------------------------------"
   echo "Установлено:"
   echo "  SERVER_IP=${SERVER_IP}"
   echo "  INSTALL_DIR=${INSTALL_DIR}"
+  echo "  COMPOSE_FILE=${COMPOSE_FILE}"
   echo "  ENV_FILE=${ENV_FILE}"
   echo "  NGINX_AUTH_FILE=${NGINX_AUTH_FILE}"
-  print_summary
+  echo "------------------------------------------------------------"
+  echo "Управление:"
+  echo "  Локальный скрипт: ${INSTALL_DIR}/hwctl.sh"
+  echo "  Глобальная команда: hwctl {up|restart|stop|down|logs|ps|pull}"
+  echo "Примеры:"
+  echo "  hwctl ps"
+  echo "  hwctl restart"
+  echo "------------------------------------------------------------"
+  echo "Данные БД:"
+  echo "  POSTGRES_DB=${POSTGRES_DB:-}"
+  echo "  POSTGRES_USER=${POSTGRES_USER:-}"
+  echo "  POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}"
+  echo "  DATABASE_URL=${DATABASE_URL:-}"
+  echo "Redis:"
+  echo "  REDIS_PASSWORD=${REDIS_PASSWORD:-}"
+  echo "  REDIS_URL=${REDIS_URL:-}"
+  echo "Секреты (сохраните в безопасном месте):"
+  echo "  NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-}"
+  echo "  ENCRYPTION_KEY=${ENCRYPTION_KEY:-}"
+  if [ -n "${AGENT_HANDSHAKE_KEY:-}" ]; then
+    echo "  AGENT_HANDSHAKE_KEY=${AGENT_HANDSHAKE_KEY}"
+  fi
+  echo "------------------------------------------------------------"
 }
 
 main "$@"

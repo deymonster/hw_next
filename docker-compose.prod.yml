@@ -14,6 +14,7 @@ services:
             - hw-network
         env_file:
             - .env.prod
+        restart: unless-stopped
 
     db-migrate:
         image: deymonster/hw-monitor:v1.0.0-alpha.8 # Обновить версию
@@ -82,6 +83,7 @@ services:
         depends_on:
             - prometheus-config-init
             - licd
+        restart: unless-stopped
 
     alertmanager:
         image: prom/alertmanager:v0.26.0
@@ -97,6 +99,7 @@ services:
             - hw-network
         depends_on:
             - prometheus-config-init
+        restart: unless-stopped
 
     nginx-proxy:
         image: deymonster/hw-monitor-nginx-combined:v1.0.0-alpha.7
@@ -126,6 +129,7 @@ services:
             - redis_data:/data
         networks:
             - hw-network
+        restart: unless-stopped
 
     licd:
         image: deymonster/hw-monitor-licd:v1.0.0-alpha.7
