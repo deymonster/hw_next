@@ -321,65 +321,275 @@ ensure_compose_file() {
   curl -fsSL "$COMPOSE_FILE_URL" -o "$COMPOSE_FILE"
 }
 
-# ensure_env_file()
-# ... existing code ...
-  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-$(get_env PROMETHEUS_INTERNAL_URL)}"
-  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-http://prometheus:9090}"
+# Read value from existing env file (if present)
+get_env() {
+  local key="$1"
+  if [ -f "$ENV_FILE" ]; then
+    grep -E "^${key}=" "$ENV_FILE" | tail -n1 | cut -d= -f2- || true
+  fi
+}
 
-  LICD_URL="${LICD_URL:-$(get_env LICD_URL)}"
-  LICD_URL="${LICD_URL:-http://licd:8081}"
+ensure_env_file() {
+  mkdir -p "$(dirname "$ENV_FILE")"
 
-  # ДОБАВЛЕНО: безопасные дефолты для недостающих переменных Prometheus/агента/Node
-  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"
-  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-http://nginx-proxy:8080}"
+  if [ -f "$ENV_FILE" ]; then
+    echo "♻️  Найден существующий $ENV_FILE — значения будут переиспользованы при генерации"
+  else
+    echo "🆕 Создаю файл окружения: $ENV_FILE"
+  fi
 
-  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"
-  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-False}"
+  local val
 
-  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"
-  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-./prometheus/targets/windows_targets.json}"
+  val="${NEXT_PUBLIC_SERVER_IP:-$(get_env NEXT_PUBLIC_SERVER_IP)}"
+  if [ -z "$val" ]; then
+    val="$SERVER_IP"
+  fi
+  NEXT_PUBLIC_SERVER_IP="$val"
 
-  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"
-  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$BASIC_AUTH_USER}"
+  local default_base="http://${NEXT_PUBLIC_SERVER_IP}"
 
-  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
-  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$BASIC_AUTH_PASSWORD}"
+  val="${NEXT_PUBLIC_BASE_URL:-$(get_env NEXT_PUBLIC_BASE_URL)}"
+  if [ -z "$val" ]; then
+    val="$default_base"
+  fi
+  NEXT_PUBLIC_BASE_URL="$val"
 
-    AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(get_env AGENT_HANDSHAKE_KEY)}"
-    AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(random_string)}"
+  val="${NEXT_PUBLIC_URL:-$(get_env NEXT_PUBLIC_URL)}"
+  if [ -z "$val" ]; then
+    val="$NEXT_PUBLIC_BASE_URL"
+  fi
+  NEXT_PUBLIC_URL="$val"
 
-    HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"
-    HANDSHAKE_KEY="${HANDSHAKE_KEY:-$AGENT_HANDSHAKE_KEY}"
+  val="${NEXTAUTH_URL:-$(get_env NEXTAUTH_URL)}"
+  if [ -z "$val" ]; then
+    val="$NEXT_PUBLIC_URL"
+  fi
+  NEXTAUTH_URL="$val"
 
-    NODE_ENV="${NODE_ENV:-$(get_env NODE_ENV)}"
-    NODE_ENV="${NODE_ENV:-production}"
+  val="${NEXT_PUBLIC_STORAGE_URL:-$(get_env NEXT_PUBLIC_STORAGE_URL)}"
+  if [ -z "$val" ]; then
+    val="$NEXT_PUBLIC_BASE_URL"
+  fi
+  NEXT_PUBLIC_STORAGE_URL="$val"
 
-  # SMTP и ADMIN_EMAIL делаем необязательными: не спрашиваем интерактивно, оставляем пустые/существующие
-  SMTP_HOST="${SMTP_HOST:-$(get_env SMTP_HOST)}"
-  SMTP_PORT="${SMTP_PORT:-$(get_env SMTP_PORT)}"
-  SMTP_SECURE="${SMTP_SECURE:-$(get_env SMTP_SECURE)}"
-  SMTP_SECURE="${SMTP_SECURE:-false}"
-  SMTP_USER="${SMTP_USER:-$(get_env SMTP_USER)}"
-  SMTP_PASSWORD="${SMTP_PASSWORD:-$(get_env SMTP_PASSWORD)}"
-  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"
-  SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"
+  val="${NEXT_PUBLIC_UPLOADS_BASE_URL:-$(get_env NEXT_PUBLIC_UPLOADS_BASE_URL)}"
+  if [ -z "$val" ]; then
+    val="$NEXT_PUBLIC_STORAGE_URL"
+  fi
+  NEXT_PUBLIC_UPLOADS_BASE_URL="$val"
 
-  ADMIN_EMAIL="${ADMIN_EMAIL:-$(get_env ADMIN_EMAIL)}"
-  ADMIN_EMAIL="${ADMIN_EMAIL:-admin@example.com}"
+  val="${NEXT_PUBLIC_MEDIA_URL:-$(get_env NEXT_PUBLIC_MEDIA_URL)}"
+  if [ -z "$val" ]; then
+    val="$NEXT_PUBLIC_UPLOADS_BASE_URL"
+  fi
+  NEXT_PUBLIC_MEDIA_URL="$val"
 
-  # УБРАНО: интерактивные промпты по SMTP/ADMIN_EMAIL
-  # if [ -t 0 ]; then
-  #   [[ "$ADMIN_EMAIL" == "admin@example.com" ]] && ADMIN_EMAIL="$(prompt_email "Введите email администратора" "$ADMIN_EMAIL")"
-  #   [[ "$SMTP_HOST" == "smtp.example.com" ]] && SMTP_HOST="$(prompt_value "SMTP host" "$SMTP_HOST")"
-  #   [[ "$SMTP_PORT" == "587" ]] && SMTP_PORT="$(prompt_value "SMTP port" "$SMTP_PORT")"
-  #   [[ "$SMTP_SECURE" == "false" ]] && SMTP_SECURE="$(prompt_bool "SMTP secure" "$SMTP_SECURE")"
-  #   [[ "$SMTP_USER" == "user" ]] && SMTP_USER="$(prompt_value "SMTP user" "$SMTP_USER")"
-  #   [[ "$SMTP_PASSWORD" == "password" ]] && SMTP_PASSWORD="$(prompt_value "SMTP password" "$SMTP_PASSWORD")"
-  #   [[ "$SMTP_FROM_EMAIL" == "noreply@example.com" ]] && SMTP_FROM_EMAIL="$(prompt_value "SMTP from email" "$SMTP_FROM_EMAIL")"
-  #   [[ "$SMTP_FROM_NAME" == "NITRINOnet Monitoring System" ]] && SMTP_FROM_NAME="$(prompt_value "SMTP from name" "$SMTP_FROM_NAME")"
-  # fi
+  val="${POSTGRES_USER:-$(get_env POSTGRES_USER)}"
+  if [ -z "$val" ]; then
+    val="hw_monitor"
+  fi
+  POSTGRES_USER="$val"
 
-  tee "$ENV_FILE" >/dev/null <<EOF
+  val="${POSTGRES_PASSWORD:-$(get_env POSTGRES_PASSWORD)}"
+  if [ -z "$val" ]; then
+    val="$(random_hex64)"
+  fi
+  POSTGRES_PASSWORD="$val"
+
+  val="${POSTGRES_DB:-$(get_env POSTGRES_DB)}"
+  if [ -z "$val" ]; then
+    val="hw_monitor"
+  fi
+  POSTGRES_DB="$val"
+
+  val="${POSTGRES_HOST:-$(get_env POSTGRES_HOST)}"
+  if [ -z "$val" ]; then
+    val="postgres"
+  fi
+  POSTGRES_HOST="$val"
+
+  val="${POSTGRES_PORT:-$(get_env POSTGRES_PORT)}"
+  if [ -z "$val" ]; then
+    val="5432"
+  fi
+  POSTGRES_PORT="$val"
+
+  DATABASE_URL="${DATABASE_URL:-$(get_env DATABASE_URL)}"
+  if [ -z "$DATABASE_URL" ]; then
+    DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
+  fi
+
+  val="${PROMETHEUS_PORT:-$(get_env PROMETHEUS_PORT)}"
+  if [ -z "$val" ]; then
+    val="9090"
+  fi
+  PROMETHEUS_PORT="$val"
+
+  val="${PROMETHEUS_INTERNAL_URL:-$(get_env PROMETHEUS_INTERNAL_URL)}"
+  if [ -z "$val" ]; then
+    val="http://prometheus:${PROMETHEUS_PORT}"
+  fi
+  PROMETHEUS_INTERNAL_URL="$val"
+
+  val="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"
+  if [ -z "$val" ]; then
+    val="http://nginx-proxy:8080"
+  fi
+  PROMETHEUS_PROXY_URL="$val"
+
+  val="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"
+  if [ -z "$val" ]; then
+    val="False"
+  fi
+  PROMETHEUS_USE_SSL="$val"
+
+  val="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"
+  if [ -z "$val" ]; then
+    val="./prometheus/targets/windows_targets.json"
+  fi
+  PROMETHEUS_TARGETS_PATH="$val"
+
+  val="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"
+  if [ -z "$val" ]; then
+    val="$BASIC_AUTH_USER"
+  fi
+  PROMETHEUS_USERNAME="$val"
+
+  val="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
+  if [ -z "$val" ]; then
+    val="$BASIC_AUTH_PASSWORD"
+  fi
+  PROMETHEUS_AUTH_PASSWORD="$val"
+
+  val="${NODE_EXPORTER_PORT:-$(get_env NODE_EXPORTER_PORT)}"
+  if [ -z "$val" ]; then
+    val="9100"
+  fi
+  NODE_EXPORTER_PORT="$val"
+
+  val="${TELEGRAM_BOT_TOKEN:-$(get_env TELEGRAM_BOT_TOKEN)}"
+  TELEGRAM_BOT_TOKEN="$val"
+
+  val="${TELEGRAM_CHAT_ID:-$(get_env TELEGRAM_CHAT_ID)}"
+  TELEGRAM_CHAT_ID="$val"
+
+  val="${ADMIN_TELEGRAM_CHAT_ID:-$(get_env ADMIN_TELEGRAM_CHAT_ID)}"
+  ADMIN_TELEGRAM_CHAT_ID="$val"
+
+  val="${ADMIN_USERNAME:-$(get_env ADMIN_USERNAME)}"
+  if [ -z "$val" ]; then
+    val="admin"
+  fi
+  ADMIN_USERNAME="$val"
+
+  val="${ADMIN_PASSWORD:-$(get_env ADMIN_PASSWORD)}"
+  if [ -z "$val" ]; then
+    val="$(random_hex64)"
+  fi
+  ADMIN_PASSWORD="$val"
+
+  local existing_admin_email
+  existing_admin_email="$(get_env ADMIN_EMAIL)"
+  if [ -n "$existing_admin_email" ] && [ "$ADMIN_EMAIL" = "admin@example.com" ]; then
+    ADMIN_EMAIL="$existing_admin_email"
+  fi
+  if [ -z "$ADMIN_EMAIL" ]; then
+    ADMIN_EMAIL="admin@example.com"
+  fi
+
+  val="${AGENT_HANDSHAKE_KEY:-$(get_env AGENT_HANDSHAKE_KEY)}"
+  if [ -z "$val" ]; then
+    val="$(random_hex64)"
+  fi
+  AGENT_HANDSHAKE_KEY="$val"
+
+  val="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"
+  if [ -z "$val" ]; then
+    val="$AGENT_HANDSHAKE_KEY"
+  fi
+  HANDSHAKE_KEY="$val"
+
+  val="${NODE_ENV:-$(get_env NODE_ENV)}"
+  if [ -z "$val" ]; then
+    val="production"
+  fi
+  NODE_ENV="$val"
+
+  val="${SMTP_HOST:-$(get_env SMTP_HOST)}"
+  if [ -z "$val" ]; then
+    val="smtp.example.com"
+  fi
+  SMTP_HOST="$val"
+
+  val="${SMTP_PORT:-$(get_env SMTP_PORT)}"
+  if [ -z "$val" ]; then
+    val="587"
+  fi
+  SMTP_PORT="$val"
+
+  val="${SMTP_SECURE:-$(get_env SMTP_SECURE)}"
+  if [ -z "$val" ]; then
+    val="false"
+  fi
+  SMTP_SECURE="$val"
+
+  val="${SMTP_USER:-$(get_env SMTP_USER)}"
+  SMTP_USER="$val"
+
+  val="${SMTP_PASSWORD:-$(get_env SMTP_PASSWORD)}"
+  SMTP_PASSWORD="$val"
+
+  val="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"
+  SMTP_FROM_EMAIL="$val"
+
+  val="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"
+  if [ -z "$val" ]; then
+    val="HW Monitor"
+  fi
+  SMTP_FROM_NAME="$val"
+
+  val="${ENCRYPTION_KEY:-$(get_env ENCRYPTION_KEY)}"
+  if [ -z "$val" ]; then
+    val="$(random_hex64)"
+  fi
+  ENCRYPTION_KEY="$val"
+
+  val="${REDIS_PASSWORD:-$(get_env REDIS_PASSWORD)}"
+  if [ -z "$val" ]; then
+    val="$(random_hex64)"
+  fi
+  REDIS_PASSWORD="$val"
+
+  val="${REDIS_HOST:-$(get_env REDIS_HOST)}"
+  if [ -z "$val" ]; then
+    val="redis"
+  fi
+  REDIS_HOST="$val"
+
+  val="${REDIS_PORT:-$(get_env REDIS_PORT)}"
+  if [ -z "$val" ]; then
+    val="6379"
+  fi
+  REDIS_PORT="$val"
+
+  REDIS_URL="${REDIS_URL:-$(get_env REDIS_URL)}"
+  if [ -z "$REDIS_URL" ]; then
+    REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+  fi
+
+  val="${NEXTAUTH_SECRET:-$(get_env NEXTAUTH_SECRET)}"
+  if [ -z "$val" ]; then
+    val="$(random_b64)"
+  fi
+  NEXTAUTH_SECRET="$val"
+
+  val="${LICD_URL:-$(get_env LICD_URL)}"
+  if [ -z "$val" ]; then
+    val="http://licd:8081"
+  fi
+  LICD_URL="$val"
+
+  cat >"$ENV_FILE" <<EOF
 # Autogenerated by install.sh
 # Base URLs
 NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
@@ -397,6 +607,7 @@ DATABASE_URL=${DATABASE_URL}
 
 # Prometheus
 PROMETHEUS_PORT=${PROMETHEUS_PORT}
+PROMETHEUS_INTERNAL_URL=${PROMETHEUS_INTERNAL_URL}
 PROMETHEUS_PROXY_URL=${PROMETHEUS_PROXY_URL}
 PROMETHEUS_USE_SSL=${PROMETHEUS_USE_SSL}
 PROMETHEUS_TARGETS_PATH=${PROMETHEUS_TARGETS_PATH}
@@ -417,11 +628,11 @@ ADMIN_PASSWORD=${ADMIN_PASSWORD}
 ADMIN_EMAIL=${ADMIN_EMAIL}
 
 # Windows agents
-HANDSHAKE_KEY=\${AGENT_HANDSHAKE_KEY}
-HANDSHAKE_KEY=\${AGENT_HANDSHAKE_KEY}
+AGENT_HANDSHAKE_KEY=${AGENT_HANDSHAKE_KEY}
+HANDSHAKE_KEY=${HANDSHAKE_KEY}
 
 # Node
-NODE_ENV=\${NODE_ENV}
+NODE_ENV=${NODE_ENV}
 
 # SMTP
 SMTP_HOST=${SMTP_HOST}
@@ -430,7 +641,7 @@ SMTP_SECURE=${SMTP_SECURE}
 SMTP_USER=${SMTP_USER}
 SMTP_PASSWORD=${SMTP_PASSWORD}
 SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
-SMTP_FROM_NAME=${SMTP_FROM_NAME}
+SMTP_FROM_NAME="${SMTP_FROM_NAME}"
 
 # Encryption
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
@@ -447,6 +658,7 @@ NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 # Storage
 NEXT_PUBLIC_STORAGE_URL=${NEXT_PUBLIC_STORAGE_URL}
 NEXT_PUBLIC_UPLOADS_BASE_URL=${NEXT_PUBLIC_UPLOADS_BASE_URL}
+NEXT_PUBLIC_MEDIA_URL=${NEXT_PUBLIC_MEDIA_URL}
 
 # LICD
 LICD_URL=${LICD_URL}
