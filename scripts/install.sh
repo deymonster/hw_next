@@ -291,6 +291,7 @@ install_compose_cli_fallback() {
   fi
 }
 
+# Определяем корректную команду для Compose: "docker compose" или "docker-compose"
 detect_compose_cmd() {
   if docker compose version >/dev/null 2>&1; then
     DOCKER_COMPOSE_CMD="docker compose"
@@ -308,8 +309,9 @@ detect_compose_cmd() {
 }
 
 # -----------------------------
-# Files & environment setup
+# Files & environment setup: добавляем get_env и восстанавливаем ensure_env_file()
 # -----------------------------
+# Обеспечиваем наличие compose-файла: создаём директорию и при необходимости скачиваем из COMPOSE_FILE_URL
 ensure_compose_file() {
   mkdir -p "$(dirname "$COMPOSE_FILE")"
   if [ -f "$COMPOSE_FILE" ]; then
@@ -321,275 +323,159 @@ ensure_compose_file() {
   curl -fsSL "$COMPOSE_FILE_URL" -o "$COMPOSE_FILE"
 }
 
-# Read value from existing env file (if present)
+# Чтение значения из уже существующего ENV_FILE (если есть)
+# Позволяет подтянуть ранее записанные значения при повторном запуске скрипта.
 get_env() {
   local key="$1"
+  local val=""
   if [ -f "$ENV_FILE" ]; then
-    grep -E "^${key}=" "$ENV_FILE" | tail -n1 | cut -d= -f2- || true
+    val="$(grep -E "^${key}=" "$ENV_FILE" | tail -n1 | cut -d= -f2-)"
   fi
+  printf "%s" "$val"
 }
 
+# Формирование .env.prod с дефолтами и интерактивными SMTP промптами (без ADMIN_EMAIL)
+# Главная функция подготовки окружения: задаёт базовые URL, креды БД/Redis, параметры Prometheus/nginx, секреты NextAuth и пр.
 ensure_env_file() {
   mkdir -p "$(dirname "$ENV_FILE")"
 
-  if [ -f "$ENV_FILE" ]; then
-    echo "♻️  Найден существующий $ENV_FILE — значения будут переиспользованы при генерации"
-  else
-    echo "🆕 Создаю файл окружения: $ENV_FILE"
-  fi
+  # Base URLs
+  # Базовые адреса для Next.js: публичный IP/домен, базовый URL фронтенда и адрес для auth
+  NEXT_PUBLIC_SERVER_IP="${NEXT_PUBLIC_SERVER_IP:-$(get_env NEXT_PUBLIC_SERVER_IP)}"
+  NEXT_PUBLIC_SERVER_IP="${NEXT_PUBLIC_SERVER_IP:-$SERVER_IP}"
 
-  local val
+  NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-$(get_env NEXT_PUBLIC_BASE_URL)}"
+  NEXT_PUBLIC_BASE_URL="${NEXT_PUBLIC_BASE_URL:-http://${NEXT_PUBLIC_SERVER_IP}:3000}"
 
-  val="${NEXT_PUBLIC_SERVER_IP:-$(get_env NEXT_PUBLIC_SERVER_IP)}"
-  if [ -z "$val" ]; then
-    val="$SERVER_IP"
-  fi
-  NEXT_PUBLIC_SERVER_IP="$val"
+  NEXT_PUBLIC_URL="${NEXT_PUBLIC_URL:-$(get_env NEXT_PUBLIC_URL)}"
+  NEXT_PUBLIC_URL="${NEXT_PUBLIC_URL:-$NEXT_PUBLIC_BASE_URL}"
 
-  local default_base="http://${NEXT_PUBLIC_SERVER_IP}"
+  NEXTAUTH_URL="${NEXTAUTH_URL:-$(get_env NEXTAUTH_URL)}"
+  NEXTAUTH_URL="${NEXTAUTH_URL:-$NEXT_PUBLIC_BASE_URL}"
 
-  val="${NEXT_PUBLIC_BASE_URL:-$(get_env NEXT_PUBLIC_BASE_URL)}"
-  if [ -z "$val" ]; then
-    val="$default_base"
-  fi
-  NEXT_PUBLIC_BASE_URL="$val"
+  NEXT_PUBLIC_STORAGE_URL="${NEXT_PUBLIC_STORAGE_URL:-$(get_env NEXT_PUBLIC_STORAGE_URL)}"
+  NEXT_PUBLIC_STORAGE_URL="${NEXT_PUBLIC_STORAGE_URL:-http://${NEXT_PUBLIC_SERVER_IP}:8081}"
 
-  val="${NEXT_PUBLIC_URL:-$(get_env NEXT_PUBLIC_URL)}"
-  if [ -z "$val" ]; then
-    val="$NEXT_PUBLIC_BASE_URL"
-  fi
-  NEXT_PUBLIC_URL="$val"
+  NEXT_PUBLIC_UPLOADS_BASE_URL="${NEXT_PUBLIC_UPLOADS_BASE_URL:-$(get_env NEXT_PUBLIC_UPLOADS_BASE_URL)}"
+  NEXT_PUBLIC_UPLOADS_BASE_URL="${NEXT_PUBLIC_UPLOADS_BASE_URL:-${NEXT_PUBLIC_STORAGE_URL}/uploads}"
 
-  val="${NEXTAUTH_URL:-$(get_env NEXTAUTH_URL)}"
-  if [ -z "$val" ]; then
-    val="$NEXT_PUBLIC_URL"
-  fi
-  NEXTAUTH_URL="$val"
-
-  val="${NEXT_PUBLIC_STORAGE_URL:-$(get_env NEXT_PUBLIC_STORAGE_URL)}"
-  if [ -z "$val" ]; then
-    val="$NEXT_PUBLIC_BASE_URL"
-  fi
-  NEXT_PUBLIC_STORAGE_URL="$val"
-
-  val="${NEXT_PUBLIC_UPLOADS_BASE_URL:-$(get_env NEXT_PUBLIC_UPLOADS_BASE_URL)}"
-  if [ -z "$val" ]; then
-    val="$NEXT_PUBLIC_STORAGE_URL"
-  fi
-  NEXT_PUBLIC_UPLOADS_BASE_URL="$val"
-
-  val="${NEXT_PUBLIC_MEDIA_URL:-$(get_env NEXT_PUBLIC_MEDIA_URL)}"
-  if [ -z "$val" ]; then
-    val="$NEXT_PUBLIC_UPLOADS_BASE_URL"
-  fi
-  NEXT_PUBLIC_MEDIA_URL="$val"
-
-  val="${POSTGRES_USER:-$(get_env POSTGRES_USER)}"
-  if [ -z "$val" ]; then
-    val="hw_monitor"
-  fi
-  POSTGRES_USER="$val"
-
-  val="${POSTGRES_PASSWORD:-$(get_env POSTGRES_PASSWORD)}"
-  if [ -z "$val" ]; then
-    val="$(random_hex64)"
-  fi
-  POSTGRES_PASSWORD="$val"
-
-  val="${POSTGRES_DB:-$(get_env POSTGRES_DB)}"
-  if [ -z "$val" ]; then
-    val="hw_monitor"
-  fi
-  POSTGRES_DB="$val"
-
-  val="${POSTGRES_HOST:-$(get_env POSTGRES_HOST)}"
-  if [ -z "$val" ]; then
-    val="postgres"
-  fi
-  POSTGRES_HOST="$val"
-
-  val="${POSTGRES_PORT:-$(get_env POSTGRES_PORT)}"
-  if [ -z "$val" ]; then
-    val="5432"
-  fi
-  POSTGRES_PORT="$val"
-
+  # PostgreSQL
+  # Создаём креды для Postgres и собираем корректный DATABASE_URL
+  POSTGRES_USER="${POSTGRES_USER:-$(get_env POSTGRES_USER)}"
+  POSTGRES_USER="${POSTGRES_USER:-postgres}"
+  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(get_env POSTGRES_PASSWORD)}"
+  POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(random_string)}"
+  POSTGRES_DB="${POSTGRES_DB:-$(get_env POSTGRES_DB)}"
+  POSTGRES_DB="${POSTGRES_DB:-hw_monitor}"
+  POSTGRES_HOST="${POSTGRES_HOST:-$(get_env POSTGRES_HOST)}"
+  POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
+  POSTGRES_PORT="${POSTGRES_PORT:-$(get_env POSTGRES_PORT)}"
+  POSTGRES_PORT="${POSTGRES_PORT:-5432}"
   DATABASE_URL="${DATABASE_URL:-$(get_env DATABASE_URL)}"
-  if [ -z "$DATABASE_URL" ]; then
-    DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
-  fi
+  DATABASE_URL="${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
 
-  val="${PROMETHEUS_PORT:-$(get_env PROMETHEUS_PORT)}"
-  if [ -z "$val" ]; then
-    val="9090"
-  fi
-  PROMETHEUS_PORT="$val"
-
-  val="${PROMETHEUS_INTERNAL_URL:-$(get_env PROMETHEUS_INTERNAL_URL)}"
-  if [ -z "$val" ]; then
-    val="http://prometheus:${PROMETHEUS_PORT}"
-  fi
-  PROMETHEUS_INTERNAL_URL="$val"
-
-  val="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"
-  if [ -z "$val" ]; then
-    val="http://nginx-proxy:8080"
-  fi
-  PROMETHEUS_PROXY_URL="$val"
-
-  val="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"
-  if [ -z "$val" ]; then
-    val="False"
-  fi
-  PROMETHEUS_USE_SSL="$val"
-
-  val="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"
-  if [ -z "$val" ]; then
-    val="./prometheus/targets/windows_targets.json"
-  fi
-  PROMETHEUS_TARGETS_PATH="$val"
-
-  val="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"
-  if [ -z "$val" ]; then
-    val="$BASIC_AUTH_USER"
-  fi
-  PROMETHEUS_USERNAME="$val"
-
-  val="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
-  if [ -z "$val" ]; then
-    val="$BASIC_AUTH_PASSWORD"
-  fi
-  PROMETHEUS_AUTH_PASSWORD="$val"
-
-  val="${NODE_EXPORTER_PORT:-$(get_env NODE_EXPORTER_PORT)}"
-  if [ -z "$val" ]; then
-    val="9100"
-  fi
-  NODE_EXPORTER_PORT="$val"
-
-  val="${TELEGRAM_BOT_TOKEN:-$(get_env TELEGRAM_BOT_TOKEN)}"
-  TELEGRAM_BOT_TOKEN="$val"
-
-  val="${TELEGRAM_CHAT_ID:-$(get_env TELEGRAM_CHAT_ID)}"
-  TELEGRAM_CHAT_ID="$val"
-
-  val="${ADMIN_TELEGRAM_CHAT_ID:-$(get_env ADMIN_TELEGRAM_CHAT_ID)}"
-  ADMIN_TELEGRAM_CHAT_ID="$val"
-
-  val="${ADMIN_USERNAME:-$(get_env ADMIN_USERNAME)}"
-  if [ -z "$val" ]; then
-    val="admin"
-  fi
-  ADMIN_USERNAME="$val"
-
-  val="${ADMIN_PASSWORD:-$(get_env ADMIN_PASSWORD)}"
-  if [ -z "$val" ]; then
-    val="$(random_hex64)"
-  fi
-  ADMIN_PASSWORD="$val"
-
-  local existing_admin_email
-  existing_admin_email="$(get_env ADMIN_EMAIL)"
-  if [ -n "$existing_admin_email" ] && [ "$ADMIN_EMAIL" = "admin@example.com" ]; then
-    ADMIN_EMAIL="$existing_admin_email"
-  fi
-  if [ -z "$ADMIN_EMAIL" ]; then
-    ADMIN_EMAIL="admin@example.com"
-  fi
-
-  val="${AGENT_HANDSHAKE_KEY:-$(get_env AGENT_HANDSHAKE_KEY)}"
-  if [ -z "$val" ]; then
-    val="$(random_hex64)"
-  fi
-  AGENT_HANDSHAKE_KEY="$val"
-
-  val="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"
-  if [ -z "$val" ]; then
-    val="$AGENT_HANDSHAKE_KEY"
-  fi
-  HANDSHAKE_KEY="$val"
-
-  val="${NODE_ENV:-$(get_env NODE_ENV)}"
-  if [ -z "$val" ]; then
-    val="production"
-  fi
-  NODE_ENV="$val"
-
-  val="${SMTP_HOST:-$(get_env SMTP_HOST)}"
-  if [ -z "$val" ]; then
-    val="smtp.example.com"
-  fi
-  SMTP_HOST="$val"
-
-  val="${SMTP_PORT:-$(get_env SMTP_PORT)}"
-  if [ -z "$val" ]; then
-    val="587"
-  fi
-  SMTP_PORT="$val"
-
-  val="${SMTP_SECURE:-$(get_env SMTP_SECURE)}"
-  if [ -z "$val" ]; then
-    val="false"
-  fi
-  SMTP_SECURE="$val"
-
-  val="${SMTP_USER:-$(get_env SMTP_USER)}"
-  SMTP_USER="$val"
-
-  val="${SMTP_PASSWORD:-$(get_env SMTP_PASSWORD)}"
-  SMTP_PASSWORD="$val"
-
-  val="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"
-  SMTP_FROM_EMAIL="$val"
-
-  val="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"
-  if [ -z "$val" ]; then
-    val="HW Monitor"
-  fi
-  SMTP_FROM_NAME="$val"
-
-  val="${ENCRYPTION_KEY:-$(get_env ENCRYPTION_KEY)}"
-  if [ -z "$val" ]; then
-    val="$(random_hex64)"
-  fi
-  ENCRYPTION_KEY="$val"
-
-  val="${REDIS_PASSWORD:-$(get_env REDIS_PASSWORD)}"
-  if [ -z "$val" ]; then
-    val="$(random_hex64)"
-  fi
-  REDIS_PASSWORD="$val"
-
-  val="${REDIS_HOST:-$(get_env REDIS_HOST)}"
-  if [ -z "$val" ]; then
-    val="redis"
-  fi
-  REDIS_HOST="$val"
-
-  val="${REDIS_PORT:-$(get_env REDIS_PORT)}"
-  if [ -z "$val" ]; then
-    val="6379"
-  fi
-  REDIS_PORT="$val"
-
+  # Redis
+  # Генерируем пароль Redis и корректный REDIS_URL
+  REDIS_PASSWORD="${REDIS_PASSWORD:-$(get_env REDIS_PASSWORD)}"
+  REDIS_PASSWORD="${REDIS_PASSWORD:-$(random_string)}"
+  REDIS_HOST="${REDIS_HOST:-$(get_env REDIS_HOST)}"
+  REDIS_HOST="${REDIS_HOST:-redis}"
+  REDIS_PORT="${REDIS_PORT:-$(get_env REDIS_PORT)}"
+  REDIS_PORT="${REDIS_PORT:-6379}"
   REDIS_URL="${REDIS_URL:-$(get_env REDIS_URL)}"
-  if [ -z "$REDIS_URL" ]; then
-    REDIS_URL="redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+  REDIS_URL="${REDIS_URL:-redis://:${REDIS_PASSWORD}@${REDIS_HOST}:${REDIS_PORT}"
+
+  # Prometheus / Node Exporter
+  # Порты и базовые URL для Prometheus (внутренний), его прокси через nginx и путь к таргетам
+  PROMETHEUS_PORT="${PROMETHEUS_PORT:-$(get_env PROMETHEUS_PORT)}"
+  PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
+
+  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-$(get_env PROMETHEUS_INTERNAL_URL)}"
+  PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-http://prometheus:9090}"
+
+  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"
+  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-http://nginx-proxy:8080}"
+
+  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"
+  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-False}"
+
+  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"
+  PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-./prometheus/targets/windows_targets.json}"
+
+  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"
+  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$BASIC_AUTH_USER}"
+
+  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
+  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$BASIC_AUTH_PASSWORD}"
+
+  NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-$(get_env NODE_EXPORTER_PORT)}"
+  NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-9100}"
+
+  # LICD
+  # Адрес внутреннего сервиса лицензий
+  LICD_URL="${LICD_URL:-$(get_env LICD_URL)}"
+  LICD_URL="${LICD_URL:-http://licd:8081}"
+
+  # Windows agents
+  # Ключ рукопожатия для Windows-агентов. HANDSHAKE_KEY = AGENT_HANDSHAKE_KEY.
+  AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(get_env AGENT_HANDSHAKE_KEY)}"
+  AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(random_string)}"
+  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"
+  HANDSHAKE_KEY="${HANDSHAKE_KEY:-$AGENT_HANDSHAKE_KEY}"
+
+  # Node & Admin creds (без email)
+  # NODE_ENV = production; базовые креды админа для первичного входа (admin/admin)
+  NODE_ENV="${NODE_ENV:-$(get_env NODE_ENV)}"
+  NODE_ENV="${NODE_ENV:-production}"
+  ADMIN_USERNAME="${ADMIN_USERNAME:-$(get_env ADMIN_USERNAME)}"
+  ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+  ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(get_env ADMIN_PASSWORD)}"
+  ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
+
+  # Telegram
+  # Параметры уведомлений в Telegram (опционально)
+  TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-$(get_env TELEGRAM_BOT_TOKEN)}"
+  TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-$(get_env TELEGRAM_CHAT_ID)}"
+  ADMIN_TELEGRAM_CHAT_ID="${ADMIN_TELEGRAM_CHAT_ID:-$(get_env ADMIN_TELEGRAM_CHAT_ID)}"
+
+  # SMTP (значения из env + интерактив, если TTY)
+  # SMTP-параметры для отправки почты (дефолты указаны; при интерактивном запуске можно их заменить через промпты)
+  SMTP_HOST="${SMTP_HOST:-$(get_env SMTP_HOST)}"
+  SMTP_HOST="${SMTP_HOST:-smtp.example.com}"
+  SMTP_PORT="${SMTP_PORT:-$(get_env SMTP_PORT)}"
+  SMTP_PORT="${SMTP_PORT:-587}"
+  SMTP_SECURE="${SMTP_SECURE:-$(get_env SMTP_SECURE)}"
+  SMTP_SECURE="${SMTP_SECURE:-false}"
+  SMTP_USER="${SMTP_USER:-$(get_env SMTP_USER)}"
+  SMTP_USER="${SMTP_USER:-user}"
+  SMTP_PASSWORD="${SMTP_PASSWORD:-$(get_env SMTP_PASSWORD)}"
+  SMTP_PASSWORD="${SMTP_PASSWORD:-password}"
+  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"
+  SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-noreply@example.com}"
+  SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"
+  SMTP_FROM_NAME="${SMTP_FROM_NAME:-NITRINOnet Monitoring System}"
+
+  if [ -t 0 ]; then
+    # Интерактивное уточнение SMTP-параметров только если запущено с TTY
+    [[ "$SMTP_HOST" == "smtp.example.com" ]] && SMTP_HOST="$(prompt_value "SMTP host" "$SMTP_HOST")"
+    [[ "$SMTP_PORT" == "587" ]] && SMTP_PORT="$(prompt_value "SMTP port" "$SMTP_PORT")"
+    [[ "$SMTP_SECURE" == "false" ]] && SMTP_SECURE="$(prompt_bool "SMTP secure (TLS/SSL?)" "$SMTP_SECURE")"
+    [[ "$SMTP_USER" == "user" ]] && SMTP_USER="$(prompt_value "SMTP user" "$SMTP_USER")"
+    [[ "$SMTP_PASSWORD" == "password" ]] && SMTP_PASSWORD="$(prompt_value "SMTP password" "$SMTP_PASSWORD")"
+    [[ "$SMTP_FROM_EMAIL" == "noreply@example.com" ]] && SMTP_FROM_EMAIL="$(prompt_value "SMTP from email" "$SMTP_FROM_EMAIL")"
+    [[ "$SMTP_FROM_NAME" == "NITRINOnet Monitoring System" ]] && SMTP_FROM_NAME="$(prompt_value "SMTP from name" "$SMTP_FROM_NAME")"
   fi
 
-  val="${NEXTAUTH_SECRET:-$(get_env NEXTAUTH_SECRET)}"
-  if [ -z "$val" ]; then
-    val="$(random_b64)"
-  fi
-  NEXTAUTH_SECRET="$val"
+  # Secrets
+  # Генерируем секреты NextAuth и ключ шифрования, если они не заданы
+  NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(get_env NEXTAUTH_SECRET)}"
+  NEXTAUTH_SECRET="${NEXTAUTH_SECRET:-$(random_hex64)}"
+  ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(get_env ENCRYPTION_KEY)}"
+  ENCRYPTION_KEY="${ENCRYPTION_KEY:-$(random_hex64)}"
 
-  val="${LICD_URL:-$(get_env LICD_URL)}"
-  if [ -z "$val" ]; then
-    val="http://licd:8081"
-  fi
-  LICD_URL="$val"
-
-  cat >"$ENV_FILE" <<EOF
+  # Запись env
+  # Формируем .env.prod целиком через tee (перезаписываем файл)
+  tee "$ENV_FILE" >/dev/null <<EOF
 # Autogenerated by install.sh
 # Base URLs
 NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
@@ -607,12 +493,12 @@ DATABASE_URL=${DATABASE_URL}
 
 # Prometheus
 PROMETHEUS_PORT=${PROMETHEUS_PORT}
-PROMETHEUS_INTERNAL_URL=${PROMETHEUS_INTERNAL_URL}
 PROMETHEUS_PROXY_URL=${PROMETHEUS_PROXY_URL}
 PROMETHEUS_USE_SSL=${PROMETHEUS_USE_SSL}
 PROMETHEUS_TARGETS_PATH=${PROMETHEUS_TARGETS_PATH}
 PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
 PROMETHEUS_AUTH_PASSWORD=${PROMETHEUS_AUTH_PASSWORD}
+PROMETHEUS_INTERNAL_URL=${PROMETHEUS_INTERNAL_URL}
 
 # Node Exporter
 NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT}
@@ -625,7 +511,6 @@ ADMIN_TELEGRAM_CHAT_ID=${ADMIN_TELEGRAM_CHAT_ID}
 # Admin
 ADMIN_USERNAME=${ADMIN_USERNAME}
 ADMIN_PASSWORD=${ADMIN_PASSWORD}
-ADMIN_EMAIL=${ADMIN_EMAIL}
 
 # Windows agents
 AGENT_HANDSHAKE_KEY=${AGENT_HANDSHAKE_KEY}
@@ -641,7 +526,7 @@ SMTP_SECURE=${SMTP_SECURE}
 SMTP_USER=${SMTP_USER}
 SMTP_PASSWORD=${SMTP_PASSWORD}
 SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL}
-SMTP_FROM_NAME="${SMTP_FROM_NAME}"
+SMTP_FROM_NAME=${SMTP_FROM_NAME}
 
 # Encryption
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
@@ -658,19 +543,20 @@ NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 # Storage
 NEXT_PUBLIC_STORAGE_URL=${NEXT_PUBLIC_STORAGE_URL}
 NEXT_PUBLIC_UPLOADS_BASE_URL=${NEXT_PUBLIC_UPLOADS_BASE_URL}
-NEXT_PUBLIC_MEDIA_URL=${NEXT_PUBLIC_MEDIA_URL}
 
 # LICD
 LICD_URL=${LICD_URL}
 EOF
 }
 
+# Подготавливаем директории хранения логов/загрузок и выставляем права
 prepare_dirs() {
   mkdir -p "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads"
   chown -R 1001:65533 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" 2>/dev/null || true
   chmod -R 777 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" || true
 }
 
+# Готовим .htpasswd для nginx basic-auth на основе кредов из env
 ensure_nginx_auth() {
   mkdir -p "$NGINX_AUTH_DIR"
 
@@ -684,7 +570,7 @@ ensure_nginx_auth() {
     echo "Создаю .htpasswd (basic auth для nginx)..."
   fi
 
-  # Генерация хеша для Basic Auth
+  # Генерация хеша для Basic Auth: предпочитаем openssl -apr1; иначе htpasswd; иначе простой base64 (как фолбэк)
   if command -v openssl >/dev/null 2>&1; then
     HASH=$(openssl passwd -apr1 "$pass")
   elif command -v htpasswd >/dev/null 2>&1; then
@@ -700,6 +586,7 @@ ensure_nginx_auth() {
 # -----------------------------
 # Image tag patching
 # -----------------------------
+# Патчим теги образов в docker-compose.yml на основе NEXT_TAG/NGINX_TAG/LICD_TAG (включая режим "auto")
 patch_compose_image_tags() {
   # Resolve image tags; support "auto" via Docker Hub
   NEXT_TAG="${NEXT_TAG:-latest}"
@@ -739,6 +626,7 @@ patch_compose_image_tags() {
   local tmp
   tmp="$(mktemp)"
 
+  # Через sed заменяем теги образов в compose-файле и атомарно применяем замену
   sed -E \
     -e "s|(image:\s*deymonster/hw-monitor:)[^[:space:]]+|\1${NEXT_TAG}|g" \
     -e "s|(image:\s*deymonster/hw-monitor-nginx-combined:)[^[:space:]]+|\1${NGINX_TAG}|g" \
@@ -749,6 +637,7 @@ patch_compose_image_tags() {
 # -----------------------------
 # Run
 # -----------------------------
+# Проверяем, установлен ли сервис: наличие файлов и есть ли запущенные контейнеры по compose ps -q
 is_installed() {
   [ -f "$COMPOSE_FILE" ] && [ -f "$ENV_FILE" ] || return 1
   local ids=""
@@ -760,6 +649,7 @@ is_installed() {
   [ -n "$ids" ]
 }
 
+# Устанавливаем вспомогательную утилиту hwctl для управления сервисом (up/restart/stop/down/logs/ps/pull)
 install_hwctl() {
   mkdir -p "$INSTALL_DIR"
   cat > "$INSTALL_DIR/hwctl.sh" <<'EOF'
@@ -794,6 +684,8 @@ EOF
   ln -sf "$INSTALL_DIR/hwctl.sh" /usr/local/bin/hwctl 2>/dev/null || true
 }
 
+# Основная логика запуска сборки и сервисов: ставим Docker, определяем команду Compose,
+# подготавливаем файлы/окружение, патчим теги образов, генерируем .htpasswd и запускаем
 compose_up() {
   install_docker_if_needed
   detect_compose_cmd
@@ -810,6 +702,8 @@ compose_up() {
   ${DOCKER_COMPOSE_CMD} --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d
 }
 
+# Точка входа: если сервис уже установлен — выводим контрольную информацию и предлагаем рестарт.
+# Иначе запускаем установку.
 main() {
   # Если уже установлен, не перетираем, даём управление
   if is_installed; then
@@ -828,6 +722,7 @@ main() {
     echo "  hwctl restart"
     echo "------------------------------------------------------------"
     if [ -t 0 ]; then
+      # При интерактивном запуске спрашиваем, перезапустить ли сейчас
       local do_restart
       do_restart="$(prompt_bool "Перезапустить сейчас?" "false")"
       if [ "$do_restart" = "true" ]; then
@@ -876,5 +771,6 @@ main() {
   echo "------------------------------------------------------------"
 }
 
+# Запускаем точку входа
 main "$@"
 
