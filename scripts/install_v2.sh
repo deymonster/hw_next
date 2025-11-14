@@ -219,7 +219,7 @@ ensure_env_file() {
   local LICD_URL="${LICD_URL:-$(get_env LICD_URL)}"; [[ -z "$LICD_URL" ]] && LICD_URL="http://licd:8081"
 
   # Windows agents handshake
-  local AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(get_env AGENT_HANDSHAKE_KEY)}"; [[ -z "$AGENT_HANDSHAKE_KEY" ]] && AGENT_HANDSHAKE_KEY="$(random_string)"
+  local AGENT_HANDSHAKE_KEY="${AGENT_HANDSHAKE_KEY:-$(get_env AGENT_HANDSHAKE_KEY)}"; [[ -z "$AGENT_HANDSHAKE_KEY" ]] && AGENT_HANDSHAKE_KEY="VERY_SECRET_KEY"
   local HANDSHAKE_KEY="${HANDSHAKE_KEY:-$(get_env HANDSHAKE_KEY)}"; [[ -z "$HANDSHAKE_KEY" ]] && HANDSHAKE_KEY="$AGENT_HANDSHAKE_KEY"
 
   # Node/Admin
