@@ -251,6 +251,16 @@ ensure_env_file() {
     read -rp "Отправитель (имя) [${SMTP_FROM_NAME}]: " v; SMTP_FROM_NAME="${v:-$SMTP_FROM_NAME}"
   fi
 
+  # Secrets (безопасная инициализация при set -u)
+  local NEXTAUTH_SECRET_FROM_FILE; NEXTAUTH_SECRET_FROM_FILE="$(get_env NEXTAUTH_SECRET)"
+  local ENCRYPTION_KEY_FROM_FILE; ENCRYPTION_KEY_FROM_FILE="$(get_env ENCRYPTION_KEY)"
+  local NEXTAUTH_SECRET="${NEXTAUTH_SECRET-}"
+  local ENCRYPTION_KEY="${ENCRYPTION_KEY-}"
+  [[ -z "$NEXTAUTH_SECRET" ]] && NEXTAUTH_SECRET="$NEXTAUTH_SECRET_FROM_FILE"
+  [[ -z "$ENCRYPTION_KEY" ]] && ENCRYPTION_KEY="$ENCRYPTION_KEY_FROM_FILE"
+  [[ -z "$NEXTAUTH_SECRET" ]] && NEXTAUTH_SECRET="$(random_hex64)"
+  [[ -z "$ENCRYPTION_KEY" ]] && ENCRYPTION_KEY="$(random_hex64)"
+
   # Write env file
   tee "$env_path" >/dev/null <<EOF
 # Сгенерировано установщиком v2.1
@@ -400,7 +410,14 @@ get_env() {
   local key="$1"
   local env_path="${INSTALL_DIR%/}/${ENV_FILE}"
   [[ -f "$env_path" ]] || { printf ""; return 0; }
-  grep -E "^${key}=" "$env_path" | tail -n1 | cut -d= -f2-
+  local line
+  line="$(grep -E "^${key}=" "$env_path" | tail -n1 || true)"
+  line="${line#*=}"
+  # strip CR (если файл случайно в CRLF)
+  line="${line%$'\r'}"
+  # снимем обрамляющие кавычки, если есть
+  line="${line%\"}"; line="${line#\"}"
+  printf "%s" "$line"
 }
 
 usage() {
