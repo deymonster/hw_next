@@ -45,7 +45,7 @@ while [[ $# -gt 0 ]]; do
       COMPOSE_FILE="$INSTALL_DIR/docker-compose.prod.yml"
       ENV_FILE="$INSTALL_DIR/.env.prod"
       NGINX_AUTH_DIR="$INSTALL_DIR/nginx/auth"
-      NGINX_AUTH_FILE="$INSTALL_DIR/nginx/auth"
+      NGINX_AUTH_FILE="$INSTALL_DIR/nginx/auth/.htpasswd"
       shift 2 ;;
     --compose-url) COMPOSE_FILE_URL="$2"; shift 2 ;;
     --basic-auth-user) BASIC_AUTH_USER="$2"; shift 2 ;;
@@ -127,39 +127,7 @@ random_b64() {
 }
 
 # interactive input helpers
-prompt_value() {
-  local label="$1"
-  local def="${2:-}"
-  read -r -p "$label [${def}]: " val
-  printf "%s" "${val:-$def}"
-}
 
-prompt_email() {
-  local label="$1"
-  local def="${2:-}"
-  while true; do
-    local v
-    v="$(prompt_value "$label" "$def")"
-    if [[ "$v" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
-      printf "%s" "$v"
-      return 0
-    fi
-    echo "Неверный email, попробуйте снова."
-  done
-}
-
-prompt_bool() {
-  local label="$1"
-  local def="${2:-false}"
-  while true; do
-    local v
-    v="$(prompt_value "$label (true/false)" "$def")"
-    case "${v,,}" in
-      true|false) printf "%s" "${v,,}"; return 0 ;;
-    esac
-    echo "Введите true или false."
-  done
-}
 
 # detect latest tag from Docker Hub (if jq exists)
 detect_latest_tag() {
@@ -652,7 +620,7 @@ is_installed() {
 # Устанавливаем вспомогательную утилиту hwctl для управления сервисом (up/restart/stop/down/logs/ps/pull)
 install_hwctl() {
   mkdir -p "$INSTALL_DIR"
-  cat > "$INSTALL_DIR/hwctl.sh" <<'EOF'
+  cat > "$INSTALL_DIR/hwctl.sh"<<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
