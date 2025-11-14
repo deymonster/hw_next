@@ -17,14 +17,6 @@ NEXT_TAG="${NEXT_TAG:-}"
 NGINX_TAG="${NGINX_TAG:-}"
 LICD_TAG="${LICD_TAG:-}"
 
-BASIC_AUTH_USER="${BASIC_AUTH_USER:-}"
-BASIC_AUTH_PASS="${BASIC_AUTH_PASS:-}"
-
-NGINX_AUTH_FILE=""
-set_nginx_auth_file() {
-  NGINX_AUTH_FILE="${INSTALL_DIR%/}/nginx/auth/.htpasswd"
-}
-
 log() { printf "\033[1;32m[+] %s\033[0m\n" "$*"; }
 warn() { printf "\033[1;33m[!] %s\033[0m\n" "$*"; }
 err() { printf "\033[1;31m[×] %s\033[0m\n" "$*" >&2; }
@@ -144,8 +136,7 @@ ensure_docker() {
 }
 
 prepare_dirs() {
-  set_nginx_auth_file
-  mkdir -p "${INSTALL_DIR%/}/nginx/auth" "${INSTALL_DIR%/}/data" "${INSTALL_DIR%/}/logs"
+  mkdir -p "${INSTALL_DIR%/}/nginx/tls" "${INSTALL_DIR%/}/data" "${INSTALL_DIR%/}/logs"
 }
 
 fetch_compose_if_needed() {
@@ -208,11 +199,13 @@ ensure_env_file() {
   # Prometheus / Node Exporter
   local PROMETHEUS_PORT="${PROMETHEUS_PORT:-$(get_env PROMETHEUS_PORT)}"; [[ -z "$PROMETHEUS_PORT" ]] && PROMETHEUS_PORT="9090"
   local PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-$(get_env PROMETHEUS_INTERNAL_URL)}"; [[ -z "$PROMETHEUS_INTERNAL_URL" ]] && PROMETHEUS_INTERNAL_URL="http://prometheus:9090"
-  local PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"; [[ -z "$PROMETHEUS_PROXY_URL" ]] && PROMETHEUS_PROXY_URL="http://nginx-proxy:8080"
-  local PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"; [[ -z "$PROMETHEUS_USE_SSL" ]] && PROMETHEUS_USE_SSL="False"
+  local PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"; [[ -z "$PROMETHEUS_PROXY_URL" ]] && PROMETHEUS_PROXY_URL="https://nginx-proxy:8443"
   local PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"; [[ -z "$PROMETHEUS_TARGETS_PATH" ]] && PROMETHEUS_TARGETS_PATH="./prometheus/targets/windows_targets.json"
-  local PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"; [[ -z "$PROMETHEUS_USERNAME" ]] && PROMETHEUS_USERNAME="${BASIC_AUTH_USER:-admin}"
-  local PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"; [[ -z "$PROMETHEUS_AUTH_PASSWORD" ]] && PROMETHEUS_AUTH_PASSWORD="${BASIC_AUTH_PASS:-admin}"
+  local PROMETHEUS_TLS_CERT_PATH="${PROMETHEUS_TLS_CERT_PATH:-$(get_env PROMETHEUS_TLS_CERT_PATH)}"; [[ -z "$PROMETHEUS_TLS_CERT_PATH" ]] && PROMETHEUS_TLS_CERT_PATH="./certs/prometheus/client.crt"
+  local PROMETHEUS_TLS_KEY_PATH="${PROMETHEUS_TLS_KEY_PATH:-$(get_env PROMETHEUS_TLS_KEY_PATH)}"; [[ -z "$PROMETHEUS_TLS_KEY_PATH" ]] && PROMETHEUS_TLS_KEY_PATH="./certs/prometheus/client.key"
+  local PROMETHEUS_TLS_CA_PATH="${PROMETHEUS_TLS_CA_PATH:-$(get_env PROMETHEUS_TLS_CA_PATH)}"; [[ -z "$PROMETHEUS_TLS_CA_PATH" ]] && PROMETHEUS_TLS_CA_PATH="./certs/prometheus/ca.crt"
+  local PROMETHEUS_TLS_KEY_PASSPHRASE="${PROMETHEUS_TLS_KEY_PASSPHRASE:-$(get_env PROMETHEUS_TLS_KEY_PASSPHRASE)}"
+  local PROMETHEUS_TLS_REJECT_UNAUTHORIZED="${PROMETHEUS_TLS_REJECT_UNAUTHORIZED:-$(get_env PROMETHEUS_TLS_REJECT_UNAUTHORIZED)}"; [[ -z "$PROMETHEUS_TLS_REJECT_UNAUTHORIZED" ]] && PROMETHEUS_TLS_REJECT_UNAUTHORIZED="true"
   local NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-$(get_env NODE_EXPORTER_PORT)}"; [[ -z "$NODE_EXPORTER_PORT" ]] && NODE_EXPORTER_PORT="9100"
 
   # LICD
@@ -282,11 +275,13 @@ DATABASE_URL=${DATABASE_URL}
 # Prometheus
 PROMETHEUS_PORT=${PROMETHEUS_PORT}
 PROMETHEUS_PROXY_URL=${PROMETHEUS_PROXY_URL}
-PROMETHEUS_USE_SSL=${PROMETHEUS_USE_SSL}
 PROMETHEUS_TARGETS_PATH=${PROMETHEUS_TARGETS_PATH}
-PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
-PROMETHEUS_AUTH_PASSWORD=${PROMETHEUS_AUTH_PASSWORD}
 PROMETHEUS_INTERNAL_URL=${PROMETHEUS_INTERNAL_URL}
+PROMETHEUS_TLS_CERT_PATH=${PROMETHEUS_TLS_CERT_PATH}
+PROMETHEUS_TLS_KEY_PATH=${PROMETHEUS_TLS_KEY_PATH}
+PROMETHEUS_TLS_CA_PATH=${PROMETHEUS_TLS_CA_PATH}
+PROMETHEUS_TLS_KEY_PASSPHRASE=${PROMETHEUS_TLS_KEY_PASSPHRASE}
+PROMETHEUS_TLS_REJECT_UNAUTHORIZED=${PROMETHEUS_TLS_REJECT_UNAUTHORIZED}
 
 # Node Exporter
 NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT}
@@ -331,29 +326,6 @@ EOF
 
   # Also provide .env for compose files that reference env_file: .env
   cp "$env_path" "${INSTALL_DIR%/}/.env" 2>/dev/null || true
-}
-
-generate_htpasswd_if_needed() {
-  if [[ -n "$BASIC_AUTH_USER" && -n "$BASIC_AUTH_PASS" ]]; then
-    require_cmd openssl
-    local auth_dir; auth_dir="$(dirname "$NGINX_AUTH_FILE")"
-    mkdir -p "$auth_dir"
-    local hash; hash=$(openssl passwd -apr1 "$BASIC_AUTH_PASS")
-    echo "${BASIC_AUTH_USER}:${hash}" > "$NGINX_AUTH_FILE"
-    chmod 640 "$NGINX_AUTH_FILE"
-    log "Создан файл базовой аутентификации: $NGINX_AUTH_FILE"
-  else
-    local auth_dir; auth_dir="$(dirname "$NGINX_AUTH_FILE")"
-    mkdir -p "$auth_dir"
-    if [[ ! -f "$NGINX_AUTH_FILE" ]]; then
-      : > "$NGINX_AUTH_FILE"
-      chmod 644 "$NGINX_AUTH_FILE"
-      warn "BASIC_AUTH_USER/BASIC_AUTH_PASS не заданы; создал пустой файл $NGINX_AUTH_FILE. Nginx запустится, но Basic Auth не будет работать."
-    else
-      chmod 644 "$NGINX_AUTH_FILE"
-      warn "BASIC_AUTH_USER/BASIC_AUTH_PASS не заданы; использую существующий $NGINX_AUTH_FILE."
-    fi
-  fi
 }
 
 patch_image_tags_if_requested() {
@@ -446,9 +418,6 @@ usage() {
   --nginx-tag TAG              Override Nginx image tag
   --licd-tag TAG               Override licd image tag
 
-  --basic-auth-user USER       Username for nginx basic auth (optional)
-  --basic-auth-pass PASS       Password for nginx basic auth (optional)
-
 Notes:
   * Astra Linux определяется автоматически; приоритет — пакет docker.io.
     Если недоступен, используется официальный репозиторий Docker для Debian (bullseye).
@@ -469,16 +438,12 @@ main() {
       --nginx-tag) NGINX_TAG="$2"; shift 2;;
       --licd-tag) LICD_TAG="$2"; shift 2;;
 
-      --basic-auth-user) BASIC_AUTH_USER="$2"; shift 2;;
-      --basic-auth-pass) BASIC_AUTH_PASS="$2"; shift 2;;
-
       -h|--help) usage; exit 0;;
       *) err "Неизвестная опция: $1"; usage; exit 2;;
     esac
   done
 
   prompt_if_empty INSTALL_DIR "Каталог установки" "/opt/hw-monitor"
-  set_nginx_auth_file
 
   log "Проверяю/устанавливаю Docker и Compose"
   ensure_docker
@@ -491,9 +456,6 @@ main() {
 
   log "Подготавлию файл окружения (интерактивно, если нет --non-interactive)"
   ensure_env_file
-
-  log "Генерирую .htpasswd, если заданы креды"
-  generate_htpasswd_if_needed
 
   log "Патчу теги образов (если заданы)"
   patch_image_tags_if_requested || true

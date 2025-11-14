@@ -75,10 +75,10 @@ services:
             dockerfile: Dockerfile.nginx-combined
         container_name: nginx_prometheus_proxy
         ports:
-            - '8080:8080'
+            - '8443:8443'
 
         volumes:
-            - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
+            - ./nginx/tls:/etc/nginx/tls:ro
             - ./nginx/conf.d/upstream.conf:/etc/nginx/conf.d/upstream.conf
         networks:
             - hw-network

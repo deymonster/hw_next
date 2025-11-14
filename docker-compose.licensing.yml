@@ -105,10 +105,10 @@ services:
         container_name: nginx_combined
         ports:
             - '0.0.0.0:80:80'
-            - '0.0.0.0:8080:8080'
+            - '0.0.0.0:8443:8443'
         volumes:
             - ./nginx_combined/conf.d:/etc/nginx/conf.d
-            - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
+            - ./nginx/tls:/etc/nginx/tls:ro
             - ./storage/uploads:/usr/share/nginx/html/uploads
         networks:
             - hw-network

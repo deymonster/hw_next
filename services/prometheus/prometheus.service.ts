@@ -1,4 +1,6 @@
 import { EventEmitter } from 'events'
+import fetch, { type RequestInit } from 'cross-fetch'
+import type { Agent as HttpsAgent } from 'https'
 
 import { LoggerService, LogLevel } from '../logger/logger.interface'
 import { Logger } from '../logger/logger.service'
@@ -16,6 +18,8 @@ import { PrometheusParser } from './prometheus.parser'
 
 // import { STATIC, DYNAMIC, PROCESS } from '@/mocks/prometheus.mock';
 
+type FetchRequestInit = RequestInit & { agent?: HttpsAgent }
+
 /**
  * Сервис для работы с Prometheus API
  * Обеспечивает:
@@ -27,7 +31,8 @@ import { PrometheusParser } from './prometheus.parser'
  * - Очистку устаревших данных
  */
 export class PrometheusService {
-	private readonly config: PrometheusServiceConfig
+        private readonly config: PrometheusServiceConfig
+        private readonly agent?: HttpsAgent
 	private readonly emitter = new EventEmitter()
 	private readonly logger = Logger.getInstance()
 	private readonly staticDataCache: Map<
@@ -60,13 +65,26 @@ export class PrometheusService {
 	> = new Map()
 
 	private readonly updateInterval = 30000 // 30 секунд
-	private readonly staticDataMaxAge = 24 * 60 * 60 * 1000 // 24 часа
-	private readonly dynamicDataMaxAge = 120000 // 2 минуты
+        private readonly staticDataMaxAge = 24 * 60 * 60 * 1000 // 24 часа
+        private readonly dynamicDataMaxAge = 120000 // 2 минуты
 
-	constructor(config: PrometheusServiceConfig) {
-		this.config = config
-		this.startMetricsCollection()
-	}
+        constructor(config: PrometheusServiceConfig) {
+                this.config = config
+                this.agent = config.agent
+                this.startMetricsCollection()
+        }
+
+        private createRequestInit(init?: FetchRequestInit): FetchRequestInit {
+                const options: FetchRequestInit = { ...(init || {}) }
+                if (this.agent) {
+                        options.agent = this.agent
+                }
+                return options
+        }
+
+        private async performFetch(url: string, init?: FetchRequestInit) {
+                return fetch(url, this.createRequestInit(init))
+        }
 
 	/**
 	 * Получает статические данные устройства (системная информация и железо)
@@ -472,20 +490,6 @@ export class PrometheusService {
 	}
 
 	/**
-	 * Формирует заголовок авторизации
-	 * @returns Строка с заголовком Basic Auth
-	 */
-	private getAuthHeader(): string {
-		if (!this.config.auth.username || !this.config.auth.password) {
-			console.error('Missing auth credentials:', {
-				username: !!this.config.auth.username,
-				password: !!this.config.auth.password
-			})
-		}
-		return `Basic ${Buffer.from(`${this.config.auth.username}:${this.config.auth.password}`).toString('base64')}`
-	}
-
-	/**
 	 * Создает экземпляр парсера для указанного устройства
 	 * @param ipAddress IP-адрес устройства
 	 * @returns Экземпляр PrometheusParser
@@ -501,16 +505,15 @@ export class PrometheusService {
 	public async reloadPrometheusConfig(): Promise<void> {
 		try {
 			this.log('info', `Reloading Prometheus configuration...`)
-			const response = await fetch(
-				`${this.config.url}/prometheus/-/reload`,
-				{
-					method: 'POST',
-					headers: {
-						Authorization: this.getAuthHeader(),
-						'Content-Type': 'application/json'
-					}
-				}
-			)
+                        const response = await this.performFetch(
+                                `${this.config.url}/prometheus/-/reload`,
+                                {
+                                        method: 'POST',
+                                        headers: {
+                                                'Content-Type': 'application/json'
+                                        }
+                                }
+                        )
 			if (!response.ok) {
 				throw new Error(
 					`Failed to reload prometheus config: ${response.statusText}`
@@ -548,16 +551,10 @@ export class PrometheusService {
 		//     return mockStatus;
 		// }
 
-		try {
-			const authHeader = this.getAuthHeader()
-			const response = await fetch(
-				`${this.config.url}/prometheus/api/v1/targets`,
-				{
-					headers: {
-						Authorization: authHeader
-					}
-				}
-			)
+                try {
+                        const response = await this.performFetch(
+                                `${this.config.url}/prometheus/api/v1/targets`
+                        )
 			if (!response.ok) {
 				throw new Error(
 					`Failed to fetch targets: ${response.statusText}`
@@ -785,12 +782,11 @@ export class PrometheusService {
 				`[METRICS_FETCH] Sending request to ${url.toString()}`
 			)
 
-			const response = await fetch(url.toString(), {
-				headers: {
-					Authorization: this.getAuthHeader(),
-					Accept: 'application/json'
-				}
-			})
+                        const response = await this.performFetch(url.toString(), {
+                                headers: {
+                                        Accept: 'application/json'
+                                }
+                        })
 
 			const fetchTime = Date.now() - fetchStartTime
 			this.log(
@@ -865,9 +861,8 @@ export class PrometheusService {
 		additionalLabels: Record<string, string> = {}
 	): Promise<PrometheusApiResponse> {
 		try {
-			const authHeader = this.getAuthHeader()
-			const end = Math.floor(Date.now() / 1000)
-			const start = end - this.parseTimeRange(range)
+                        const end = Math.floor(Date.now() / 1000)
+                        const start = end - this.parseTimeRange(range)
 
 			// Формируем лейблы для запроса
 			const labels = {
@@ -886,11 +881,7 @@ export class PrometheusService {
 				`${this.config.url}/prometheus/api/v1/query_range?` +
 				`query=${query}&start=${start}&end=${end}&step=${this.parseTimeRange(step)}`
 
-			const response = await fetch(url, {
-				headers: {
-					Authorization: authHeader
-				}
-			})
+                        const response = await this.performFetch(url)
 
 			if (!response.ok) {
 				throw new Error(
@@ -1071,11 +1062,7 @@ export class PrometheusService {
 				}
 			})
 
-			const response = await fetch(url, {
-				headers: {
-					Authorization: this.getAuthHeader()
-				}
-			})
+                        const response = await this.performFetch(url)
 
 			if (!response.ok) {
 				throw new Error(

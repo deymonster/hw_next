@@ -120,9 +120,9 @@ services:
         container_name: nginx_combined
         ports:
             - '0.0.0.0:80:80' # Основной порт для monitoring.local
-            - '0.0.0.0:8080:8080' # Для обратной совместимости с Prometheus
+            - '0.0.0.0:8443:8443' # Защищённый порт Prometheus (mTLS)
         volumes:
-            - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
+            - ./nginx/tls:/etc/nginx/tls:ro
             - ./storage/uploads:/usr/share/nginx/html/uploads
         networks:
             - hw-network

@@ -94,7 +94,7 @@ What the script does:
 
 - validates that Docker is available (Docker Desktop on Windows/macOS, or Docker Engine on Linux)
 - generates `.env` with sensible development defaults (random secrets, localhost URLs)
-- prepares required folders (`storage/logs`, `storage/uploads`, `nginx/auth/.htpasswd`)
+- prepares required folders (`storage/logs`, `storage/uploads`, `nginx/tls/`)
 - builds/starts all Docker Compose services from `docker-compose.dev.yml`
 - installs Node dependencies, generates Prisma client, runs `prisma migrate deploy`
 - optionally starts the Next.js dev server (`--start-next` flag)
@@ -115,7 +115,7 @@ After the script finishes the services are exposed on:
 | Redis          | 127.0.0.1:6379         |
 | Prometheus     | http://localhost:9090  |
 | Alertmanager   | http://localhost:9093  |
-| Nginx proxy    | http://localhost:8080  |
+| Nginx proxy    | https://localhost:8443 |
 | File storage   | http://localhost:8081  |
 | LICD service   | http://localhost:8082  |
 
@@ -130,7 +130,7 @@ Most of the application logic expects the following keys (the script fills them 
 - `NEXT_PUBLIC_STORAGE_URL`, `NEXT_PUBLIC_UPLOADS_BASE_URL`, `NEXT_PUBLIC_MEDIA_URL`
 - PostgreSQL block: `POSTGRES_*`, `DATABASE_URL`
 - Redis block: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_URL`
-- Prometheus block: `PROMETHEUS_PROXY_URL`, `PROMETHEUS_USERNAME`, `PROMETHEUS_AUTH_PASSWORD`, `PROMETHEUS_TARGETS_PATH`
+- Prometheus block: `PROMETHEUS_PROXY_URL`, `PROMETHEUS_TLS_CERT_PATH`, `PROMETHEUS_TLS_KEY_PATH`, `PROMETHEUS_TLS_CA_PATH`, `PROMETHEUS_TLS_KEY_PASSPHRASE`, `PROMETHEUS_TLS_REJECT_UNAUTHORIZED`, `PROMETHEUS_TARGETS_PATH`
 - Admin credentials: `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`
 - Agent shared key: `AGENT_HANDSHAKE_KEY`
 - Encryption/auth secrets: `ENCRYPTION_KEY`, `NEXTAUTH_SECRET`
@@ -156,7 +156,7 @@ If you prefer not to run the script, follow these steps:
 3. **Edit `.env`**
 
     - set the variables listed above
-    - create `storage/logs`, `storage/uploads`, and `nginx/auth/.htpasswd` (use `openssl passwd -apr1 <password>` to populate the file)
+    - create `storage/logs`, `storage/uploads`, and place TLS materials under `nginx/tls/` (`server.crt`, `server.key`, `ca.crt`)
 
 4. **Start Docker services**
 
@@ -190,7 +190,7 @@ If you prefer not to run the script, follow these steps:
 
 2. **Port Conflicts**:
 
-    - Check if ports 3000, 5432, 6379, 8080, 9090 are available
+    - Check if ports 3000, 5432, 6379, 8443, 9090 are available
     - Modify docker-compose.yml if needed
 
 3. **Database Connection Issues**:

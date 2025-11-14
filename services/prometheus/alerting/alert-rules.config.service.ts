@@ -202,19 +202,12 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 		const reloadUrl = `${this.config.prometheusUrl}/prometheus/-/reload`
 		console.log(`Отправка запроса на перезагрузку Prometheus: ${reloadUrl}`)
 
-		// Используем те же переменные окружения, что и PrometheusService
-		const username = process.env.PROMETHEUS_USERNAME || 'admin'
-		const password = process.env.PROMETHEUS_AUTH_PASSWORD || ''
-		const authHeader =
-			'Basic ' + Buffer.from(`${username}:${password}`).toString('base64')
-
-		try {
-			const response = await this.httpClient.post(reloadUrl, {
-				headers: {
-					Authorization: authHeader,
-					'Content-Type': 'application/json'
-				}
-			})
+                try {
+                        const response = await this.httpClient.post(reloadUrl, {
+                                headers: {
+                                        'Content-Type': 'application/json'
+                                }
+                        })
 
 			if (!response.ok) {
 				const statusText = response.statusText || 'Нет текста статуса'

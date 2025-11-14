@@ -2,6 +2,8 @@
 // Конфигурационные интерфейсы
 // =====================================
 
+import type { Agent as HttpsAgent } from 'https'
+
 /**
  * Конфигурация цели Prometheus
  */
@@ -17,12 +19,9 @@ export interface PrometheusTarget {
  * Конфигурация сервиса Prometheus
  */
 export interface PrometheusServiceConfig {
-	url: string
-	targetsPath?: string // Опционально, нужно только при прямом управлении целями Prometheus
-	auth: {
-		username: string
-		password: string
-	}
+        url: string
+        targetsPath?: string // Опционально, нужно только при прямом управлении целями Prometheus
+        agent?: HttpsAgent
 }
 
 // =====================================

@@ -61,10 +61,10 @@ services:
             dockerfile: Dockerfile.nginx-combined
         container_name: nginx_combined_dev
         ports:
-            - '8080:8080' # Прокси для Prometheus
+            - '8443:8443' # Прокси для Prometheus (mTLS)
             - '8081:80' # Файловое хранилище
         volumes:
-            - ./nginx/auth/.htpasswd:/etc/nginx/auth/.htpasswd
+            - ./nginx/tls:/etc/nginx/tls:ro
             - ./nginx/conf.d/upstream.conf:/etc/nginx/conf.d/upstream.conf
             - ./storage/uploads:/usr/share/nginx/html/uploads
         extra_hosts:

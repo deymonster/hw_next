@@ -103,7 +103,7 @@ bash scripts/setup-local.sh --start-next
 
 - проверяет наличие Docker/Compose
 - генерирует `.env` с локальными значениями (рандомные пароли, `localhost` в URL)
-- создаёт необходимые каталоги (`storage/logs`, `storage/uploads`, `nginx/auth/.htpasswd`)
+- создаёт необходимые каталоги (`storage/logs`, `storage/uploads`, `nginx/tls/`)
 - запускает `docker-compose.dev.yml`
 - выполняет `yarn install`, `yarn prisma generate`, `yarn prisma migrate deploy`
 - по флагу `--start-next` автоматически запускает `yarn dev`
@@ -123,7 +123,7 @@ bash scripts/setup-local.sh --start-next
 | Redis         | 127.0.0.1:6379          |
 | Prometheus    | http://localhost:9090   |
 | Alertmanager  | http://localhost:9093   |
-| Nginx proxy   | http://localhost:8080   |
+| Nginx proxy   | https://localhost:8443  |
 | Хранилище     | http://localhost:8081   |
 | LICD сервис   | http://localhost:8082   |
 
@@ -134,7 +134,7 @@ bash scripts/setup-local.sh --start-next
 1. Установить Docker (с поддержкой Compose), Node.js 18+ и Yarn
 2. Клонировать репозиторий и скопировать `.env.example` → `.env`
 3. Заполнить переменные окружения (см. список ниже)
-4. Создать каталоги `storage/logs`, `storage/uploads` и файл `nginx/auth/.htpasswd` (пароль можно сгенерировать `openssl passwd -apr1 <password>`)
+4. Создать каталоги `storage/logs`, `storage/uploads` и разместить сертификаты в `nginx/tls/` (`server.crt`, `server.key`, `ca.crt`)
 5. Запустить инфраструктуру: `docker compose -f docker-compose.dev.yml up -d --build`
 6. Выполнить `yarn install`, `yarn prisma generate`, `yarn prisma migrate deploy`
 7. Запустить Next.js: `yarn dev --hostname 0.0.0.0`
@@ -146,7 +146,7 @@ bash scripts/setup-local.sh --start-next
 - `NEXT_PUBLIC_STORAGE_URL`, `NEXT_PUBLIC_UPLOADS_BASE_URL`, `NEXT_PUBLIC_MEDIA_URL`
 - `POSTGRES_*`, `DATABASE_URL`
 - `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_URL`
-- `PROMETHEUS_PROXY_URL`, `PROMETHEUS_USERNAME`, `PROMETHEUS_AUTH_PASSWORD`, `PROMETHEUS_TARGETS_PATH`
+- `PROMETHEUS_PROXY_URL`, `PROMETHEUS_TLS_CERT_PATH`, `PROMETHEUS_TLS_KEY_PATH`, `PROMETHEUS_TLS_CA_PATH`, `PROMETHEUS_TLS_KEY_PASSPHRASE`, `PROMETHEUS_TLS_REJECT_UNAUTHORIZED`, `PROMETHEUS_TARGETS_PATH`
 - `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_EMAIL`
 - `AGENT_HANDSHAKE_KEY`
 - `ENCRYPTION_KEY`

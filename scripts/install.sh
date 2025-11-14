@@ -21,13 +21,8 @@ DOCKER_COMPOSE_CMD=""
 INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
 COMPOSE_FILE="${COMPOSE_FILE:-$INSTALL_DIR/docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-$INSTALL_DIR/.env.prod}"
-NGINX_AUTH_DIR="${NGINX_AUTH_DIR:-$INSTALL_DIR/nginx/auth}"
-NGINX_AUTH_FILE="${NGINX_AUTH_FILE:-$NGINX_AUTH_DIR/.htpasswd}"
 
 COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://github.com/deymonster/hw_next/raw/refs/heads/main/docker-compose.prod.yml}"
-
-BASIC_AUTH_USER="${BASIC_AUTH_USER:-admin}"
-BASIC_AUTH_PASSWORD="${BASIC_AUTH_PASSWORD:-admin}"
 
 # Per-image tags (can be set to "auto" to fetch latest via Docker Hub if jq is available)
 NEXT_TAG="${NEXT_TAG:-latest}"
@@ -44,12 +39,8 @@ while [[ $# -gt 0 ]]; do
       INSTALL_DIR="$2"
       COMPOSE_FILE="$INSTALL_DIR/docker-compose.prod.yml"
       ENV_FILE="$INSTALL_DIR/.env.prod"
-      NGINX_AUTH_DIR="$INSTALL_DIR/nginx/auth"
-      NGINX_AUTH_FILE="$INSTALL_DIR/nginx/auth/.htpasswd"
       shift 2 ;;
     --compose-url) COMPOSE_FILE_URL="$2"; shift 2 ;;
-    --basic-auth-user) BASIC_AUTH_USER="$2"; shift 2 ;;
-    --basic-auth-password) BASIC_AUTH_PASSWORD="$2"; shift 2 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
@@ -362,19 +353,25 @@ ensure_env_file() {
   PROMETHEUS_INTERNAL_URL="${PROMETHEUS_INTERNAL_URL:-http://prometheus:9090}"
 
   PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-$(get_env PROMETHEUS_PROXY_URL)}"
-  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-http://nginx-proxy:8080}"
-
-  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-$(get_env PROMETHEUS_USE_SSL)}"
-  PROMETHEUS_USE_SSL="${PROMETHEUS_USE_SSL:-False}"
+  PROMETHEUS_PROXY_URL="${PROMETHEUS_PROXY_URL:-https://nginx-proxy:8443}"
 
   PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-$(get_env PROMETHEUS_TARGETS_PATH)}"
   PROMETHEUS_TARGETS_PATH="${PROMETHEUS_TARGETS_PATH:-./prometheus/targets/windows_targets.json}"
 
-  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$(get_env PROMETHEUS_USERNAME)}"
-  PROMETHEUS_USERNAME="${PROMETHEUS_USERNAME:-$BASIC_AUTH_USER}"
+  PROMETHEUS_TLS_CERT_PATH="${PROMETHEUS_TLS_CERT_PATH:-$(get_env PROMETHEUS_TLS_CERT_PATH)}"
+  PROMETHEUS_TLS_CERT_PATH="${PROMETHEUS_TLS_CERT_PATH:-./certs/prometheus/client.crt}"
 
-  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
-  PROMETHEUS_AUTH_PASSWORD="${PROMETHEUS_AUTH_PASSWORD:-$BASIC_AUTH_PASSWORD}"
+  PROMETHEUS_TLS_KEY_PATH="${PROMETHEUS_TLS_KEY_PATH:-$(get_env PROMETHEUS_TLS_KEY_PATH)}"
+  PROMETHEUS_TLS_KEY_PATH="${PROMETHEUS_TLS_KEY_PATH:-./certs/prometheus/client.key}"
+
+  PROMETHEUS_TLS_CA_PATH="${PROMETHEUS_TLS_CA_PATH:-$(get_env PROMETHEUS_TLS_CA_PATH)}"
+  PROMETHEUS_TLS_CA_PATH="${PROMETHEUS_TLS_CA_PATH:-./certs/prometheus/ca.crt}"
+
+  PROMETHEUS_TLS_KEY_PASSPHRASE="${PROMETHEUS_TLS_KEY_PASSPHRASE:-$(get_env PROMETHEUS_TLS_KEY_PASSPHRASE)}"
+  PROMETHEUS_TLS_KEY_PASSPHRASE="${PROMETHEUS_TLS_KEY_PASSPHRASE:-}"
+
+  PROMETHEUS_TLS_REJECT_UNAUTHORIZED="${PROMETHEUS_TLS_REJECT_UNAUTHORIZED:-$(get_env PROMETHEUS_TLS_REJECT_UNAUTHORIZED)}"
+  PROMETHEUS_TLS_REJECT_UNAUTHORIZED="${PROMETHEUS_TLS_REJECT_UNAUTHORIZED:-true}"
 
   NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-$(get_env NODE_EXPORTER_PORT)}"
   NODE_EXPORTER_PORT="${NODE_EXPORTER_PORT:-9100}"
@@ -462,11 +459,13 @@ DATABASE_URL=${DATABASE_URL}
 # Prometheus
 PROMETHEUS_PORT=${PROMETHEUS_PORT}
 PROMETHEUS_PROXY_URL=${PROMETHEUS_PROXY_URL}
-PROMETHEUS_USE_SSL=${PROMETHEUS_USE_SSL}
 PROMETHEUS_TARGETS_PATH=${PROMETHEUS_TARGETS_PATH}
-PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME}
-PROMETHEUS_AUTH_PASSWORD=${PROMETHEUS_AUTH_PASSWORD}
 PROMETHEUS_INTERNAL_URL=${PROMETHEUS_INTERNAL_URL}
+PROMETHEUS_TLS_CERT_PATH=${PROMETHEUS_TLS_CERT_PATH}
+PROMETHEUS_TLS_KEY_PATH=${PROMETHEUS_TLS_KEY_PATH}
+PROMETHEUS_TLS_CA_PATH=${PROMETHEUS_TLS_CA_PATH}
+PROMETHEUS_TLS_KEY_PASSPHRASE=${PROMETHEUS_TLS_KEY_PASSPHRASE}
+PROMETHEUS_TLS_REJECT_UNAUTHORIZED=${PROMETHEUS_TLS_REJECT_UNAUTHORIZED}
 
 # Node Exporter
 NODE_EXPORTER_PORT=${NODE_EXPORTER_PORT}
@@ -519,36 +518,9 @@ EOF
 
 # Подготавливаем директории хранения логов/загрузок и выставляем права
 prepare_dirs() {
-  mkdir -p "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads"
+  mkdir -p "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" "$INSTALL_DIR/nginx/tls"
   chown -R 1001:65533 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" 2>/dev/null || true
   chmod -R 777 "$INSTALL_DIR/storage/logs" "$INSTALL_DIR/storage/uploads" || true
-}
-
-# Готовим .htpasswd для nginx basic-auth на основе кредов из env
-ensure_nginx_auth() {
-  mkdir -p "$NGINX_AUTH_DIR"
-
-  # Используем те же креды, что и Next.js/Prometheus
-  local user="${PROMETHEUS_USERNAME:-$BASIC_AUTH_USER}"
-  local pass="${PROMETHEUS_AUTH_PASSWORD:-$BASIC_AUTH_PASSWORD}"
-
-  if [ -f "$NGINX_AUTH_FILE" ]; then
-    echo ".htpasswd найден: $NGINX_AUTH_FILE (перезапишу для синхронизации с env)"
-  else
-    echo "Создаю .htpasswd (basic auth для nginx)..."
-  fi
-
-  # Генерация хеша для Basic Auth: предпочитаем openssl -apr1; иначе htpasswd; иначе простой base64 (как фолбэк)
-  if command -v openssl >/dev/null 2>&1; then
-    HASH=$(openssl passwd -apr1 "$pass")
-  elif command -v htpasswd >/dev/null 2>&1; then
-    HASH=$(htpasswd -nb "$user" "$pass" | cut -d: -f2-)
-  else
-    echo "⚠️  OpenSSL и htpasswd не найдены. Использую fallback (base64)."
-    HASH=$(echo -n "$pass" | base64)
-  fi
-
-  echo "${user}:${HASH}" > "$NGINX_AUTH_FILE"
 }
 
 # -----------------------------
@@ -653,7 +625,7 @@ EOF
 }
 
 # Основная логика запуска сборки и сервисов: ставим Docker, определяем команду Compose,
-# подготавливаем файлы/окружение, патчим теги образов, генерируем .htpasswd и запускаем
+# подготавливаем файлы/окружение, патчим теги образов и запускаем
 compose_up() {
   install_docker_if_needed
   detect_compose_cmd
@@ -661,7 +633,6 @@ compose_up() {
   patch_compose_image_tags
   ensure_env_file
   prepare_dirs
-  ensure_nginx_auth
   install_hwctl
 
   echo "Pulling images and starting services..."

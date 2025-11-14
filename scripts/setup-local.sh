@@ -4,7 +4,6 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${PROJECT_ROOT}/.env"
 COMPOSE_FILE="${PROJECT_ROOT}/docker-compose.dev.yml"
-HTPASSWD_FILE="${PROJECT_ROOT}/nginx/auth/.htpasswd"
 LOG_DIR="${PROJECT_ROOT}/storage/logs"
 UPLOAD_DIR="${PROJECT_ROOT}/storage/uploads"
 
@@ -90,7 +89,7 @@ ensure_env_file() {
         echo "📄 Preparing .env file at $ENV_FILE"
 
         local postgres_user postgres_password postgres_db postgres_port redis_password redis_port
-        local prometheus_password nextauth_secret encryption_key agent_key
+        local nextauth_secret encryption_key agent_key
 
         postgres_user="${POSTGRES_USER:-$(get_env_value POSTGRES_USER)}"
         postgres_user="${postgres_user:-hw_monitor}"
@@ -109,9 +108,6 @@ ensure_env_file() {
 
         redis_port="${REDIS_PORT:-$(get_env_value REDIS_PORT)}"
         redis_port="${redis_port:-6379}"
-
-        prometheus_password="${PROMETHEUS_AUTH_PASSWORD:-$(get_env_value PROMETHEUS_AUTH_PASSWORD)}"
-        prometheus_password="${prometheus_password:-$(random_hex 12)}"
 
         nextauth_secret="${NEXTAUTH_SECRET:-$(get_env_value NEXTAUTH_SECRET)}"
         nextauth_secret="${nextauth_secret:-$(random_b64)}"
@@ -149,11 +145,14 @@ REDIS_URL=redis://:${redis_password}@127.0.0.1:${redis_port}
 
 # Prometheus
 PROMETHEUS_PORT=9090
-PROMETHEUS_PROXY_URL=http://${SERVER_HOST}:8080
+PROMETHEUS_PROXY_URL=https://${SERVER_HOST}:8443
 PROMETHEUS_TARGETS_PATH=./prometheus/targets/windows_targets.json
-PROMETHEUS_USERNAME=admin
-PROMETHEUS_AUTH_PASSWORD=${prometheus_password}
 PROMETHEUS_RULES_PATH=./prometheus/alerts
+PROMETHEUS_TLS_CERT_PATH=./certs/prometheus/client.crt
+PROMETHEUS_TLS_KEY_PATH=./certs/prometheus/client.key
+PROMETHEUS_TLS_CA_PATH=./certs/prometheus/ca.crt
+PROMETHEUS_TLS_KEY_PASSPHRASE=
+PROMETHEUS_TLS_REJECT_UNAUTHORIZED=true
 
 # Node exporter
 NODE_EXPORTER_PORT=9100
@@ -195,27 +194,8 @@ EOF
 }
 
 ensure_directories() {
-        mkdir -p "$LOG_DIR" "$UPLOAD_DIR" "$(dirname "$HTPASSWD_FILE")"
+        mkdir -p "$LOG_DIR" "$UPLOAD_DIR" "${PROJECT_ROOT}/nginx/tls"
         chmod 775 "$LOG_DIR" "$UPLOAD_DIR" || true
-}
-
-ensure_htpasswd() {
-        local user pass hash
-        user="$(get_env_value PROMETHEUS_USERNAME)"
-        user="${user:-admin}"
-        pass="$(get_env_value PROMETHEUS_AUTH_PASSWORD)"
-        pass="${pass:-admin}"
-
-        if command -v openssl >/dev/null 2>&1; then
-                hash="$(openssl passwd -apr1 "$pass")"
-        elif command -v htpasswd >/dev/null 2>&1; then
-                hash="$(htpasswd -nb "$user" "$pass" | cut -d: -f2-)"
-        else
-                echo "⚠️  Neither openssl nor htpasswd is available. Using clear-text basic auth." >&2
-                hash="$pass"
-        fi
-
-        echo "${user}:${hash}" >"$HTPASSWD_FILE"
 }
 
 detect_compose() {
@@ -290,7 +270,6 @@ main() {
         require_command docker
         ensure_env_file
         ensure_directories
-        ensure_htpasswd
         start_docker_services
         run_yarn_tasks
         start_next_dev
@@ -302,7 +281,7 @@ main() {
         echo "  Redis:          127.0.0.1:${REDIS_PORT_VALUE:-6379}"
         echo "  Prometheus:     http://${SERVER_HOST}:9090"
         echo "  Alertmanager:   http://${SERVER_HOST}:9093"
-        echo "  Nginx proxy:    http://${SERVER_HOST}:8080"
+        echo "  Nginx proxy:    https://${SERVER_HOST}:8443"
         echo "  File storage:   http://${SERVER_HOST}:8081"
         echo "  LICD service:   http://${SERVER_HOST}:8082"
 }

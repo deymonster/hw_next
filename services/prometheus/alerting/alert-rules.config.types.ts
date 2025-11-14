@@ -82,7 +82,7 @@ export interface FileSystemAdapter {
 }
 
 type FetchResponse = globalThis.Response
-type FetchRequestInit = globalThis.RequestInit
+type FetchRequestInit = globalThis.RequestInit & { agent?: unknown }
 
 /**
  * HTTP-клиент
