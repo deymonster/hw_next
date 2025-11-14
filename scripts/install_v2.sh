@@ -333,14 +333,45 @@ EOF
   cp "$env_path" "${INSTALL_DIR%/}/.env" 2>/dev/null || true
 }
 
+install_hwctl() {
+    local src_dir
+    src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local hwctl_src="${src_dir%/}/hwctl.sh"
+    local hwctl_dst="${INSTALL_DIR%/}/hwctl.sh"
+
+    if [[ ! -f "$hwctl_src" ]]; then
+        warn "Не найден исходный скрипт: $hwctl_src. Пропускаю установку hwctl."
+        return 0
+    fi
+
+    mkdir -p "$INSTALL_DIR"
+    cp "$hwctl_src" "$hwctl_dst"
+    chmod +x "$hwctl_dst" || true
+
+    if ln -sf "$hwctl_dst" /usr/local/bin/hwctl 2>/dev/null; then
+        log "Создан симлинк /usr/local/bin/hwctl -> $hwctl_dst"
+    else
+        warn "Не удалось создать симлинк /usr/local/bin/hwctl. Используйте локальный скрипт: $hwctl_dst"
+    fi
+
+    log "Установлен локальный скрипт управления: $hwctl_dst"
+}
+
 generate_htpasswd_if_needed() {
+  if [[ -d "$NGINX_AUTH_FILE" ]]; then
+    rm -rf "$NGINX_AUTH_FILE"
+  fi
+
+  local user="${BASIC_AUTH_USER:-$(get_env PROMETHEUS_USERNAME)}"
+  local pass="${BASIC_AUTH_PASS:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
+
   if [[ -n "$BASIC_AUTH_USER" && -n "$BASIC_AUTH_PASS" ]]; then
     require_cmd openssl
     local auth_dir; auth_dir="$(dirname "$NGINX_AUTH_FILE")"
     mkdir -p "$auth_dir"
     local hash; hash=$(openssl passwd -apr1 "$BASIC_AUTH_PASS")
     echo "${BASIC_AUTH_USER}:${hash}" > "$NGINX_AUTH_FILE"
-    chmod 640 "$NGINX_AUTH_FILE"
+    chmod 644 "$NGINX_AUTH_FILE"
     log "Создан файл базовой аутентификации: $NGINX_AUTH_FILE"
   else
     local auth_dir; auth_dir="$(dirname "$NGINX_AUTH_FILE")"
@@ -491,6 +522,9 @@ main() {
 
   log "Подготавлию файл окружения (интерактивно, если нет --non-interactive)"
   ensure_env_file
+
+  log "Устанавливаю hwctl (локальный и глобальный симлинк)"
+  install_hwctl
 
   log "Генерирую .htpasswd, если заданы креды"
   generate_htpasswd_if_needed
