@@ -343,7 +343,16 @@ generate_htpasswd_if_needed() {
     chmod 640 "$NGINX_AUTH_FILE"
     log "Создан файл базовой аутентификации: $NGINX_AUTH_FILE"
   else
-    warn "Переменные BASIC_AUTH_USER / BASIC_AUTH_PASS не заданы; пропускаю генерацию .htpasswd."
+    local auth_dir; auth_dir="$(dirname "$NGINX_AUTH_FILE")"
+    mkdir -p "$auth_dir"
+    if [[ ! -f "$NGINX_AUTH_FILE" ]]; then
+      : > "$NGINX_AUTH_FILE"
+      chmod 644 "$NGINX_AUTH_FILE"
+      warn "BASIC_AUTH_USER/BASIC_AUTH_PASS не заданы; создал пустой файл $NGINX_AUTH_FILE. Nginx запустится, но Basic Auth не будет работать."
+    else
+      chmod 644 "$NGINX_AUTH_FILE"
+      warn "BASIC_AUTH_USER/BASIC_AUTH_PASS не заданы; использую существующий $NGINX_AUTH_FILE."
+    fi
   fi
 }
 
@@ -377,7 +386,7 @@ bring_up_stack() {
   if docker compose version >/dev/null 2>&1; then
     ( cd "$INSTALL_DIR" && docker compose --project-name "$PROJECT_NAME" --env-file "$env_path" -f "$compose_path" up -d )
   elif command -v docker-compose >/dev/null 2>&1; then
-    warn "Использую устаревший бинарник docker-compose."
+    warn "Обнаружен docker-compose v1 (legacy). Продолжаю с ним; рекомендуется установить plugin v2 и использовать 'docker compose'."
     ( cd "$INSTALL_DIR" && docker-compose --project-name "$PROJECT_NAME" --env-file "$env_path" -f "$compose_path" up -d )
   else
     die "Не найдено ни 'docker compose', ни 'docker-compose'."
