@@ -39,7 +39,6 @@ export function DevicesProvider({ children }: { children: ReactNode }) {
 	const [_, setRefreshCounter] = useState(0)
 
 	const setDevicesWithCache = useCallback((newDevices: Device[]) => {
-		console.log('[DEVICES_CONTEXT] Setting devices with cache:', newDevices)
 		setDevices(newDevices)
 		console.log(
 			'[DEVICES_CONTEXT] Devices updated in context, new length:',
@@ -83,7 +82,7 @@ export function DevicesProvider({ children }: { children: ReactNode }) {
 			setIsLoading(false)
 		}
 	}, [])
-	console.log('[DEVICES_CONTEXT] Initializing with devices:', devices)
+
 	return (
 		<DeviceContext.Provider
 			value={{
