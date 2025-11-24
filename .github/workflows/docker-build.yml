@@ -187,32 +187,35 @@ jobs:
               env:
                   NEXTCLOUD_PASSWORD: ${{ secrets.NEXTCLOUD }}
               run: |
+                  set -euo pipefail
                   echo "Заливаем файлы в Nextcloud..."
 
-                  # Проверяем, что секрет действительно задан
                   if [[ -z "${NEXTCLOUD_PASSWORD}" ]]; then
                     echo "❌ NEXTCLOUD секрет не задан или пуст (Repository secrets → NEXTCLOUD)"
                     exit 1
                   fi
 
+                  BASE="https://storage.deymonster.ru/remote.php/dav/files/admin/hw"
+                  AUTH="admin:${NEXTCLOUD_PASSWORD}"
+
                   # Файл должен существовать локально, иначе фейлимся
                   test -f docker-compose.prod.yml || { echo "Файл docker-compose.prod.yml отсутствует"; exit 1; }
 
                   # Upload compose (фейлимся на не-2xx)
-                  curl -f -s -u "admin:${NEXTCLOUD_PASSWORD}" \
+                  curl -f -s -u "$AUTH" \
                        -X PUT \
-                       "https://storage.deymonster.ru/remote.php/dav/files/admin/deploys/docker-compose/docker-compose.prod.yml" \
+                       "$BASE/deploys/docker-compose/docker-compose.prod.yml" \
                        --data-binary @docker-compose.prod.yml \
                        -w "docker-compose.prod.yml → %{http_code}\n" -o /dev/null
 
                   # Upload installer (фейлимся на не-2xx)
-                  curl -f -s -u "admin:${NEXTCLOUD_PASSWORD}" \
+                  curl -f -s -u "$AUTH" \
                        -X PUT \
-                       "https://storage.deymonster.ru/remote.php/dav/files/admin/deploys/scripts/install_v2.sh" \
+                       "$BASE/deploys/scripts/install_v2.sh" \
                        --data-binary @scripts/install_v2.sh \
                        -w "install_v2.sh → %{http_code}\n" -o /dev/null
 
                   echo ""
                   echo "Проверить можно здесь:"
-                  echo "• https://storage.deymonster.ru/apps/files/?dir=/deploys/docker-compose"
-                  echo "• https://storage.deymonster.ru/apps/files/?dir=/deploys/scripts"
+                  echo "• https://storage.deymonster.ru/apps/files/?dir=/hw/deploys/docker-compose"
+                  echo "• https://storage.deymonster.ru/apps/files/?dir=/hw/deploys/scripts"
