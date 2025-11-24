@@ -108,16 +108,16 @@ Useful flags:
 
 After the script finishes the services are exposed on:
 
-| Service        | URL/Port               |
-| -------------- | ---------------------- |
-| Next.js UI     | http://localhost:3000  |
-| PostgreSQL     | 127.0.0.1:5432         |
-| Redis          | 127.0.0.1:6379         |
-| Prometheus     | http://localhost:9090  |
-| Alertmanager   | http://localhost:9093  |
-| Nginx proxy    | http://localhost:8080  |
-| File storage   | http://localhost:8081  |
-| LICD service   | http://localhost:8082  |
+| Service      | URL/Port              |
+| ------------ | --------------------- |
+| Next.js UI   | http://localhost:3000 |
+| PostgreSQL   | 127.0.0.1:5432        |
+| Redis        | 127.0.0.1:6379        |
+| Prometheus   | http://localhost:9090 |
+| Alertmanager | http://localhost:9093 |
+| Nginx proxy  | http://localhost:8080 |
+| File storage | http://localhost:8081 |
+| LICD service | http://localhost:8082 |
 
 The script creates/updates `.env`. If you customise values later, simply re-run the script to merge changes.
 
