@@ -182,6 +182,30 @@ jobs:
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
+            - name: Update docker-compose.prod.yml image tags
+              if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+              run: |
+                  set -euo pipefail
+                  SERVICE="${{ steps.vars.outputs.SERVICE }}"
+                  VERSION="${{ steps.vars.outputs.VERSION }}"
+
+                  echo "Патчим docker-compose.prod.yml для $SERVICE → v${VERSION}"
+
+                  case "$SERVICE" in
+                    hw-monitor)
+                      sed -E -i 's|(image:\s*deymonster/hw-monitor:)[^ #]+|\1v'"$VERSION"'|g' docker-compose.prod.yml
+                      ;;
+                    hw-monitor-licd)
+                      sed -E -i 's|(image:\s*deymonster/hw-monitor-licd:)[^ #]+|\1v'"$VERSION"'|g' docker-compose.prod.yml
+                      ;;
+                    hw-monitor-nginx-combined)
+                      sed -E -i 's|(image:\s*deymonster/hw-monitor-nginx-combined:)[^ #]+|\1v'"$VERSION"'|g' docker-compose.prod.yml
+                      ;;
+                  esac
+
+                  echo "Итоговые строки:"
+                  grep -nE 'image:\s*deymonster/(hw-monitor|hw-monitor-licd|hw-monitor-nginx-combined):' docker-compose.prod.yml || true
+
             - name: Upload deploy files to Nextcloud
               if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
               env:
@@ -198,20 +222,13 @@ jobs:
                   BASE="https://storage.deymonster.ru/remote.php/dav/files/admin/hw"
                   AUTH="admin:${NEXTCLOUD_PASSWORD}"
 
-                  # Файл должен существовать локально, иначе фейлимся
                   test -f docker-compose.prod.yml || { echo "Файл docker-compose.prod.yml отсутствует"; exit 1; }
 
-                  # Upload compose (фейлимся на не-2xx)
-                  curl -f -s -u "$AUTH" \
-                       -X PUT \
-                       "$BASE/deploys/docker-compose/docker-compose.prod.yml" \
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/docker-compose/docker-compose.prod.yml" \
                        --data-binary @docker-compose.prod.yml \
                        -w "docker-compose.prod.yml → %{http_code}\n" -o /dev/null
 
-                  # Upload installer (фейлимся на не-2xx)
-                  curl -f -s -u "$AUTH" \
-                       -X PUT \
-                       "$BASE/deploys/scripts/install_v2.sh" \
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/install_v2.sh" \
                        --data-binary @scripts/install_v2.sh \
                        -w "install_v2.sh → %{http_code}\n" -o /dev/null
 
