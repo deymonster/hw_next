@@ -183,22 +183,30 @@ jobs:
                   cache-to: type=gha,mode=max
 
             - name: Upload deploy files to Nextcloud
-              if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+              if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+              env:
+                  NEXTCLOUD_PASSWORD: ${{ secrets.NEXTCLOUD }}
               run: |
                   echo "Заливаем файлы в Nextcloud..."
 
-                  # Sanity check: файл должен существовать локально, иначе фейлимся
+                  # Проверяем, что секрет действительно задан
+                  if [[ -z "${NEXTCLOUD_PASSWORD}" ]]; then
+                    echo "❌ NEXTCLOUD секрет не задан или пуст (Repository secrets → NEXTCLOUD)"
+                    exit 1
+                  fi
+
+                  # Файл должен существовать локально, иначе фейлимся
                   test -f docker-compose.prod.yml || { echo "Файл docker-compose.prod.yml отсутствует"; exit 1; }
 
                   # Upload compose (фейлимся на не-2xx)
-                  curl -f -s -u "admin:${{ secrets.NEXTCLOUD_APP_PASSWORD }}" \
+                  curl -f -s -u "admin:${NEXTCLOUD_PASSWORD}" \
                        -X PUT \
                        "https://storage.deymonster.ru/remote.php/dav/files/admin/deploys/docker-compose/docker-compose.prod.yml" \
                        --data-binary @docker-compose.prod.yml \
                        -w "docker-compose.prod.yml → %{http_code}\n" -o /dev/null
 
                   # Upload installer (фейлимся на не-2xx)
-                  curl -f -s -u "admin:${{ secrets.NEXTCLOUD_APP_PASSWORD }}" \
+                  curl -f -s -u "admin:${NEXTCLOUD_PASSWORD}" \
                        -X PUT \
                        "https://storage.deymonster.ru/remote.php/dav/files/admin/deploys/scripts/install_v2.sh" \
                        --data-binary @scripts/install_v2.sh \
