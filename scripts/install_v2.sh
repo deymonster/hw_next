@@ -7,7 +7,7 @@ set -Eeuo pipefail
 
 INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
 COMPOSE_URL="${COMPOSE_URL:-}"
-COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://storage.deymonster.ru/s/3bGK9FnqLMHAfYz/download/docker-compose.prod.yml}"
+COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://storage.deymonster.ru/s/pwK2PLo5DDyspnm/download/docker-compose.prod.yml}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-.env.prod}"
 PROJECT_NAME="${PROJECT_NAME:-hw-monitor}"
