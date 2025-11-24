@@ -7,7 +7,7 @@ set -Eeuo pipefail
 
 INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
 COMPOSE_URL="${COMPOSE_URL:-}"
-COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://github.com/deymonster/hw_next/raw/refs/heads/main/docker-compose.prod.yml}"
+COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://storage.deymonster.ru/s/3bGK9FnqLMHAfYz/download/docker-compose.prod.yml}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 ENV_FILE="${ENV_FILE:-.env.prod}"
 PROJECT_NAME="${PROJECT_NAME:-hw-monitor}"
@@ -149,23 +149,17 @@ prepare_dirs() {
 }
 
 fetch_compose_if_needed() {
+  require_cmd curl
+
+  local dest="${INSTALL_DIR%/}/${COMPOSE_FILE}"
+
   if [[ -n "$COMPOSE_URL" ]]; then
-    log "Скачиваю compose-файл из $COMPOSE_URL"
-    curl -fsSL "$COMPOSE_URL" -o "${INSTALL_DIR%/}/${COMPOSE_FILE}"
+    log "Скачиваю compose-файл из COMPOSE_URL=$COMPOSE_URL"
+    curl -fsSL "$COMPOSE_URL" -o "$dest" || die "Не удалось скачать compose-файл по COMPOSE_URL"
   else
-    if [[ -f "$COMPOSE_FILE" ]]; then
-      cp "$COMPOSE_FILE" "${INSTALL_DIR%/}/${COMPOSE_FILE}"
-    elif [[ -f "docker-compose.yml" ]]; then
-      warn "Найден локальный docker-compose.yml; использую его как ${COMPOSE_FILE}"
-      cp "docker-compose.yml" "${INSTALL_DIR%/}/${COMPOSE_FILE}"
-    elif [[ -n "$COMPOSE_FILE_URL" ]]; then
-      log "Скачиваю compose-файл по COMPOSE_FILE_URL=$COMPOSE_FILE_URL"
-      curl -fsSL "$COMPOSE_FILE_URL" -o "${INSTALL_DIR%/}/${COMPOSE_FILE}"
-    elif [[ -f "/mnt/data/${COMPOSE_FILE}" ]]; then
-      cp "/mnt/data/${COMPOSE_FILE}" "${INSTALL_DIR%/}/${COMPOSE_FILE}"
-    else
-      die "Compose-файл не найден локально и URL не указан."
-    fi
+    [[ -n "$COMPOSE_FILE_URL" ]] || die "COMPOSE_FILE_URL не задан."
+    log "Скачиваю compose-файл по COMPOSE_FILE_URL=$COMPOSE_FILE_URL"
+    curl -fsSL "$COMPOSE_FILE_URL" -o "$dest" || die "Не удалось скачать compose-файл по COMPOSE_FILE_URL"
   fi
 }
 
