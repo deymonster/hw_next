@@ -28,6 +28,8 @@ set_nginx_auth_file() {
   NGINX_AUTH_FILE="${INSTALL_DIR%/}/nginx/auth/.htpasswd"
 }
 
+
+
 log() { printf "\033[1;32m[+] %s\033[0m\n" "$*"; }
 warn() { printf "\033[1;33m[!] %s\033[0m\n" "$*"; }
 err() { printf "\033[1;31m[×] %s\033[0m\n" "$*" >&2; }
@@ -154,17 +156,11 @@ prepare_dirs() {
 fetch_scripts_if_available() {
   require_cmd curl
 
-  # Скачивание hwctl.sh
   local hwctl_dst="${INSTALL_DIR%/}/hwctl.sh"
-  if [[ -n "${HWCTL_URL:-}" ]]; then
-    log "Скачиваю hwctl.sh из $HWCTL_URL"
-    curl -fsSL "$HWCTL_URL" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по HWCTL_URL"
-    chmod +x "$hwctl_dst" 2>/dev/null || true
-  elif [[ -n "${SCRIPTS_URL_BASE:-}" ]]; then
-    log "Пробую скачать hwctl.sh из базового URL $SCRIPTS_URL_BASE"
-    curl -fsSL "${SCRIPTS_URL_BASE%/}/hwctl.sh" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по SCRIPTS_URL_BASE"
-    chmod +x "$hwctl_dst" 2>/dev/null || true
-  fi
+
+  log "Скачиваю hwctl.sh с Nextcloud (прямая ссылка)"
+  curl -fsSL "https://storage.deymonster.ru/s/zdFfe6p7nGkP7HW/download/hwctl.sh" -o "$hwctl_dst" || die "Не удалось скачать hwctl.sh по прямой ссылке"
+  chmod +x "$hwctl_dst" 2>/dev/null || true
 }
 
 fetch_compose_if_needed() {
@@ -410,7 +406,7 @@ patch_image_tags_if_requested() {
   local tmp; tmp="$(mktemp)"
   cp "$compose_path" "$tmp"
 
-  local next_prefix="deymonster/hw-monitor-nextjs"
+  local next_prefix="deymonster/hw-monitor"
   local nginx_prefix="deymonster/hw-monitor-nginx-combined"
   local licd_prefix="deymonster/hw-monitor-licd"
 

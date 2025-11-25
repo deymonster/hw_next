@@ -112,25 +112,7 @@ jobs:
                     exit 1
                   fi
 
-                  if [[ "$VERSION" == *"-alpha"* ]]; then
-                    ALIAS_TAG="alpha"
-                  else
-                    ALIAS_TAG="latest"
-                  fi
-
-                  if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-alpha$ ]]; then
-                    git fetch --tags --force
-                    BASE="${SERVICE}-v${VERSION}"
-                    LAST=$(git tag -l "${BASE}.*" | sed -E 's/.*-alpha\.([0-9]+)$/\1/' | sort -n | tail -n1)
-                    if [[ -z "$LAST" ]]; then
-                      NEXT=1
-                    else
-                      NEXT=$((LAST+1))
-                    fi
-                    VERSION_TAG="${SERVICE}-v${VERSION}.${NEXT}"
-                  else
-                    VERSION_TAG="${TAG}"
-                  fi
+                  ALIAS_TAG="latest"
 
                   case "$SERVICE" in
                     hw-monitor)
@@ -153,13 +135,11 @@ jobs:
                       exit 1
                       ;;
                   esac
-
                   echo "SERVICE=$SERVICE" >> $GITHUB_OUTPUT
                   echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
                   echo "COMMIT=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
                   echo "DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
                   echo "ALIAS_TAG=$ALIAS_TAG" >> $GITHUB_OUTPUT
-                  echo "VERSION_TAG=$VERSION_TAG" >> $GITHUB_OUTPUT
                   echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
                   echo "DOCKERFILE=$DOCKERFILE" >> $GITHUB_OUTPUT
                   echo "CONTEXT=$CONTEXT" >> $GITHUB_OUTPUT
@@ -172,7 +152,6 @@ jobs:
                   push: true
                   tags: |
                       ${{ steps.vars.outputs.IMAGE }}:${{ steps.vars.outputs.ALIAS_TAG }}
-                      ${{ steps.vars.outputs.IMAGE }}:${{ steps.vars.outputs.VERSION_TAG }}
                       ${{ steps.vars.outputs.IMAGE }}:v${{ steps.vars.outputs.VERSION }}
                   build-args: |
                       VERSION=${{ steps.vars.outputs.VERSION }}
@@ -181,6 +160,46 @@ jobs:
                       ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
+
+            - name: Ensure hw-monitor-nginx-combined:latest points to newest tag
+              if: ${{ steps.vars.outputs.SERVICE == 'hw-monitor' }}
+              env:
+                  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+                  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  REPO="deymonster/hw-monitor-nginx-combined"
+
+                  # Установим jq при необходимости
+                  if ! command -v jq >/dev/null 2>&1; then
+                    sudo apt-get update -y
+                    sudo apt-get install -y jq
+                  fi
+
+                  echo "Получаем самый свежий версионный тег для $REPO..."
+                  LATEST_VERSION_TAG="$(curl -s -u "${DOCKERHUB_USERNAME}:${DOCKERHUB_TOKEN}" "https://hub.docker.com/v2/repositories/${REPO}/tags/?page_size=100" \
+                    | jq -r '.results | map(select(.name | test("^v"))) | sort_by(.last_updated) | last | .name')"
+
+                  if [[ -z "$LATEST_VERSION_TAG" || "$LATEST_VERSION_TAG" == "null" ]]; then
+                    echo "Не найдено версионных тегов для $REPO — пропускаем."
+                    exit 0
+                  fi
+
+                  echo "Самый свежий тег: $LATEST_VERSION_TAG"
+
+                  # Сравним digest у latest и у найденного тега (по манифест-листу)
+                  set +e
+                  CURRENT_DIGEST="$(docker buildx imagetools inspect -j "${REPO}:latest" 2>/dev/null | jq -r '.manifest.digest' || true)"
+                  set -e
+                  NEW_DIGEST="$(docker buildx imagetools inspect -j "${REPO}:${LATEST_VERSION_TAG}" | jq -r '.manifest.digest')"
+
+                  if [[ -n "$CURRENT_DIGEST" && "$CURRENT_DIGEST" == "$NEW_DIGEST" ]]; then
+                    echo "latest уже указывает на ${LATEST_VERSION_TAG} (digest ${NEW_DIGEST})"
+                  else
+                    echo "Обновляю latest → ${LATEST_VERSION_TAG} (digest ${NEW_DIGEST})"
+                    docker buildx imagetools create -t "${REPO}:latest" "${REPO}:${LATEST_VERSION_TAG}"
+                    echo "Готово."
+                  fi
 
             - name: Update docker-compose.prod.yml image tags
               if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))

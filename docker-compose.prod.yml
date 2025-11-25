@@ -27,7 +27,7 @@ services:
             start_period: 10s
 
     db-migrate:
-        image: deymonster/hw-monitor:v1.0.0-alpha.8 # Обновить версию
+        image: deymonster/hw-monitor:latest # Обновить версию
         container_name: db-migrate
         command: npx prisma migrate deploy
         depends_on:
@@ -40,12 +40,12 @@ services:
         restart: 'no'
 
     nextjs:
-        image: deymonster/hw-monitor:v1.0.0-alpha.8 # Обновить версию
+        image: deymonster/hw-monitor:latest # Обновить версию
         container_name: nextjs_app
         user: '1001:65533'
         ports:
             - '0.0.0.0:3000:3000'
-            - '0.0.0.0:3001:3001' # Добавить эту строку для WebSocket
+            - '0.0.0.0:3001:3001'
         depends_on:
             postgres:
                 condition: service_healthy
@@ -64,7 +64,7 @@ services:
             - nextjs_prometheus_config:/app/prometheus
 
     prometheus-config-init:
-        image: deymonster/hw-monitor:v1.0.0-alpha.8 # Обновить версию
+        image: deymonster/hw-monitor:latest # Обновить версию
         container_name: prometheus_config_init
         user: root
         command: >
@@ -116,7 +116,7 @@ services:
         restart: unless-stopped
 
     nginx-proxy:
-        image: deymonster/hw-monitor-nginx-combined:v1.0.0-alpha.7
+        image: deymonster/hw-monitor-nginx-combined:latest
         container_name: nginx_combined
         ports:
             - '0.0.0.0:80:80' # Основной порт для monitoring.local
@@ -146,7 +146,7 @@ services:
         restart: unless-stopped
 
     licd:
-        image: deymonster/hw-monitor-licd:v1.0.0-alpha.7
+        image: deymonster/hw-monitor-licd:latest
         container_name: licd
         environment:
             - MAX_AGENTS=50
