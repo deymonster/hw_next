@@ -1,0 +1,41 @@
+name: Upload Install Scripts to Nextcloud
+on:
+    workflow_dispatch:
+jobs:
+    upload:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Validate files exist (no fallback)
+              run: |
+                  set -euo pipefail
+                  [ -f "docker-compose.prod.yml" ] || { echo "❌ Missing docker-compose.prod.yml"; exit 1; }
+                  [ -f "scripts/install_v2.sh" ] || { echo "❌ Missing scripts/install_v2.sh"; exit 1; }
+                  [ -f "scripts/hwctl.sh" ] || { echo "❌ Missing scripts/hwctl.sh"; exit 1; }
+
+            - name: Upload files to Nextcloud (match old workflow secrets)
+              env:
+                  NEXTCLOUD_PASSWORD: ${{ secrets.NEXTCLOUD }}
+              run: |
+                  set -euo pipefail
+                  BASE="https://storage.deymonster.ru/remote.php/dav/files/admin/hw"
+                  AUTH="admin:${NEXTCLOUD_PASSWORD}"
+
+                  echo "Uploading docker-compose.prod.yml → hw/deploys/docker-compose"
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/docker-compose/docker-compose.prod.yml" \
+                       --data-binary @docker-compose.prod.yml \
+                       -w "docker-compose.prod.yml → %{http_code}\n" -o /dev/null
+
+                  echo "Uploading install_v2.sh → hw/deploys/scripts"
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/install_v2.sh" \
+                       --data-binary @scripts/install_v2.sh \
+                       -w "install_v2.sh → %{http_code}\n" -o /dev/null
+
+                  echo "Uploading hwctl (from hwctl.sh) → hw/deploys/scripts"
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/hwctl.sh" \
+                       --data-binary @scripts/hwctl.sh \
+                       -w "hwctl → %{http_code}\n" -o /dev/null
+
+                  echo "✅ Upload complete."
