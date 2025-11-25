@@ -184,20 +184,9 @@ jobs:
                     exit 0
                   fi
 
-                  echo "Самый свежий тег: $LATEST_VERSION_TAG"
-
-                  set +e
-                  CURRENT_DIGEST="$(docker buildx imagetools inspect -j "${REPO}:latest" 2>/dev/null | jq -r '.manifest.digest' || true)"
-                  set -e
-                  NEW_DIGEST="$(docker buildx imagetools inspect -j "${REPO}:${LATEST_VERSION_TAG}" | jq -r '.manifest.digest')"
-
-                  if [[ -n "$CURRENT_DIGEST" && "$CURRENT_DIGEST" == "$NEW_DIGEST" ]]; then
-                    echo "latest уже указывает на ${LATEST_VERSION_TAG} (digest ${NEW_DIGEST})"
-                  else
-                    echo "Обновляю latest → ${LATEST_VERSION_TAG} (digest ${NEW_DIGEST})"
-                    docker buildx imagetools create -t "${REPO}:latest" "${REPO}:${LATEST_VERSION_TAG}"
-                    echo "Готово."
-                  fi
+                  echo "Обновляю ${REPO}:latest → ${LATEST_VERSION_TAG}"
+                  docker buildx imagetools create -t "${REPO}:latest" "${REPO}:${LATEST_VERSION_TAG}"
+                  echo "Готово."
 
             - name: Ensure hw-monitor-licd:latest points to newest tag
               if: ${{ steps.vars.outputs.SERVICE == 'hw-monitor' }}
@@ -222,20 +211,9 @@ jobs:
                     exit 0
                   fi
 
-                  echo "Самый свежий тег: $LATEST_VERSION_TAG"
-
-                  set +e
-                  CURRENT_DIGEST="$(docker buildx imagetools inspect -j "${REPO}:latest" 2>/dev/null | jq -r '.manifest.digest' || true)"
-                  set -e
-                  NEW_DIGEST="$(docker buildx imagetools inspect -j "${REPO}:${LATEST_VERSION_TAG}" | jq -r '.manifest.digest')"
-
-                  if [[ -n "$CURRENT_DIGEST" && "$CURRENT_DIGEST" == "$NEW_DIGEST" ]]; then
-                    echo "latest уже указывает на ${LATEST_VERSION_TAG} (digest ${NEW_DIGEST})"
-                  else
-                    echo "Обновляю latest → ${LATEST_VERSION_TAG} (digest ${NEW_DIGEST})"
-                    docker buildx imagetools create -t "${REPO}:latest" "${REPO}:${LATEST_VERSION_TAG}"
-                    echo "Готово."
-                  fi
+                  echo "Обновляю ${REPO}:latest → ${LATEST_VERSION_TAG}"
+                  docker buildx imagetools create -t "${REPO}:latest" "${REPO}:${LATEST_VERSION_TAG}"
+                  echo "Готово."
 
             - name: Update docker-compose.prod.yml image tags
               if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
