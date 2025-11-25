@@ -223,6 +223,9 @@ jobs:
                   AUTH="admin:${NEXTCLOUD_PASSWORD}"
 
                   test -f docker-compose.prod.yml || { echo "Файл docker-compose.prod.yml отсутствует"; exit 1; }
+                  test -f scripts/install_v2.sh || { echo "Файл scripts/install_v2.sh отсутствует"; exit 1; }
+                  test -f scripts/hwctl.sh || { echo "Файл scripts/hwctl.sh отсутствует"; exit 1; }
+                  test -f scripts/cleanup.sh || { echo "Файл scripts/cleanup.sh отсутствует"; exit 1; }
 
                   curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/docker-compose/docker-compose.prod.yml" \
                        --data-binary @docker-compose.prod.yml \
@@ -231,6 +234,14 @@ jobs:
                   curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/install_v2.sh" \
                        --data-binary @scripts/install_v2.sh \
                        -w "install_v2.sh → %{http_code}\n" -o /dev/null
+
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/hwctl.sh" \
+                       --data-binary @scripts/hwctl.sh \
+                       -w "hwctl.sh → %{http_code}\n" -o /dev/null
+
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/cleanup.sh" \
+                       --data-binary @scripts/cleanup.sh \
+                       -w "cleanup.sh → %{http_code}\n" -o /dev/null
 
                   echo ""
                   echo "Проверить можно здесь:"

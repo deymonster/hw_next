@@ -148,6 +148,36 @@ prepare_dirs() {
   mkdir -p "${INSTALL_DIR%/}/nginx/auth" "${INSTALL_DIR%/}/data" "${INSTALL_DIR%/}/logs"
 }
 
+fetch_scripts_if_available() {
+  require_cmd curl
+
+  # Скачивание hwctl.sh
+  local hwctl_dst="${INSTALL_DIR%/}/hwctl.sh"
+  if [[ -n "$HWCTL_URL" ]]; then
+    log "Скачиваю hwctl.sh из $HWCTL_URL"
+    curl -fsSL "$HWCTL_URL" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по HWCTL_URL"
+    chmod +x "$hwctl_dst" 2>/dev/null || true
+  elif [[ -n "$SCRIPTS_URL_BASE" ]]; then
+    log "Пробую скачать hwctl.sh из базового URL $SCRIPTS_URL_BASE"
+    curl -fsSL "${SCRIPTS_URL_BASE%/}/hwctl.sh" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по SCRIPTS_URL_BASE"
+    chmod +x "$hwctl_dst" 2>/dev/null || true
+  fi
+
+  # Скачивание cleanup.sh
+  local scripts_dir="${INSTALL_DIR%/}/scripts"
+  local cleanup_dst="${scripts_dir%/}/cleanup.sh"
+  mkdir -p "$scripts_dir"
+  if [[ -n "$CLEANUP_URL" ]]; then
+    log "Скачиваю cleanup.sh из $CLEANUP_URL"
+    curl -fsSL "$CLEANUP_URL" -o "$cleanup_dst" || warn "Не удалось скачать cleanup.sh по CLEANUP_URL"
+    chmod +x "$cleanup_dst" 2>/dev/null || true
+  elif [[ -n "$SCRIPTS_URL_BASE" ]]; then
+    log "Пробую скачать cleanup.sh из базового URL $SCRIPTS_URL_BASE"
+    curl -fsSL "${SCRIPTS_URL_BASE%/}/cleanup.sh" -o "$cleanup_dst" || warn "Не удалось скачать cleanup.sh по SCRIPTS_URL_BASE"
+    chmod +x "$cleanup_dst" 2>/dev/null || true
+  fi
+}
+
 fetch_compose_if_needed() {
   require_cmd curl
 
@@ -333,16 +363,19 @@ install_hwctl() {
     local hwctl_src="${src_dir%/}/hwctl.sh"
     local hwctl_dst="${INSTALL_DIR%/}/hwctl.sh"
 
-    if [[ ! -f "$hwctl_src" ]]; then
-        warn "Не найден исходный скрипт: $hwctl_src. Пропускаю установку hwctl."
+    if [[ -f "$hwctl_src" ]]; then
+        mkdir -p "$INSTALL_DIR"
+        cp "$hwctl_src" "$hwctl_dst"
+        chmod +x "$hwctl_dst" || true
+    elif [[ -f "$hwctl_dst" ]]; then
+        # Уже скачан fetch_scripts_if_available
+        chmod +x "$hwctl_dst" || true
+    else
+        warn "Не найден hwctl.sh ни локально ($hwctl_src), ни в установочной директории ($hwctl_dst). Пропускаю установку hwctl."
         return 0
     fi
 
-    mkdir -p "$INSTALL_DIR"
-    cp "$hwctl_src" "$hwctl_dst"
-    chmod +x "$hwctl_dst" || true
-
-    if ln -sf "$hwctl_dst" /usr/local/bin/hwctl 2>/dev/null; then
+    if sudo ln -sf "$hwctl_dst" /usr/local/bin/hwctl 2>/dev/null; then
         log "Создан симлинк /usr/local/bin/hwctl -> $hwctl_dst"
     else
         warn "Не удалось создать симлинк /usr/local/bin/hwctl. Используйте локальный скрипт: $hwctl_dst"
@@ -427,6 +460,9 @@ detect_ip() {
   echo "$ip"
 }
 
+# Точка входа
+main "$@"
+
 # Helpers: random strings
 random_string() {
   openssl rand -hex 16 2>/dev/null || tr -dc 'a-f0-9' < /dev/urandom | head -c 32
@@ -461,7 +497,6 @@ usage() {
 Опции:
   --install-dir PATH           Каталог установки (по умолчанию: /opt/hw-monitor)
   --compose-url URL            Скачать docker-compose.prod.yml по URL
-  --compose-file-url URL       Доп. URL для загрузки compose (по умолчанию: GitHub)
   --compose-file NAME          Имя compose-файла (по умолчанию: docker-compose.prod.yml)
   --env-file NAME              Имя файла окружения (по умолчанию: .env.prod)
   --project-name NAME          Имя проекта Docker Compose (по умолчанию: hw-monitor)
@@ -474,13 +509,18 @@ usage() {
   --basic-auth-user USER       Username for nginx basic auth (optional)
   --basic-auth-pass PASS       Password for nginx basic auth (optional)
 
+  --hwctl-url URL              URL для загрузки hwctl.sh (опционально)
+  --cleanup-url URL            URL для загрузки cleanup.sh (опционально)
+  --scripts-url-base URL       Базовый URL; скачает /hwctl.sh и /cleanup.sh
+
 Notes:
+  * Если параметр --compose-url не задан, используется COMPOSE_FILE_URL из скрипта.
   * Astra Linux определяется автоматически; приоритет — пакет docker.io.
     Если недоступен, используется официальный репозиторий Docker для Debian (bullseye).
 USAGE
 }
 
-main() {
+function main() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --install-dir) INSTALL_DIR="$2"; shift 2;;
@@ -496,6 +536,10 @@ main() {
 
       --basic-auth-user) BASIC_AUTH_USER="$2"; shift 2;;
       --basic-auth-pass) BASIC_AUTH_PASS="$2"; shift 2;;
+
+      --hwctl-url) HWCTL_URL="$2"; shift 2;;
+      --cleanup-url) CLEANUP_URL="$2"; shift 2;;
+      --scripts-url-base) SCRIPTS_URL_BASE="$2"; shift 2;;
 
       -h|--help) usage; exit 0;;
       *) err "Неизвестная опция: $1"; usage; exit 2;;
@@ -514,11 +558,17 @@ main() {
   log "Получаю compose-файл"
   fetch_compose_if_needed
 
+  log "Скачиваю вспомогательные скрипты (hwctl/cleanup) при наличии URL"
+  fetch_scripts_if_available
+
   log "Подготавлию файл окружения (интерактивно, если нет --non-interactive)"
   ensure_env_file
 
   log "Устанавливаю hwctl (локальный и глобальный симлинк)"
   install_hwctl
+
+  log "Устанавливаю cleanup.sh (если скачан/локально доступен)"
+  install_cleanup_script
 
   log "Генерирую .htpasswd, если заданы креды"
   generate_htpasswd_if_needed
@@ -529,7 +579,76 @@ main() {
   log "Поднимаю стек"
   bring_up_stack
 
+  print_post_install_summary
+
   log "Готово."
 }
 
-main "$@"
+install_cleanup_script() {
+    local src_dir
+    src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local cleanup_src="${src_dir%/}/cleanup.sh"
+    local dst_dir="${INSTALL_DIR%/}/scripts"
+    local cleanup_dst="${dst_dir%/}/cleanup.sh"
+
+    mkdir -p "$dst_dir"
+
+    if [[ -f "$cleanup_src" ]]; then
+        cp "$cleanup_src" "$cleanup_dst"
+        chmod +x "$cleanup_dst" || true
+        log "Установлен скрипт очистки: $cleanup_dst"
+        return 0
+    fi
+
+    if [[ -f "$cleanup_dst" ]]; then
+        chmod +x "$cleanup_dst" || true
+        log "Скрипт очистки уже присутствует: $cleanup_dst"
+        return 0
+    fi
+
+    warn "cleanup.sh не найден ни локально, ни в директории установки."
+}
+}
+
+# Подкачиваем и ставим утилиты
+fetch_scripts_if_available
+install_hwctl
+install_cleanup_script
+
+# Патчим теги, если заданы
+patch_image_tags_if_requested
+
+# Поднимаем стек
+bring_up_stack
+
+# Проверка доступности hwctl
+if command -v hwctl >/dev/null 2>&1; then
+  log "hwctl установлен: $(command -v hwctl)"
+  hwctl ps || true
+else
+  warn "hwctl не найден в PATH. Проверьте симлинк /usr/local/bin/hwctl."
+fi
+}
+
+function print_post_install_summary() {
+  local env_path="${INSTALL_DIR%/}/${ENV_FILE}"
+  local compose_path="${INSTALL_DIR%/}/${COMPOSE_FILE}"
+
+  echo "=============================================="
+  echo "Установка завершена"
+  echo "Каталог установки: ${INSTALL_DIR}"
+  echo "Compose: ${compose_path}"
+  echo "Env: ${env_path}"
+  echo "Проект: ${PROJECT_NAME}"
+  echo
+  echo "Управление:"
+  echo "  docker compose --project-name ${PROJECT_NAME} --env-file ${env_path} -f ${compose_path} ps"
+  echo "  docker compose --project-name ${PROJECT_NAME} --env-file ${env_path} -f ${compose_path} logs -f --tail=100"
+  echo "  docker compose --project-name ${PROJECT_NAME} --env-file ${env_path} -f ${compose_path} down"
+  if command -v hwctl >/dev/null 2>&1; then
+    echo
+    echo "hwctl установлен: $(command -v hwctl)"
+    echo "Примеры: hwctl ps | hwctl logs | hwctl restart"
+  fi
+  echo "=============================================="
+}
