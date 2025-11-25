@@ -20,6 +20,9 @@ LICD_TAG="${LICD_TAG:-}"
 BASIC_AUTH_USER="${BASIC_AUTH_USER:-}"
 BASIC_AUTH_PASS="${BASIC_AUTH_PASS:-}"
 
+HWCTL_URL="${HWCTL_URL:-}"
+SCRIPTS_URL_BASE="${SCRIPTS_URL_BASE:-}"
+
 NGINX_AUTH_FILE=""
 set_nginx_auth_file() {
   NGINX_AUTH_FILE="${INSTALL_DIR%/}/nginx/auth/.htpasswd"
@@ -153,11 +156,11 @@ fetch_scripts_if_available() {
 
   # Скачивание hwctl.sh
   local hwctl_dst="${INSTALL_DIR%/}/hwctl.sh"
-  if [[ -n "$HWCTL_URL" ]]; then
+  if [[ -n "${HWCTL_URL:-}" ]]; then
     log "Скачиваю hwctl.sh из $HWCTL_URL"
     curl -fsSL "$HWCTL_URL" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по HWCTL_URL"
     chmod +x "$hwctl_dst" 2>/dev/null || true
-  elif [[ -n "$SCRIPTS_URL_BASE" ]]; then
+  elif [[ -n "${SCRIPTS_URL_BASE:-}" ]]; then
     log "Пробую скачать hwctl.sh из базового URL $SCRIPTS_URL_BASE"
     curl -fsSL "${SCRIPTS_URL_BASE%/}/hwctl.sh" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по SCRIPTS_URL_BASE"
     chmod +x "$hwctl_dst" 2>/dev/null || true
