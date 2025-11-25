@@ -446,8 +446,6 @@ detect_ip() {
   echo "$ip"
 }
 
-# Точка входа — без дублирования вызовов
-main "$@"
 
 # Helpers: random strings
 random_string() {
@@ -561,53 +559,8 @@ function main() {
   log "Поднимаю стек"
   bring_up_stack
 
+  # Завершение main
   log "Готово."
-}
-
-install_cleanup_script() {
-    local src_dir
-    src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local cleanup_src="${src_dir%/}/cleanup.sh"
-    local dst_dir="${INSTALL_DIR%/}/scripts"
-    local cleanup_dst="${dst_dir%/}/cleanup.sh"
-
-    mkdir -p "$dst_dir"
-
-    if [[ -f "$cleanup_src" ]]; then
-        cp "$cleanup_src" "$cleanup_dst"
-        chmod +x "$cleanup_dst" || true
-        log "Установлен скрипт очистки: $cleanup_dst"
-        return 0
-    fi
-
-    if [[ -f "$cleanup_dst" ]]; then
-        chmod +x "$cleanup_dst" || true
-        log "Скрипт очистки уже присутствует: $cleanup_dst"
-        return 0
-    fi
-
-    warn "cleanup.sh не найден ни локально, ни в директории установки."
-}
-}
-
-# Подкачиваем и ставим утилиты
-fetch_scripts_if_available
-install_hwctl
-install_cleanup_script
-
-# Патчим теги, если заданы
-patch_image_tags_if_requested
-
-# Поднимаем стек
-bring_up_stack
-
-# Проверка доступности hwctl
-if command -v hwctl >/dev/null 2>&1; then
-  log "hwctl установлен: $(command -v hwctl)"
-  hwctl ps || true
-else
-  warn "hwctl не найден в PATH. Проверьте симлинк /usr/local/bin/hwctl."
-fi
 }
 
 function print_post_install_summary() {
@@ -638,3 +591,6 @@ function print_post_install_summary() {
   fi
   echo "=============================================="
 }
+
+# Правильное место вызова: в самом конце файла
+main "$@"
