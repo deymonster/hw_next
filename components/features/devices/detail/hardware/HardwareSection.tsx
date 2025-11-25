@@ -12,11 +12,11 @@ interface HardwareSectionProps {
 }
 
 export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
-	const t = useTranslations('dashboard.devices.detail.hardware')
+        const t = useTranslations('dashboard.devices.detail.hardware')
 
-	if (!hardwareInfo) return null
+        if (!hardwareInfo) return null
 
-	const formatDiskSize = (disk: DiskInfo): string => {
+        const formatDiskSize = (disk: DiskInfo): string => {
 		if (typeof disk.sizeGb === 'number' && !Number.isNaN(disk.sizeGb)) {
 			return `${disk.sizeGb.toFixed(2)} ГБ`
 		}
@@ -27,14 +27,37 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 			return `${sizeInGB.toFixed(2)} ГБ`
 		}
 
-		return disk.size
-	}
+                return disk.size
+        }
 
-	return (
-		<div className='grid gap-4 md:grid-cols-2'>
-			<Card>
-				<CardContent className='pt-6'>
-					<div className='space-y-6'>
+        const gpuStatusTypes = hardwareInfo.gpus
+                .map(gpu => gpu.type)
+                .filter(
+                        (type): type is 'integrated' | 'discrete' | 'unknown' =>
+                                Boolean(type)
+                )
+
+        const hasIntegrated = gpuStatusTypes.includes('integrated')
+        const hasDiscrete = gpuStatusTypes.includes('discrete')
+        const hasUnknown = gpuStatusTypes.includes('unknown')
+
+        let gpuStatusLabel: string | null = null
+
+        if (hasIntegrated && hasDiscrete) {
+                gpuStatusLabel = t('graphicsStatusBoth')
+        } else if (hasIntegrated) {
+                gpuStatusLabel = t('graphicsStatusIntegrated')
+        } else if (hasDiscrete) {
+                gpuStatusLabel = t('graphicsStatusDiscrete')
+        } else if (hasUnknown && gpuStatusTypes.length > 0) {
+                gpuStatusLabel = t('graphicsStatusUnknown')
+        }
+
+        return (
+                <div className='grid gap-4 md:grid-cols-2'>
+                        <Card>
+                                <CardContent className='pt-6'>
+                                        <div className='space-y-6'>
 						{/* BIOS */}
 						<div className='flex items-start space-x-3'>
 							<Cpu className='mt-1 h-5 w-5 text-muted-foreground' />
@@ -165,15 +188,25 @@ export function HardwareSection({ hardwareInfo }: HardwareSectionProps) {
 						</div>
 
 						{/* GPU */}
-						<div className='flex items-start space-x-3'>
-							<MonitorSmartphone className='mt-1 h-5 w-5 text-muted-foreground' />
-							<div>
-								<h4 className='font-medium'>{t('graphics')}</h4>
-								<div className='space-y-2'>
-									{hardwareInfo.gpus.map((gpu, index) => {
-										const memoryValue =
-											typeof gpu.memoryGB === 'number' &&
-											!Number.isNaN(gpu.memoryGB)
+                                                <div className='flex items-start space-x-3'>
+                                                        <MonitorSmartphone className='mt-1 h-5 w-5 text-muted-foreground' />
+                                                        <div>
+                                                                <h4 className='font-medium'>{t('graphics')}</h4>
+                                                                {gpuStatusLabel && (
+                                                                        <div className='mt-1 inline-flex items-center space-x-2 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground'>
+                                                                                <span className='font-medium text-foreground/80'>
+                                                                                        {t('graphicsStatusLabel')}:
+                                                                                </span>
+                                                                                <span className='capitalize text-foreground'>
+                                                                                        {gpuStatusLabel}
+                                                                                </span>
+                                                                        </div>
+                                                                )}
+                                                                <div className='space-y-2'>
+                                                                        {hardwareInfo.gpus.map((gpu, index) => {
+                                                                                const memoryValue =
+                                                                                        typeof gpu.memoryGB === 'number' &&
+                                                                                        !Number.isNaN(gpu.memoryGB)
 												? `${gpu.memoryGB.toFixed(2)} ГБ`
 												: typeof gpu.memoryMB ===
 															'number' &&

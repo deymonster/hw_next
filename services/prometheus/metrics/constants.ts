@@ -15,14 +15,15 @@ export const PROMETHEUS_METRICS = {
 		/** Информация о железе */
 		hardware: [
 			'cpu_usage_percent',
-			'bios_info',
-			'motherboard_info',
-			'memory_module_info',
-			'gpu_info',
-			'gpu_memory_bytes',
-			'disk_health_status',
-			'network_status'
-		]
+                        'bios_info',
+                        'motherboard_info',
+                        'memory_module_info',
+                        'gpu_info',
+                        'gpu_type_info',
+                        'gpu_memory_bytes',
+                        'disk_health_status',
+                        'network_status'
+                ]
 	},
 	[MetricType.DYNAMIC]: {
 		/** Метрики процессора */
