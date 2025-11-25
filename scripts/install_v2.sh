@@ -162,20 +162,6 @@ fetch_scripts_if_available() {
     curl -fsSL "${SCRIPTS_URL_BASE%/}/hwctl.sh" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по SCRIPTS_URL_BASE"
     chmod +x "$hwctl_dst" 2>/dev/null || true
   fi
-
-  # Скачивание cleanup.sh
-  local scripts_dir="${INSTALL_DIR%/}/scripts"
-  local cleanup_dst="${scripts_dir%/}/cleanup.sh"
-  mkdir -p "$scripts_dir"
-  if [[ -n "$CLEANUP_URL" ]]; then
-    log "Скачиваю cleanup.sh из $CLEANUP_URL"
-    curl -fsSL "$CLEANUP_URL" -o "$cleanup_dst" || warn "Не удалось скачать cleanup.sh по CLEANUP_URL"
-    chmod +x "$cleanup_dst" 2>/dev/null || true
-  elif [[ -n "$SCRIPTS_URL_BASE" ]]; then
-    log "Пробую скачать cleanup.sh из базового URL $SCRIPTS_URL_BASE"
-    curl -fsSL "${SCRIPTS_URL_BASE%/}/cleanup.sh" -o "$cleanup_dst" || warn "Не удалось скачать cleanup.sh по SCRIPTS_URL_BASE"
-    chmod +x "$cleanup_dst" 2>/dev/null || true
-  fi
 }
 
 fetch_compose_if_needed() {
@@ -460,7 +446,7 @@ detect_ip() {
   echo "$ip"
 }
 
-# Точка входа
+# Точка входа — без дублирования вызовов
 main "$@"
 
 # Helpers: random strings
@@ -538,7 +524,6 @@ function main() {
       --basic-auth-pass) BASIC_AUTH_PASS="$2"; shift 2;;
 
       --hwctl-url) HWCTL_URL="$2"; shift 2;;
-      --cleanup-url) CLEANUP_URL="$2"; shift 2;;
       --scripts-url-base) SCRIPTS_URL_BASE="$2"; shift 2;;
 
       -h|--help) usage; exit 0;;
@@ -558,7 +543,7 @@ function main() {
   log "Получаю compose-файл"
   fetch_compose_if_needed
 
-  log "Скачиваю вспомогательные скрипты (hwctl/cleanup) при наличии URL"
+  log "Скачиваю вспомогательные скрипты (hwctl) при наличии URL"
   fetch_scripts_if_available
 
   log "Подготавлию файл окружения (интерактивно, если нет --non-interactive)"
@@ -566,9 +551,6 @@ function main() {
 
   log "Устанавливаю hwctl (локальный и глобальный симлинк)"
   install_hwctl
-
-  log "Устанавливаю cleanup.sh (если скачан/локально доступен)"
-  install_cleanup_script
 
   log "Генерирую .htpasswd, если заданы креды"
   generate_htpasswd_if_needed
@@ -578,8 +560,6 @@ function main() {
 
   log "Поднимаю стек"
   bring_up_stack
-
-  print_post_install_summary
 
   log "Готово."
 }
@@ -647,8 +627,14 @@ function print_post_install_summary() {
   echo "  docker compose --project-name ${PROJECT_NAME} --env-file ${env_path} -f ${compose_path} down"
   if command -v hwctl >/dev/null 2>&1; then
     echo
-    echo "hwctl установлен: $(command -v hwctl)"
-    echo "Примеры: hwctl ps | hwctl logs | hwctl restart"
+    echo "hwctl — управление сервисом:"
+    echo "  Обновление с автопулом:    hwctl update"
+    echo "    Compose v2: up -d --pull always --remove-orphans"
+    echo "    Compose v1: pull -> up -d --remove-orphans"
+    echo "  Полное удаление (purge):   hwctl purge [--remove-images] [--remove-hwctl]"
+    echo "    --remove-images — удалить образы deymonster/hw-monitor*"
+    echo "    --remove-hwctl  — удалить скрипт и симлинк hwctl"
+    echo "  Быстрое управление:        hwctl ps | hwctl logs | hwctl restart"
   fi
   echo "=============================================="
 }
