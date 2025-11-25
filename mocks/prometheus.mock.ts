@@ -104,30 +104,30 @@ const hardwareMetrics: PrometheusApiResponse = {
 				value: [1625097600, '1']
 			},
 			// GPU Info
-                        {
-                                metric: {
-                                        __name__: 'gpu_info',
-                                        instance: 'localhost:9182',
-                                        job: 'node',
-                                        name: 'Apple M1 GPU'
-                                },
-                                value: [1625097600, '1']
-                        },
-                        {
-                                metric: {
-                                        __name__: 'gpu_type_info',
-                                        instance: 'localhost:9182',
-                                        job: 'node',
-                                        name: 'Apple M1 GPU',
-                                        type: 'integrated'
-                                },
-                                value: [1625097600, '1']
-                        },
-                        // GPU Memory
-                        {
-                                metric: {
-                                        __name__: 'gpu_memory_bytes',
-                                        instance: 'localhost:9182',
+			{
+				metric: {
+					__name__: 'gpu_info',
+					instance: 'localhost:9182',
+					job: 'node',
+					name: 'Apple M1 GPU'
+				},
+				value: [1625097600, '1']
+			},
+			{
+				metric: {
+					__name__: 'gpu_type_info',
+					instance: 'localhost:9182',
+					job: 'node',
+					name: 'Apple M1 GPU',
+					type: 'integrated'
+				},
+				value: [1625097600, '1']
+			},
+			// GPU Memory
+			{
+				metric: {
+					__name__: 'gpu_memory_bytes',
+					instance: 'localhost:9182',
 					job: 'node',
 					name: 'Apple M1 GPU'
 				},

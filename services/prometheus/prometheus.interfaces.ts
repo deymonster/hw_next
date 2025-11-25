@@ -245,17 +245,17 @@ export interface FreeMemoryBytes extends MetricBase {
  * Статическая информация о GPU
  */
 export interface GpuInfo extends MetricBase {
-        __name__: 'gpu_info'
-        name: string
+	__name__: 'gpu_info'
+	name: string
 }
 
 /**
  * Тип GPU: интегрированная/дискретная/неизвестно
  */
 export interface GpuTypeInfo extends MetricBase {
-        __name__: 'gpu_type_info'
-        name: string
-        type: 'integrated' | 'discrete' | 'unknown'
+	__name__: 'gpu_type_info'
+	name: string
+	type: 'integrated' | 'discrete' | 'unknown'
 }
 
 /**
@@ -469,16 +469,16 @@ export interface DeviceMetrics {
 		memory: {
 			modules: MemoryModuleSummary[] // статическая информация о модулях
 		}
-                disks: DiskInfo[] // статическая информация о дисках
-                gpus: Array<{
-                        name: string
-                        memoryMB?: number
-                        memoryGB?: number
-                        type?: 'integrated' | 'discrete' | 'unknown'
-                }>
-                networkInterfaces: Array<{
-                        name: string
-                        status: string
+		disks: DiskInfo[] // статическая информация о дисках
+		gpus: Array<{
+			name: string
+			memoryMB?: number
+			memoryGB?: number
+			type?: 'integrated' | 'discrete' | 'unknown'
+		}>
+		networkInterfaces: Array<{
+			name: string
+			status: string
 			performance?: {
 				rx: { value: number; unit: string }
 				tx: { value: number; unit: string }

@@ -447,24 +447,24 @@
 						"saving": "Saving..."
 					}
 				},
-                                "hardware": {
-                                        "storage": "Storage",
-                                        "graphics": "Graphics",
-                                        "graphicsStatusLabel": "Video adapter status",
-                                        "graphicsStatusIntegrated": "integrated",
-                                        "graphicsStatusDiscrete": "discrete",
-                                        "graphicsStatusBoth": "integrated, discrete",
-                                        "graphicsStatusUnknown": "unknown",
-                                        "graphicsMemory": "Memory",
-                                        "processor": "Processor",
-                                        "motherboard": "Motherboard",
-                                        "memory": "Memory",
-                                        "networkAdapters": "Network Adapters",
-                                        "model": "Model",
-                                        "type": "Type",
-                                        "health": "Health",
-                                        "version": "Version",
-                                        "date": "Date"
+				"hardware": {
+					"storage": "Storage",
+					"graphics": "Graphics",
+					"graphicsStatusLabel": "Video adapter status",
+					"graphicsStatusIntegrated": "integrated",
+					"graphicsStatusDiscrete": "discrete",
+					"graphicsStatusBoth": "integrated, discrete",
+					"graphicsStatusUnknown": "unknown",
+					"graphicsMemory": "Memory",
+					"processor": "Processor",
+					"motherboard": "Motherboard",
+					"memory": "Memory",
+					"networkAdapters": "Network Adapters",
+					"model": "Model",
+					"type": "Type",
+					"health": "Health",
+					"version": "Version",
+					"date": "Date"
 				},
 				"performance": {
 					"cpuUsage": "CPU Usage",
