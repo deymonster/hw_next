@@ -4,15 +4,16 @@ import {
 	ActiveProcessMemoryUsage,
 	BiosInfo,
 	CpuTemperature,
-	CpuUsagePercent,
-	DiskHealthStatus,
-	DiskMetrics,
-	GpuInfo,
-	MemoryMetrics,
-	MemoryModuleInfo,
-	MotherBoardInfo,
-	NetworkStatus,
-	ProcessCpuUsagePercent,
+        CpuUsagePercent,
+        DiskHealthStatus,
+        DiskMetrics,
+        GpuInfo,
+        GpuTypeInfo,
+        MemoryMetrics,
+        MemoryModuleInfo,
+        MotherBoardInfo,
+        NetworkStatus,
+        ProcessCpuUsagePercent,
 	ProcessGroupCpuUsage,
 	ProcessGroupMemoryPrivate,
 	ProcessGroupMemoryWorkingSet,
@@ -268,37 +269,40 @@ export class PrometheusParser {
 	 * @returns Объект с информацией о железе
 	 */
 	public async getHardwareInfo() {
-		const bios = await this.findMetric<BiosInfo>('bios_info')
-		const motherboard =
-			await this.findMetric<MotherBoardInfo>('motherboard_info')
-		const memoryModules =
-			await this.findMetrics<MemoryModuleInfo>('memory_module_info')
-		const gpus = await this.findMetrics<GpuInfo>('gpu_info')
-		const disks =
-			await this.findMetrics<DiskHealthStatus>('disk_health_status')
-		const cpuInfo =
-			await this.findMetric<CpuUsagePercent>('cpu_usage_percent')
-		const networkInterfaces =
+                const bios = await this.findMetric<BiosInfo>('bios_info')
+                const motherboard =
+                        await this.findMetric<MotherBoardInfo>('motherboard_info')
+                const memoryModules =
+                        await this.findMetrics<MemoryModuleInfo>('memory_module_info')
+                const gpus = await this.findMetrics<GpuInfo>('gpu_info')
+                const gpuTypes = await this.findMetrics<GpuTypeInfo>('gpu_type_info')
+                const disks =
+                        await this.findMetrics<DiskHealthStatus>('disk_health_status')
+                const cpuInfo =
+                        await this.findMetric<CpuUsagePercent>('cpu_usage_percent')
+                const networkInterfaces =
 			await this.findMetrics<NetworkStatus>('network_status')
 
-		const gpuInfo = await Promise.all(
-			gpus.map(async gpu => {
-				const name = gpu.name
-				const memoryBytes = await this.getMetricValue(
-					'gpu_memory_bytes',
-					{ name }
-				)
+                const gpuInfo = await Promise.all(
+                        gpus.map(async gpu => {
+                                const name = gpu.name
+                                const gpuType = gpuTypes.find(type => type.name === name)?.type
+                                const memoryBytes = await this.getMetricValue(
+                                        'gpu_memory_bytes',
+                                        { name }
+                                )
 
 				const memoryMB = this.bytesToMB(memoryBytes)
 				const memoryGB = Number((memoryMB / 1024).toFixed(2))
 
-				return {
-					name,
-					memoryMB,
-					memoryGB: Number.isFinite(memoryGB) ? memoryGB : undefined
-				}
-			})
-		)
+                                return {
+                                        name,
+                                        memoryMB,
+                                        memoryGB: Number.isFinite(memoryGB) ? memoryGB : undefined,
+                                        type: gpuType
+                                }
+                        })
+                )
 
 		const networkInfo = await Promise.all(
 			networkInterfaces.map(async iface => {
