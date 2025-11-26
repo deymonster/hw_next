@@ -102,12 +102,7 @@ export function ScanModal() {
 			setSelectedDevices([])
 			fetchSubnet()
 		}
-		return () => {
-			if (isScanning) {
-				stopScan()
-			}
-		}
-	}, [isOpen, resetScanner, isScanning, stopScan, fetchSubnet])
+	}, [isOpen, resetScanner, fetchSubnet])
 
 	async function onSubmit(data: TypeScanDeviceSchema) {
 		if (isScanning) {
@@ -123,7 +118,8 @@ export function ScanModal() {
 			{ subnet: data.subnet },
 			{
 				onSuccess: () => {
-					toast.success(t('successScanMessage'))
+					// Показать тост на успешный запуск, а не завершение
+					toast.success(t('scanStartedMessage'))
 				},
 				onError: () => {
 					toast.error(t('errorScanMessage'))
@@ -145,6 +141,13 @@ export function ScanModal() {
 	useEffect(() => {
 		setLocalAgents(discoveredAgents)
 	}, [discoveredAgents])
+
+	// Показать тост на реальное завершение (progress == 100 и сканирование остановлено)
+	useEffect(() => {
+		if (!isScanning && progress === 100) {
+			toast.success(t('successScanMessage'))
+		}
+	}, [isScanning, progress, t])
 
 	const handleAddDevices = async () => {
 		try {

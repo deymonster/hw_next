@@ -19,6 +19,23 @@ function createRedirectUrl(
 	return url
 }
 
+// Добавляем безопасный способ получить IP клиента из заголовков
+function getClientIp(request: NextRequest): string | null {
+	const xff = request.headers.get('x-forwarded-for')
+	if (xff) {
+		return xff.split(',')[0].trim()
+	}
+	const xrip = request.headers.get('x-real-ip')
+	if (xrip) {
+		return xrip
+	}
+	const cf = request.headers.get('cf-connecting-ip')
+	if (cf) {
+		return cf
+	}
+	return null
+}
+
 export default async function middleware(request: NextRequest) {
 	const token = await getToken({
 		req: request,
@@ -35,18 +52,32 @@ export default async function middleware(request: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 		}
 
-		const throttleKey = token.id || request.ip || 'unknown'
-		const now = Date.now()
-		const last = networkScanThrottle.get(throttleKey)
+		// Ограничиваем только мутирующие методы, чтобы не ломать GET подсети и SSE
+		const shouldThrottle =
+			request.method === 'POST' || request.method === 'DELETE'
 
-		if (last && now - last < NETWORK_SCAN_WINDOW_MS) {
-			return NextResponse.json(
-				{ error: 'Too Many Requests' },
-				{ status: 429 }
-			)
+		if (shouldThrottle) {
+			// Жёстко сузим тип и гарантируем строку
+			const userId =
+				typeof token?.id === 'string' && token.id.length > 0
+					? token.id
+					: null
+			const clientIp = getClientIp(request)
+			const throttleKey: string = userId ?? clientIp ?? 'unknown'
+
+			const now = Date.now()
+			const last = networkScanThrottle.get(throttleKey)
+
+			if (last && now - last < NETWORK_SCAN_WINDOW_MS) {
+				return NextResponse.json(
+					{ error: 'Too Many Requests' },
+					{ status: 429 }
+				)
+			}
+
+			networkScanThrottle.set(throttleKey, now)
 		}
 
-		networkScanThrottle.set(throttleKey, now)
 		return NextResponse.next()
 	}
 

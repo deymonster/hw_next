@@ -38,7 +38,7 @@ export function ScanTable({
 	> = updaterOrValue => {
 		console.log('[SCAN_TABLE] Selection change:', updaterOrValue)
 
-		// Get new selection value by applying updater to current state
+		// Применяем апдейтер к текущему состоянию (если это функция)
 		const newSelection =
 			typeof updaterOrValue === 'function'
 				? updaterOrValue(rowSelection)
@@ -47,13 +47,13 @@ export function ScanTable({
 		console.log('[SCAN_TABLE] Current selection:', rowSelection)
 		console.log('[SCAN_TABLE] New selection:', newSelection)
 
-		// Update local selection state
+		// Обновляем локальное состояние выбора
 		setRowSelection(newSelection)
 
-		// Convert all selected rows to array of IP addresses
-		const selectedIps = Object.entries(newSelection)
-			.filter(([_, selected]) => selected)
-			.map(([index]) => data[parseInt(index)].ipAddress)
+		// Безопасно получаем IP-адреса только для существующих индексов
+		const selectedIps = data
+			.filter((_, idx) => Boolean(newSelection[String(idx)]))
+			.map(item => item.ipAddress)
 
 		console.log('[SCAN_TABLE] All selected IPs:', selectedIps)
 
