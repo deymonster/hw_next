@@ -6,6 +6,7 @@ import { EmployeeService } from './employee/employee.service'
 import { EventService } from './event.service'
 import { InventoryService } from './inventory/inventory.service'
 import { ILoggerService } from './logger/logger.interface'
+import { NetworkScanJobService } from './network-scan-job/network-scan-job.service'
 import { NetworkScannerService } from './network-scanner/network-scanner.service'
 import { NotificationSettingsService } from './notification-settings/notification-settings.service'
 import { NotificationFactory } from './notifications/notification.factory'
@@ -29,6 +30,7 @@ export interface IDataServices {
 	employee: EmployeeService
 	inventory: InventoryService
 	alert_rules: AlertRulesService
+	network_scan_job: NetworkScanJobService
 }
 
 // Инфраструктурные сервисы

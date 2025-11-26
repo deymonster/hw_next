@@ -3,6 +3,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 
 import { AUTH_ROUTES } from './libs/auth/constants'
 
+const networkScanThrottle = new Map<string, number>()
+const NETWORK_SCAN_WINDOW_MS = 5_000
+
 function createRedirectUrl(
 	baseUrl: string,
 	from: string,
@@ -23,6 +26,29 @@ export default async function middleware(request: NextRequest) {
 		cookieName: 'authjs.session-token',
 		secureCookie: process.env.NODE_ENV === 'production'
 	})
+
+	const isNetworkScanApi =
+		request.nextUrl.pathname.startsWith('/api/network/scan')
+
+	if (isNetworkScanApi) {
+		if (!token?.id) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+		}
+
+		const throttleKey = token.id || request.ip || 'unknown'
+		const now = Date.now()
+		const last = networkScanThrottle.get(throttleKey)
+
+		if (last && now - last < NETWORK_SCAN_WINDOW_MS) {
+			return NextResponse.json(
+				{ error: 'Too Many Requests' },
+				{ status: 429 }
+			)
+		}
+
+		networkScanThrottle.set(throttleKey, now)
+		return NextResponse.next()
+	}
 
 	// Проверяем Redis сессию если есть токен
 	if (token?.id && token?.sessionId) {
@@ -120,6 +146,7 @@ export default async function middleware(request: NextRequest) {
 export const config = {
 	matcher: [
 		'/((?!api/metadata|api|_next/static|_next/image|favicon.ico|images).*)',
-		'/api/auth/signout'
+		'/api/auth/signout',
+		'/api/network/scan/:path*'
 	]
 }

@@ -42,8 +42,15 @@ export function ScanModal() {
 	const queryClient = useQueryClient()
 
 	// Хуки для сканирования и управления устройствами
-	const { startScan, stopScan, isScanning, getSubnet, resetScanner } =
-		useNetworkScanner()
+	const {
+		startScan,
+		stopScan,
+		isScanning,
+		getSubnet,
+		resetScanner,
+		progress,
+		discoveredAgents
+	} = useNetworkScanner()
 	const { isLoading, addMultipleDevices } = useDeviceInfo()
 	const { refreshDevices } = useDevicesContext()
 
@@ -134,6 +141,10 @@ export function ScanModal() {
 			setLocalAgents([])
 		}
 	}
+
+	useEffect(() => {
+		setLocalAgents(discoveredAgents)
+	}, [discoveredAgents])
 
 	const handleAddDevices = async () => {
 		try {
@@ -308,14 +319,14 @@ export function ScanModal() {
 									<div className='flex items-center justify-between text-sm text-muted-foreground'>
 										<span>Сканирование сети...</span>
 										<span>
-											{localAgents.length} устройств
-											найдено
+											{progress}% · {localAgents.length}{' '}
+											устройств
 										</span>
 									</div>
 									<div className='h-2 w-full rounded-full bg-secondary'>
 										<div
-											className='h-2 animate-pulse rounded-full bg-primary transition-all duration-300'
-											style={{ width: '100%' }}
+											className='h-2 rounded-full bg-primary transition-all duration-300'
+											style={{ width: `${progress}%` }}
 										/>
 									</div>
 								</div>
