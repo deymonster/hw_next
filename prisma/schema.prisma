@@ -26,6 +26,7 @@ model User {
   telegramSettings     TelegramSettings?
   inventories          Inventory[]
   alertRules           AlertRule[]
+  networkScanJobs      NetworkScanJob[]
 }
 
 model Event {
@@ -204,6 +205,31 @@ model InventoryItem {
   @@index([employeeId])
   @@index([departmentId])
 
+}
+
+model NetworkScanJob {
+  id        String            @id @default(uuid())
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  status    NetworkScanStatus @default(QUEUED)
+  progress  Int               @default(0)
+  result    Json?
+  error     String?
+  options   Json?
+  userId    String?
+  user      User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+enum NetworkScanStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
 }
 
 enum Role {

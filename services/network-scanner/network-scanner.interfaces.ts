@@ -10,12 +10,22 @@ export interface NetworkScannerOptions {
 	concurrency?: number
 	agentPort?: number
 	targetAgentKey?: string
+	jobId?: string
+}
+
+export interface NetworkScanProgressPayload {
+	jobId?: string
+	processed: number
+	total: number
 }
 
 export interface NetworkScannerService {
 	getCurrentSubnet(): Promise<string>
 	scanNetwork(
-		options?: NetworkScannerOptions
+		options?: NetworkScannerOptions,
+		progressCallback?: (
+			payload: NetworkScanProgressPayload
+		) => void | Promise<void>
 	): Promise<NetworkDiscoveredAgent[]>
 	checkAgent(ipAddress: string): Promise<boolean>
 }

@@ -50,9 +50,16 @@ export class NetworkScannerService {
 	}
 
 	async scanNetwork(
-		options?: NetworkScannerOptions
+		options?: NetworkScannerOptions,
+		progressCallback?: (payload: {
+			jobId?: string
+			processed: number
+			total: number
+		}) => void
 	): Promise<NetworkDiscoveredAgent[]> {
-		console.log('[SCAN_NETWORK] Starting network scan...')
+		console.log(
+			`[SCAN_NETWORK] [${options?.jobId || options?.targetAgentKey || 'job'}] Starting network scan...`
+		)
 		this.isCancelled = false
 		const opts = { ...this.defaultOptions, ...options }
 		const subnet = options?.subnet || (await this.getCurrentSubnet())
@@ -63,6 +70,9 @@ export class NetworkScannerService {
 		const ips = Array.from({ length: 254 }, (_, i) =>
 			baseIp.replace(/\.0$/, `.${i + 1}`)
 		)
+
+		let processed = 0
+		const total = ips.length
 
 		// Разбиваем на чанки для параллельного сканирования
 		const chunks = this.chunkArray(ips, opts.concurrency!)
@@ -98,14 +108,26 @@ export class NetworkScannerService {
 					)
 					if (targetAgent) {
 						console.log(
-							'[SCAN_NETWORK] Found target agent:',
+							`[SCAN_NETWORK] [${opts.jobId || opts.targetAgentKey}] Found target agent:`,
 							targetAgent
 						)
+						processed += chunk.length
+						await progressCallback?.({
+							jobId: opts.jobId || opts.targetAgentKey,
+							processed,
+							total
+						})
 						return [targetAgent]
 					}
 				}
 
 				agents.push(...foundAgents)
+				processed += chunk.length
+				await progressCallback?.({
+					jobId: opts.jobId || opts.targetAgentKey,
+					processed,
+					total
+				})
 			} catch (error) {
 				if (error instanceof Error && error.message === 'AbortError') {
 					throw error

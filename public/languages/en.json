@@ -370,6 +370,7 @@
 				"heading": "Scan devices",
 				"subnetLabel": "Subnet",
 				"scanButton": "Scan",
+				"scanStartedMessage": "Devices scan successfully started",
 				"successScanMessage": "Devices scan successfully completed",
 				"errorScanMessage": "Error during devices scanning",
 				"subnetError": "Error determining subnet",

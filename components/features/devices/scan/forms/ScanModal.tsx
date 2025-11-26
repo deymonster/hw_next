@@ -42,8 +42,15 @@ export function ScanModal() {
 	const queryClient = useQueryClient()
 
 	// Хуки для сканирования и управления устройствами
-	const { startScan, stopScan, isScanning, getSubnet, resetScanner } =
-		useNetworkScanner()
+	const {
+		startScan,
+		stopScan,
+		isScanning,
+		getSubnet,
+		resetScanner,
+		progress,
+		discoveredAgents
+	} = useNetworkScanner()
 	const { isLoading, addMultipleDevices } = useDeviceInfo()
 	const { refreshDevices } = useDevicesContext()
 
@@ -95,12 +102,7 @@ export function ScanModal() {
 			setSelectedDevices([])
 			fetchSubnet()
 		}
-		return () => {
-			if (isScanning) {
-				stopScan()
-			}
-		}
-	}, [isOpen, resetScanner, isScanning, stopScan, fetchSubnet])
+	}, [isOpen, resetScanner, fetchSubnet])
 
 	async function onSubmit(data: TypeScanDeviceSchema) {
 		if (isScanning) {
@@ -116,7 +118,8 @@ export function ScanModal() {
 			{ subnet: data.subnet },
 			{
 				onSuccess: () => {
-					toast.success(t('successScanMessage'))
+					// Показать тост на успешный запуск, а не завершение
+					toast.success(t('scanStartedMessage'))
 				},
 				onError: () => {
 					toast.error(t('errorScanMessage'))
@@ -134,6 +137,17 @@ export function ScanModal() {
 			setLocalAgents([])
 		}
 	}
+
+	useEffect(() => {
+		setLocalAgents(discoveredAgents)
+	}, [discoveredAgents])
+
+	// Показать тост на реальное завершение (progress == 100 и сканирование остановлено)
+	useEffect(() => {
+		if (!isScanning && progress === 100) {
+			toast.success(t('successScanMessage'))
+		}
+	}, [isScanning, progress, t])
 
 	const handleAddDevices = async () => {
 		try {
@@ -308,14 +322,14 @@ export function ScanModal() {
 									<div className='flex items-center justify-between text-sm text-muted-foreground'>
 										<span>Сканирование сети...</span>
 										<span>
-											{localAgents.length} устройств
-											найдено
+											{progress}% · {localAgents.length}{' '}
+											устройств
 										</span>
 									</div>
 									<div className='h-2 w-full rounded-full bg-secondary'>
 										<div
-											className='h-2 animate-pulse rounded-full bg-primary transition-all duration-300'
-											style={{ width: '100%' }}
+											className='h-2 rounded-full bg-primary transition-all duration-300'
+											style={{ width: `${progress}%` }}
 										/>
 									</div>
 								</div>

@@ -5,6 +5,7 @@ import { EmployeeService } from './employee/employee.service'
 import { EventService } from './event.service'
 import { InventoryService } from './inventory/inventory.service'
 import { Logger } from './logger/logger.service'
+import { NetworkScanJobService } from './network-scan-job/network-scan-job.service'
 import { NetworkScannerService } from './network-scanner/network-scanner.service'
 import { NotificationSettingsService } from './notification-settings/notification-settings.service'
 import { NotificationFactory } from './notifications/notification.factory'
@@ -39,7 +40,8 @@ class ServiceFactory {
 			department: new DepartmentService(prisma),
 			employee: new EmployeeService(prisma),
 			inventory: new InventoryService(prisma),
-			alert_rules: new AlertRulesService(prisma)
+			alert_rules: new AlertRulesService(prisma),
+			network_scan_job: new NetworkScanJobService(prisma)
 		}
 
 		const prometheusService = new PrometheusService({
