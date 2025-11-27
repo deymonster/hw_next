@@ -51,17 +51,17 @@ export const PROMETHEUS_METRICS = {
 			'network_dropped_packets'
 		]
 	},
-	[MetricType.PROCESS]: {
-		/** Метрики процессов */
-		process: [
-			'active_proccess_list',
-			'proccess_cpu_usage_percent',
-			'active_proccess_memory_usage',
-			'cpu_usage_percent',
-			'process_instance_count',
-			'process_group_memory_workingset_mb',
-			'process_group_memory_private_mb',
-			'process_group_cpu_usage_percent'
-		]
-	}
+        [MetricType.PROCESS]: {
+                /** Метрики процессов */
+                process: [
+                        'active_process_list',
+                        'process_cpu_usage_percent',
+                        'active_process_memory_usage',
+                        'cpu_usage_percent',
+                        'process_instance_count',
+                        'process_group_memory_workingset_mb',
+                        'process_group_memory_private_mb',
+                        'process_group_cpu_usage_percent'
+                ]
+        }
 } as const
