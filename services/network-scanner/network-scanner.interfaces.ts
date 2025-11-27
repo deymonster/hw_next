@@ -5,12 +5,15 @@ export interface NetworkDiscoveredAgent {
 }
 
 export interface NetworkScannerOptions {
-	subnet?: string
-	timeout?: number
-	concurrency?: number
-	agentPort?: number
-	targetAgentKey?: string
-	jobId?: string
+        subnet?: string
+        timeout?: number
+        concurrency?: number
+        agentPort?: number
+        targetAgentKey?: string
+        jobId?: string
+        enableBackoff?: boolean
+        backoffBaseMs?: number
+        maxRetries?: number
 }
 
 export interface NetworkScanProgressPayload {

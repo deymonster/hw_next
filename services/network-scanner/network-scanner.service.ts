@@ -9,15 +9,25 @@ import {
 
 export class NetworkScannerService {
 	private readonly defaultOptions: NetworkScannerOptions = {
-		timeout: 5000,
-		concurrency: 25,
-		agentPort: 9182
+		timeout: Number(process.env.NETWORK_SCANNER_TIMEOUT_MS) || 5000,
+		concurrency: Number(process.env.NETWORK_SCANNER_CONCURRENCY) || 25,
+		agentPort: Number(process.env.AGENT_PORT) || 9182,
+		enableBackoff:
+			(process.env.NETWORK_SCANNER_BACKOFF_ENABLED || 'false') === 'true',
+		backoffBaseMs:
+			Number(process.env.NETWORK_SCANNER_BACKOFF_BASE_MS) || 200,
+		maxRetries: Number(process.env.NETWORK_SCANNER_MAX_RETRIES) || 3
 	}
+	private readonly cacheTtlSeconds =
+		Number(process.env.NETWORK_SCANNER_CACHE_TTL_SECONDS) || 600
+	private readonly cacheKeyPrefix = 'network_scanner:agent_ip:'
 	private services?: IServices
 
 	private isCancelled = false
 
-	constructor() {}
+	constructor() {
+		//
+	}
 
 	initialize(services: IServices) {
 		this.services = services
@@ -67,15 +77,45 @@ export class NetworkScannerService {
 		const baseIp = subnet.split('/')[0]
 		const agents: NetworkDiscoveredAgent[] = []
 
+		const cachedTargetIp = options?.targetAgentKey
+			? await this.getCachedIp(options.targetAgentKey)
+			: null
+
 		const ips = Array.from({ length: 254 }, (_, i) =>
 			baseIp.replace(/\.0$/, `.${i + 1}`)
 		)
 
+		const uniqueIps = new Set<string>(
+			cachedTargetIp ? [cachedTargetIp] : []
+		)
+		ips.forEach(ip => uniqueIps.add(ip))
+
+		const aliveIps = await this.filterAliveIps(
+			Array.from(uniqueIps),
+			opts.timeout!,
+			opts.concurrency!
+		)
+
 		let processed = 0
-		const total = ips.length
+		const total = Math.max(aliveIps.length, 1)
+
+		if (aliveIps.length === 0) {
+			await progressCallback?.({
+				jobId: opts.jobId || opts.targetAgentKey,
+				processed,
+				total
+			})
+			return agents
+		}
+
+		if (cachedTargetIp && !aliveIps.includes(cachedTargetIp)) {
+			console.log(
+				`[SCAN_NETWORK] Cached IP ${cachedTargetIp} for ${options?.targetAgentKey} is not reachable`
+			)
+		}
 
 		// Разбиваем на чанки для параллельного сканирования
-		const chunks = this.chunkArray(ips, opts.concurrency!)
+		const chunks = this.chunkArray(aliveIps, opts.concurrency!)
 
 		for (const chunk of chunks) {
 			if (this.isCancelled) {
@@ -164,51 +204,54 @@ export class NetworkScannerService {
 		options: NetworkScannerOptions
 	): Promise<NetworkDiscoveredAgent | null> {
 		try {
-			const response = await axios
-				.get(`http://${ip}:${options.agentPort}/metrics`, {
-					timeout: options.timeout,
-					proxy: false,
-					headers: {
-						'X-Agent-Handshake-Key':
-							process.env.AGENT_HANDSHAKE_KEY || 'VERY_SECRET_KEY'
-					}
-				})
-				.catch(error => {
-					// Детальное логирование ошибки
-					if (axios.isCancel(error)) {
-						throw new Error('AbortError')
-					}
-
-					if (
-						error.code !== 'ECONNREFUSED' &&
-						error.code !== 'ETIMEDOUT' &&
-						error.code !== 'ECONNABORTED'
-					) {
-						console.log(
-							`[CHECK_AGENT] [${ip}] Error type: ${error.code || 'unknown'}`
-						)
-						console.log(
-							`[CHECK_AGENT] [${ip}] Error name:`,
-							error.name
-						)
-						console.log(
-							`[CHECK_AGENT] [${ip}] Full error:`,
-							error.message
-						)
-						if (error.response) {
-							console.log(
-								`[CHECK_AGENT] [${ip}] Response status:`,
-								error.response.status
-							)
-							console.log(
-								`[CHECK_AGENT] [${ip}] Response headers:`,
-								error.response.headers
-							)
+			const response = await this.executeWithBackoff(options, () =>
+				axios
+					.get(`http://${ip}:${options.agentPort}/metrics`, {
+						timeout: options.timeout,
+						proxy: false,
+						headers: {
+							'X-Agent-Handshake-Key':
+								process.env.AGENT_HANDSHAKE_KEY ||
+								'VERY_SECRET_KEY'
 						}
-					}
+					})
+					.catch(error => {
+						// Детальное логирование ошибки
+						if (axios.isCancel(error)) {
+							throw new Error('AbortError')
+						}
 
-					throw error // Перебрасываем ошибку дальше
-				})
+						if (
+							error.code !== 'ECONNREFUSED' &&
+							error.code !== 'ETIMEDOUT' &&
+							error.code !== 'ECONNABORTED'
+						) {
+							console.log(
+								`[CHECK_AGENT] [${ip}] Error type: ${error.code || 'unknown'}`
+							)
+							console.log(
+								`[CHECK_AGENT] [${ip}] Error name:`,
+								error.name
+							)
+							console.log(
+								`[CHECK_AGENT] [${ip}] Full error:`,
+								error.message
+							)
+							if (error.response) {
+								console.log(
+									`[CHECK_AGENT] [${ip}] Response status:`,
+									error.response.status
+								)
+								console.log(
+									`[CHECK_AGENT] [${ip}] Response headers:`,
+									error.response.headers
+								)
+							}
+						}
+
+						throw error // Перебрасываем ошибку дальше
+					})
+			)
 
 			if (response.status === 200) {
 				const metrics = response.data as string
@@ -240,6 +283,8 @@ export class NetworkScannerService {
 					isRegistered: !!existingDevice
 				}
 
+				await this.cacheAgentIp(agentKey, ip)
+
 				console.log(
 					`[CHECK_AGENT] Successfully discovered agent at ${ip}:`,
 					{
@@ -266,5 +311,114 @@ export class NetworkScannerService {
 			chunks.push(array.slice(i, i + size))
 		}
 		return chunks
+	}
+
+	private async filterAliveIps(
+		ips: string[],
+		timeout: number,
+		concurrency: number
+	): Promise<string[]> {
+		const alive: string[] = []
+		if (ips.length === 0) return alive
+
+		const chunks = this.chunkArray(ips, concurrency)
+		for (const chunk of chunks) {
+			if (this.isCancelled) break
+
+			const results = await Promise.all(
+				chunk.map(ip => this.isIpAlive(ip, timeout))
+			)
+			results.forEach((isAlive, idx) => {
+				if (isAlive) alive.push(chunk[idx])
+			})
+		}
+
+		return alive
+	}
+
+	private async isIpAlive(ip: string, timeout: number): Promise<boolean> {
+		const { exec } = await import('child_process')
+		const isWindows = process.platform === 'win32'
+
+		const command = isWindows
+			? `ping -n 1 -w ${timeout} ${ip}`
+			: `ping -c 1 -W ${timeout / 1000} ${ip}`
+
+		return new Promise<boolean>(resolve => {
+			exec(command, (error, stdout) => {
+				if (error) {
+					// On failure, try ARP as a fallback
+					this.isArpReachable(ip).then(resolve)
+					return
+				}
+				const isAlive = isWindows
+					? stdout.includes('TTL=')
+					: stdout.includes('ttl=') || stdout.includes('bytes from')
+				resolve(isAlive)
+			})
+		})
+	}
+
+	private async isArpReachable(ip: string): Promise<boolean> {
+		const { exec } = await import('child_process')
+		const command = `arp -n ${ip}`
+
+		return new Promise<boolean>(resolve => {
+			exec(command, (error, stdout) => {
+				if (error) {
+					resolve(false)
+					return
+				}
+				// If ARP entry exists and is not 'incomplete', host is likely up
+				const isReachable = !stdout.toLowerCase().includes('incomplete')
+				resolve(isReachable)
+			})
+		})
+	}
+
+	private async executeWithBackoff<T>(
+		options: NetworkScannerOptions,
+		fn: () => Promise<T>
+	): Promise<T> {
+		const enableBackoff =
+			options.enableBackoff ?? this.defaultOptions.enableBackoff ?? false
+		const maxRetries =
+			options.maxRetries ?? this.defaultOptions.maxRetries ?? 0
+		const baseDelay =
+			options.backoffBaseMs ?? this.defaultOptions.backoffBaseMs ?? 200
+
+		let attempt = 0
+
+		while (true) {
+			try {
+				return await fn()
+			} catch (error) {
+				if (!enableBackoff || attempt >= maxRetries) {
+					throw error
+				}
+
+				const delay = baseDelay * Math.pow(2, attempt)
+				await new Promise(resolve => setTimeout(resolve, delay))
+				attempt += 1
+			}
+		}
+	}
+
+	private async getCachedIp(agentKey: string): Promise<string | null> {
+		const key = `${this.cacheKeyPrefix}${agentKey}`
+		const memoryValue = await this.services?.infrastructure.cache.get(key)
+		if (memoryValue) return memoryValue
+
+		return null
+	}
+
+	private async cacheAgentIp(agentKey: string, ip: string) {
+		const key = `${this.cacheKeyPrefix}${agentKey}`
+
+		await this.services?.infrastructure.cache.set(
+			key,
+			ip,
+			this.cacheTtlSeconds
+		)
 	}
 }
