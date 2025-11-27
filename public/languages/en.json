@@ -45,7 +45,8 @@
 				"events": "Events",
 				"departments": "Departments",
 				"inventory": "Inventory",
-				"users": "Users"
+				"users": "Users",
+				"license": "License"
 			}
 		}
 	},
@@ -352,6 +353,16 @@
 					"ipAddress": "IP-address",
 					"createdAt": "Created at"
 				}
+			}
+		},
+		"license": {
+			"header": {
+				"heading": "License",
+				"description": "License information and terms of use"
+			},
+			"notice": {
+				"demoTitle": "Demonstration version",
+				"demo": "Demonstration version. Resale, commercial distribution, rental or any paid use is prohibited. Use is permitted for internal testing only. All rights reserved."
 			}
 		},
 		"devices": {

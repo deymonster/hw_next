@@ -1,4 +1,12 @@
-import { Bell, Building, Cpu, Package, Settings, Users } from 'lucide-react'
+import {
+	Bell,
+	Building,
+	Cpu,
+	Package,
+	Settings,
+	ShieldCheck,
+	Users
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 import type { Route } from './route.interface'
@@ -12,6 +20,11 @@ export function DashboardNav() {
 			label: t('settings'),
 			href: '/dashboard/settings',
 			icon: Settings
+		},
+		{
+			label: t('license'),
+			href: '/dashboard/license',
+			icon: ShieldCheck
 		},
 		{
 			label: t('devices'),
