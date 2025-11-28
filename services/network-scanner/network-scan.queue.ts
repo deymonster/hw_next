@@ -6,12 +6,13 @@ import { LoggerService } from '../logger/logger.interface'
 import { NetworkScannerOptions } from './network-scanner.interfaces'
 
 const redisPublisher = process.env.REDIS_URL
-	? new Redis(process.env.REDIS_URL)
-	: new Redis({
-			host: process.env.REDIS_HOST || 'localhost',
-			port: Number(process.env.REDIS_PORT) || 6379,
-			password: process.env.REDIS_PASSWORD
-		})
+        ? new Redis(process.env.REDIS_URL, { lazyConnect: true })
+        : new Redis({
+                        host: process.env.REDIS_HOST || 'localhost',
+                        port: Number(process.env.REDIS_PORT) || 6379,
+                        password: process.env.REDIS_PASSWORD,
+                        lazyConnect: true
+                })
 
 const JOB_KEY_PREFIX = 'network_scan_job:'
 const JOB_CHANNEL_PREFIX = 'network_scan_job_channel:'
@@ -40,17 +41,17 @@ class NetworkScanQueue {
 	private readonly cancelledJobs = new Set<string>()
 
 	enqueue(job: QueueJobPayload) {
-		this.queue.push(job)
-		void this.saveState(job.id, {
-			id: job.id,
-			status: 'QUEUED',
-			progress: 0,
-			updatedAt: Date.now(),
-			userId: job.userId,
-			options: job.options
-		})
-		this.processNext()
-	}
+                this.queue.push(job)
+                void this.saveState(job.id, {
+                        id: job.id,
+                        status: 'QUEUED',
+                        progress: 0,
+                        updatedAt: Date.now(),
+                        userId: job.userId,
+                        options: job.options ? { ...job.options } : undefined
+                })
+                this.processNext()
+        }
 
 	async cancel(jobId: string) {
 		this.cancelledJobs.add(jobId)

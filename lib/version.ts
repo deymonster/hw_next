@@ -1,5 +1,10 @@
 import redis from '@/services/redis/client'
 
+type TagInfo = {
+	name: string
+	last_updated: string | null
+}
+
 export async function getVersionInfo() {
 	const version = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
 	const commit = process.env.NEXT_PUBLIC_GIT_COMMIT || 'dev'
@@ -34,25 +39,32 @@ export async function getVersionInfo() {
 			if (res.ok) {
 				const data = await res.json()
 				const results = Array.isArray(data?.results) ? data.results : []
-				const tags = results
+				const tags: TagInfo[] = results
 					.filter(
 						(
-							tag
+							tag: unknown
 						): tag is {
 							name: string
 							last_updated?: string | null
-						} => typeof tag?.name === 'string'
+						} =>
+							typeof (tag as { name?: unknown })?.name ===
+							'string'
 					)
-					.map(tag => ({
-						name: tag.name,
-						last_updated:
-							typeof tag.last_updated === 'string'
-								? tag.last_updated
-								: null
-					}))
+					.map(
+						(tag: {
+							name: string
+							last_updated?: string | null
+						}): TagInfo => ({
+							name: tag.name,
+							last_updated:
+								typeof tag.last_updated === 'string'
+									? tag.last_updated
+									: null
+						})
+					)
 
 				const sorted = tags.sort(
-					(a, b) =>
+					(a: TagInfo, b: TagInfo) =>
 						new Date(b.last_updated ?? 0).getTime() -
 						new Date(a.last_updated ?? 0).getTime()
 				)

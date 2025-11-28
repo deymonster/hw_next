@@ -41,14 +41,14 @@ async function authorize(request: NextRequest) {
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { scanId: string } }
+	{ params }: { params: Promise<{ scanId: string }> }
 ) {
 	const token = await authorize(request)
 	if (!token) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 	}
 
-	const { scanId } = params
+	const { scanId } = await params
 
 	if (request.headers.get('accept') === 'text/event-stream') {
 		const stream = new ReadableStream({
@@ -109,14 +109,14 @@ export async function GET(
 
 export async function DELETE(
 	request: NextRequest,
-	{ params }: { params: { scanId: string } }
+	{ params }: { params: Promise<{ scanId: string }> }
 ) {
 	const token = await authorize(request)
 	if (!token) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 	}
 
-	const { scanId } = params
+	const { scanId } = await params
 	const state = await readJobState(scanId)
 
 	if (!state) {
