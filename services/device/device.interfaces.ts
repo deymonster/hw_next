@@ -25,15 +25,15 @@ export interface IDeviceCreateInput {
 }
 
 export interface IDeviceFindManyArgs {
-        where?: {
-                status?: DeviceStatus
-                type?: DeviceType
-                departmentId?: string
-                employeeId?: string
-        }
-        orderBy?: {
-                [key: string]: 'asc' | 'desc'
-        }
+	where?: {
+		status?: DeviceStatus
+		type?: DeviceType
+		departmentId?: string
+		employeeId?: string
+	}
+	orderBy?: {
+		[key: string]: 'asc' | 'desc'
+	}
 	take?: number
 	skip?: number
 }
