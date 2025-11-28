@@ -13,13 +13,17 @@ export async function GET() {
 			...checkResult,
 			migrationInfo
 		})
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error('Database check failed:', error)
+		const message =
+			error instanceof Error
+				? error.message
+				: 'Ошибка при проверке базы данных'
 		return NextResponse.json(
 			{
 				isValid: false,
 				missingTables: [],
-				error: error.message || 'Ошибка при проверке базы данных'
+				error: message
 			},
 			{ status: 500 }
 		)

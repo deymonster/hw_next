@@ -57,10 +57,11 @@ export async function GET(request: Request) {
 			{ status: 200 }
 		)
 	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error)
 		await logger.error(
 			LoggerService.AUTH_SERVICE,
 			'[EMAIL_VERIFICATION_ERROR]',
-			{ error: (error as any)?.message ?? String(error) }
+			{ error: message }
 		)
 		return NextResponse.json(
 			{ success: false, message: 'EMAIL_VERIFICATION_ERROR' },

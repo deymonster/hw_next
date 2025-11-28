@@ -72,7 +72,7 @@ export function VerifyAccountForm({ token }: VerifyAccountFormProps) {
 		}
 
 		verifyEmail()
-	}, [token])
+	}, [auth, router, t, tErrors, token])
 
 	return (
 		<AuthWrapper heading={t('heading')}>
