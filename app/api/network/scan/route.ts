@@ -50,16 +50,17 @@ export async function POST(request: NextRequest) {
 
 	const jobId = networkScanQueue.generateJobId()
 	const options = parsed.data
+	const userId = String(token.id)
 
 	await services.data.network_scan_job.createJob({
 		id: jobId,
 		status: 'QUEUED',
 		progress: 0,
 		options,
-		userId: token.id
+		userId
 	})
 
-	networkScanQueue.enqueue({ id: jobId, options, userId: token.id })
+	networkScanQueue.enqueue({ id: jobId, options, userId })
 
 	await services.infrastructure.logger.info(
 		LoggerService.NETWORK_SCANNER,

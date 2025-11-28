@@ -572,7 +572,7 @@ export async function updateEmployeeDevicesSelection({
 
 		// Текущие устройства у сотрудника
 		const currentDevices = await services.data.device.findMany({
-			where: { employeeId } as any
+			where: { employeeId }
 		})
 		const currentIds = new Set(currentDevices.map(d => d.id))
 		const nextIds = new Set(deviceIds)

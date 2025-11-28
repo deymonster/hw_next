@@ -1,5 +1,10 @@
 import redis from '@/services/redis/client'
 
+type TagInfo = {
+	name: string
+	last_updated: string | null
+}
+
 export async function getVersionInfo() {
 	const version = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.0'
 	const commit = process.env.NEXT_PUBLIC_GIT_COMMIT || 'dev'
@@ -34,15 +39,37 @@ export async function getVersionInfo() {
 			if (res.ok) {
 				const data = await res.json()
 				const results = Array.isArray(data?.results) ? data.results : []
-				const sorted = results
-					.filter((r: any) => typeof r?.name === 'string')
-					.sort(
-						(a: any, b: any) =>
-							new Date(b.last_updated).getTime() -
-							new Date(a.last_updated).getTime()
+				const tags: TagInfo[] = results
+					.filter(
+						(
+							tag: unknown
+						): tag is {
+							name: string
+							last_updated?: string | null
+						} =>
+							typeof (tag as { name?: unknown })?.name ===
+							'string'
 					)
+					.map(
+						(tag: {
+							name: string
+							last_updated?: string | null
+						}): TagInfo => ({
+							name: tag.name,
+							last_updated:
+								typeof tag.last_updated === 'string'
+									? tag.last_updated
+									: null
+						})
+					)
+
+				const sorted = tags.sort(
+					(a: TagInfo, b: TagInfo) =>
+						new Date(b.last_updated ?? 0).getTime() -
+						new Date(a.last_updated ?? 0).getTime()
+				)
 				const preferred =
-					sorted.find((r: any) => r.name !== 'latest') || sorted[0]
+					sorted.find(tag => tag.name !== 'latest') || sorted[0]
 				if (preferred) {
 					dockerHubTag = String(preferred.name)
 					dockerHubUpdated = String(preferred.last_updated || '')
@@ -59,7 +86,7 @@ export async function getVersionInfo() {
 			}
 		}
 	} catch (error) {
-		//
+		console.error('Failed to fetch version info from Docker Hub', error)
 	}
 
 	return {
