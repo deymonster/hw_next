@@ -345,27 +345,27 @@ export async function GET(
 		initWebSocketServer()
 	}
 
-        const forwardedProto = request.headers.get('x-forwarded-proto')
-        const forwardedHost = request.headers.get('x-forwarded-host')
-        const requestHost = request.headers.get('host')
+	const forwardedProto = request.headers.get('x-forwarded-proto')
+	const forwardedHost = request.headers.get('x-forwarded-host')
+	const requestHost = request.headers.get('host')
 
-        const host = forwardedHost || requestHost || 'localhost'
-        const protocol =
-                forwardedProto || request.nextUrl.protocol.replace(':', '') || 'http'
+	const host = forwardedHost || requestHost || 'localhost'
+	const protocol =
+		forwardedProto || request.nextUrl.protocol.replace(':', '') || 'http'
 
-        const wsProtocol = protocol === 'https' ? 'wss' : 'ws'
+	const wsProtocol = protocol === 'https' ? 'wss' : 'ws'
 
-        const connectionUrl = new URL(
-                `/api/metrics/processes/${deviceId}`,
-                `${wsProtocol}://${host}`
-        ).toString()
+	const connectionUrl = new URL(
+		`/api/metrics/processes/${deviceId}`,
+		`${wsProtocol}://${host}`
+	).toString()
 
 	return new Response(
 		JSON.stringify({
 			message: 'WebSocket server is running',
-                        connection: connectionUrl
-                }),
-                {
+			connection: connectionUrl
+		}),
+		{
 			headers: { 'Content-Type': 'application/json' }
 		}
 	)

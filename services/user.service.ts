@@ -105,7 +105,7 @@ export class UserService
 			})
 
 			// Формируем ссылку подтверждения РАНТАЙМ-способом
-                        const baseUrl = getBaseUrl()
+			const baseUrl = getBaseUrl()
 
 			const verificationLink = new URL(
 				`/account/verify-email?token=${verificationToken}`,
@@ -206,7 +206,7 @@ export class UserService
 	}
 
 	async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-                const baseUrl = getBaseUrl()
+		const baseUrl = getBaseUrl()
 
 		const resetLink = new URL(
 			`/account/recovery/${token}`,
@@ -268,36 +268,36 @@ export class UserService
 }
 
 function getBaseUrl(): string {
-        const envUrl =
-                process.env.NEXTAUTH_URL ||
-                process.env['NEXT_PUBLIC_BASE_URL'] ||
-                process.env['NEXT_PUBLIC_URL']
+	const envUrl =
+		process.env.NEXTAUTH_URL ||
+		process.env['NEXT_PUBLIC_BASE_URL'] ||
+		process.env['NEXT_PUBLIC_URL']
 
-        const serverIp = process.env['NEXT_PUBLIC_SERVER_IP']
+	const serverIp = process.env['NEXT_PUBLIC_SERVER_IP']
 
-        const defaultUrl = serverIp
-                ? `http://${serverIp}`
-                : process.env.NODE_ENV === 'production'
-                        ? 'http://localhost'
-                        : 'http://localhost:3000'
+	const defaultUrl = serverIp
+		? `http://${serverIp}`
+		: process.env.NODE_ENV === 'production'
+			? 'http://localhost'
+			: 'http://localhost:3000'
 
-        const baseUrl = envUrl || defaultUrl
+	const baseUrl = envUrl || defaultUrl
 
-        try {
-                const url = new URL(baseUrl)
+	try {
+		const url = new URL(baseUrl)
 
-                // В продакшене принудительно используем порт по умолчанию (80/443),
-                // даже если переменные окружения содержат 3000/3001
-                if (
-                        process.env.NODE_ENV === 'production' &&
-                        (url.port === '3000' || url.port === '3001')
-                ) {
-                        url.port = ''
-                }
+		// В продакшене принудительно используем порт по умолчанию (80/443),
+		// даже если переменные окружения содержат 3000/3001
+		if (
+			process.env.NODE_ENV === 'production' &&
+			(url.port === '3000' || url.port === '3001')
+		) {
+			url.port = ''
+		}
 
-                return url.toString()
-        } catch (error) {
-                console.error('Invalid base URL configuration:', error)
-                return baseUrl
-        }
+		return url.toString()
+	} catch (error) {
+		console.error('Invalid base URL configuration:', error)
+		return baseUrl
+	}
 }
