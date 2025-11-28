@@ -571,18 +571,18 @@ export class PrometheusParser {
 	 * Получает список процессов
 	 * @returns Информация о процессах: общее количество и топ-5 по использованию CPU
 	 */
-        public async getProcessList(): Promise<ProcessListInfo> {
-                const totalProcesses = Math.round(
-                        await this.getMetricValue('active_process_list')
-                )
-                const processMemoryMetrics =
-                        await this.findMetrics<ActiveProcessMemoryUsage>(
-                                'active_process_memory_usage'
-                        )
-                const processCpuMetrics =
-                        await this.findMetrics<ProcessCpuUsagePercent>(
-                                'process_cpu_usage_percent'
-                        )
+	public async getProcessList(): Promise<ProcessListInfo> {
+		const totalProcesses = Math.round(
+			await this.getMetricValue('active_process_list')
+		)
+		const processMemoryMetrics =
+			await this.findMetrics<ActiveProcessMemoryUsage>(
+				'active_process_memory_usage'
+			)
+		const processCpuMetrics =
+			await this.findMetrics<ProcessCpuUsagePercent>(
+				'process_cpu_usage_percent'
+			)
 
 		const instanceCountMetrics =
 			await this.findMetrics<ProcessInstanceCount>(
@@ -593,46 +593,46 @@ export class PrometheusParser {
 				'process_group_memory_workingset_mb'
 			)
 		const privateMemoryMetrics =
-                        await this.findMetrics<ProcessGroupMemoryPrivate>(
-                                'process_group_memory_private_mb'
-                        )
-                const groupCpuMetrics = await this.findMetrics<ProcessGroupCpuUsage>(
-                        'process_group_cpu_usage_percent'
-                )
+			await this.findMetrics<ProcessGroupMemoryPrivate>(
+				'process_group_memory_private_mb'
+			)
+		const groupCpuMetrics = await this.findMetrics<ProcessGroupCpuUsage>(
+			'process_group_cpu_usage_percent'
+		)
 
-                const metricsPresence: Record<string, number> = {
-                        active_process_memory_usage: processMemoryMetrics.length,
-                        process_cpu_usage_percent: processCpuMetrics.length,
-                        process_instance_count: instanceCountMetrics.length,
-                        process_group_memory_workingset_mb: workingSetMetrics.length,
-                        process_group_memory_private_mb: privateMemoryMetrics.length,
-                        process_group_cpu_usage_percent: groupCpuMetrics.length
-                }
+		const metricsPresence: Record<string, number> = {
+			active_process_memory_usage: processMemoryMetrics.length,
+			process_cpu_usage_percent: processCpuMetrics.length,
+			process_instance_count: instanceCountMetrics.length,
+			process_group_memory_workingset_mb: workingSetMetrics.length,
+			process_group_memory_private_mb: privateMemoryMetrics.length,
+			process_group_cpu_usage_percent: groupCpuMetrics.length
+		}
 
-                const missingMetrics = Object.entries(metricsPresence)
-                        .filter(([, count]) => count === 0)
-                        .map(([name]) => name)
+		const missingMetrics = Object.entries(metricsPresence)
+			.filter(([, count]) => count === 0)
+			.map(([name]) => name)
 
-                if (missingMetrics.length) {
-                        await this.log(
-                                'warn',
-                                `[PROMETHEUS_PARSER] Missing process metrics: ${missingMetrics.join(', ')}`
-                        )
-                        return {
-                                total: totalProcesses,
-                                processes: [],
-                                status: `Missing process metrics: ${missingMetrics.join(', ')}`,
-                                missingMetrics
-                        }
-                }
+		if (missingMetrics.length) {
+			await this.log(
+				'warn',
+				`[PROMETHEUS_PARSER] Missing process metrics: ${missingMetrics.join(', ')}`
+			)
+			return {
+				total: totalProcesses,
+				processes: [],
+				status: `Missing process metrics: ${missingMetrics.join(', ')}`,
+				missingMetrics
+			}
+		}
 
 		// Создаем Map для быстрого поиска CPU метрик по PID
 		// const cpuByPid = new Map();
 		// await Promise.all(processCpuMetrics.map(async metric => {
-                //     const value = await this.getMetricValue('process_cpu_usage_percent', {
-                //         pid: metric.pid,
-                //         process: metric.process
-                //     });
+		//     const value = await this.getMetricValue('process_cpu_usage_percent', {
+		//         pid: metric.pid,
+		//         process: metric.process
+		//     });
 		//     cpuByPid.set(metric.pid, value);
 		// }));
 
@@ -747,14 +747,14 @@ export class PrometheusParser {
 			(a, b) => b.metrics.cpu - a.metrics.cpu
 		)
 		// В конце метода getProcessList()
-                const total = totalProcesses || processes?.length || 0
+		const total = totalProcesses || processes?.length || 0
 
-                return {
-                        total,
-                        processes: processes || [],
-                        status: 'ok'
-                }
-        }
+		return {
+			total,
+			processes: processes || [],
+			status: 'ok'
+		}
+	}
 
 	/**
 	 * Парсит временной ряд метрик

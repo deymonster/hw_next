@@ -79,7 +79,7 @@ export interface SerialNumber extends MetricBase {
  * Список активных процессов
  */
 export interface ActiveProcessList extends MetricBase {
-        __name__: 'active_process_list'
+	__name__: 'active_process_list'
 }
 
 /**
@@ -96,9 +96,9 @@ export interface ActiveProcessMemoryUsage extends MetricBase {
  * Использование CPU процессом в процентах
  */
 export interface ProcessCpuUsagePercent extends MetricBase {
-        __name__: 'process_cpu_usage_percent'
-        pid: string
-        process: string
+	__name__: 'process_cpu_usage_percent'
+	pid: string
+	process: string
 }
 
 /**
@@ -614,8 +614,8 @@ export interface ProcessCpuUsage {
  * Информация о процессах с метриками
  */
 export interface ProcessListInfo {
-        total: number
-        processes: ProcessInfo[]
-        status?: string
-        missingMetrics?: string[]
+	total: number
+	processes: ProcessInfo[]
+	status?: string
+	missingMetrics?: string[]
 }
