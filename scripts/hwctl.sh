@@ -5,6 +5,7 @@ INSTALL_DIR="${INSTALL_DIR:-/opt/hw-monitor}"
 ENV_FILE="${ENV_FILE:-$INSTALL_DIR/.env.prod}"
 COMPOSE_FILE="${COMPOSE_FILE:-$INSTALL_DIR/docker-compose.prod.yml}"
 COMPOSE_FILE_URL="${COMPOSE_FILE_URL:-https://storage.deymonster.ru/s/pwK2PLo5DDyspnm/download/docker-compose.prod.yml}"
+PROJECT_NAME="${PROJECT_NAME:-hw-monitor}"
 
 if docker compose version >/dev/null 2>&1; then
   DC="docker compose"
