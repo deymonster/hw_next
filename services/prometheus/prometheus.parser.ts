@@ -1,7 +1,6 @@
 import { LoggerService, LogLevel } from '../logger/logger.interface'
 import { Logger } from '../logger/logger.service'
 import {
-	ActiveProcessMemoryUsage,
 	BiosInfo,
 	CpuTemperature,
 	CpuUsagePercent,
@@ -13,7 +12,6 @@ import {
 	MemoryModuleInfo,
 	MotherBoardInfo,
 	NetworkStatus,
-	ProcessCpuUsagePercent,
 	ProcessGroupCpuUsage,
 	ProcessGroupMemoryPrivate,
 	ProcessGroupMemoryWorkingSet,
@@ -575,14 +573,6 @@ export class PrometheusParser {
 		const totalProcesses = Math.round(
 			await this.getMetricValue('active_process_list')
 		)
-		const processMemoryMetrics =
-			await this.findMetrics<ActiveProcessMemoryUsage>(
-				'active_process_memory_usage'
-			)
-		const processCpuMetrics =
-			await this.findMetrics<ProcessCpuUsagePercent>(
-				'process_cpu_usage_percent'
-			)
 
 		const instanceCountMetrics =
 			await this.findMetrics<ProcessInstanceCount>(
@@ -601,8 +591,6 @@ export class PrometheusParser {
 		)
 
 		const metricsPresence: Record<string, number> = {
-			active_process_memory_usage: processMemoryMetrics.length,
-			process_cpu_usage_percent: processCpuMetrics.length,
 			process_instance_count: instanceCountMetrics.length,
 			process_group_memory_workingset_mb: workingSetMetrics.length,
 			process_group_memory_private_mb: privateMemoryMetrics.length,
@@ -621,7 +609,7 @@ export class PrometheusParser {
 			return {
 				total: totalProcesses,
 				processes: [],
-				status: `Missing process metrics: ${missingMetrics.join(', ')}`,
+				status: 'partial',
 				missingMetrics
 			}
 		}

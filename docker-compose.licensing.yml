@@ -140,3 +140,7 @@ volumes:
 
 networks:
     hw-network:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 172.32.0.0/16

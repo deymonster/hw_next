@@ -490,8 +490,11 @@ export class PrometheusService {
 	 * @param ipAddress IP-адрес устройства
 	 * @returns Экземпляр PrometheusParser
 	 */
-	private async getParser(ipAddress: string): Promise<PrometheusParser> {
-		const response = await this.getMetricsByIp(ipAddress)
+	private async getParser(
+		ipAddress: string,
+		type: MetricType
+	): Promise<PrometheusParser> {
+		const response = await this.getMetricsByIp(ipAddress, type)
 		return new PrometheusParser(response)
 	}
 
@@ -590,14 +593,35 @@ export class PrometheusService {
 			)
 
 			if (!targetAgent) {
-				return {
-					health: 'unknown',
-					lastError: 'Agent not found in Prometheus targets',
-					lastScrape: '',
-					lastScrapeDuration: 0,
-					scrapeInterval: '',
-					scrapeTimeout: '',
-					up: false
+				try {
+					const probe = await this.getMetricsByIp(
+						ipAddress,
+						MetricType.STATIC
+					)
+					const hasData =
+						Array.isArray(probe?.data?.result) &&
+						probe.data.result.length > 0
+					return {
+						health: hasData ? 'up' : 'unknown',
+						lastError: hasData
+							? ''
+							: 'Agent not found in Prometheus targets',
+						lastScrape: '',
+						lastScrapeDuration: 0,
+						scrapeInterval: '',
+						scrapeTimeout: '',
+						up: hasData
+					}
+				} catch {
+					return {
+						health: 'error',
+						lastError: 'Probe failed',
+						lastScrape: '',
+						lastScrapeDuration: 0,
+						scrapeInterval: '',
+						scrapeTimeout: '',
+						up: false
+					}
 				}
 			}
 
@@ -753,9 +777,11 @@ export class PrometheusService {
 					]
 				}
 			} else {
-				throw new Error(
-					'Either type or specificMetrics must be provided'
-				)
+				type = MetricType.STATIC
+				metricsToQuery = [
+					...PROMETHEUS_METRICS[MetricType.STATIC].system,
+					...PROMETHEUS_METRICS[MetricType.STATIC].hardware
+				]
 			}
 
 			if (!metricsToQuery.length) {
@@ -951,7 +977,7 @@ export class PrometheusService {
 	 */
 	async getSystemInfo(ipAddress: string) {
 		try {
-			const parser = await this.getParser(ipAddress)
+			const parser = await this.getParser(ipAddress, MetricType.STATIC)
 			const info = await parser.getSystemInfo()
 
 			return info
@@ -968,7 +994,7 @@ export class PrometheusService {
 	 */
 	async getHardwareInfo(ipAddress: string) {
 		try {
-			const parser = await this.getParser(ipAddress)
+			const parser = await this.getParser(ipAddress, MetricType.STATIC)
 			const info = await parser.getHardwareInfo()
 
 			return info
@@ -987,7 +1013,7 @@ export class PrometheusService {
 	 * @returns Метрики процессора
 	 */
 	async getProcessorMetrics(ipAddress: string) {
-		const parser = await this.getParser(ipAddress)
+		const parser = await this.getParser(ipAddress, MetricType.DYNAMIC)
 		return parser.getProcessorMetrics()
 	}
 
@@ -997,7 +1023,7 @@ export class PrometheusService {
 	 * @returns Метрики сети
 	 */
 	async getNetworkMetrics(ipAddress: string) {
-		const parser = await this.getParser(ipAddress)
+		const parser = await this.getParser(ipAddress, MetricType.DYNAMIC)
 		return parser.getNetworkMetrics()
 	}
 
@@ -1007,7 +1033,7 @@ export class PrometheusService {
 	 * @returns Метрики дисков
 	 */
 	async getDiskMetrics(ipAddress: string) {
-		const parser = await this.getParser(ipAddress)
+		const parser = await this.getParser(ipAddress, MetricType.DYNAMIC)
 		return parser.getDiskMetrics()
 	}
 
@@ -1017,7 +1043,7 @@ export class PrometheusService {
 	 * @returns Список процессов
 	 */
 	async getProcessList(ipAddress: string) {
-		const parser = await this.getParser(ipAddress)
+		const parser = await this.getParser(ipAddress, MetricType.PROCESS)
 		return parser.getProcessList()
 	}
 

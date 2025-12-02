@@ -345,25 +345,17 @@ export async function GET(
 		initWebSocketServer()
 	}
 
-	const forwardedProto = request.headers.get('x-forwarded-proto')
-	const forwardedHost = request.headers.get('x-forwarded-host')
-	const requestHost = request.headers.get('host')
-
-	const host = forwardedHost || requestHost || 'localhost'
-	const protocol =
-		forwardedProto || request.nextUrl.protocol.replace(':', '') || 'http'
-
-	const wsProtocol = protocol === 'https' ? 'wss' : 'ws'
-
-	const connectionUrl = new URL(
-		`/api/metrics/processes/${deviceId}`,
-		`${wsProtocol}://${host}`
-	).toString()
+	// Используем переменную окружения для определения внешнего IP
+	const serverHost =
+		process.env.NEXT_PUBLIC_SERVER_IP ||
+		process.env.NEXT_PUBLIC_BASE_URL?.replace(/^https?:\/\//, '') ||
+		'localhost'
+	const wsHost = serverHost.split(':')[0] // Убираем порт если есть
 
 	return new Response(
 		JSON.stringify({
 			message: 'WebSocket server is running',
-			connection: connectionUrl
+			connection: `ws://${wsHost}:3001/api/metrics/processes/${deviceId}`
 		}),
 		{
 			headers: { 'Content-Type': 'application/json' }
