@@ -51,7 +51,7 @@ This system allows you to monitor multiple workstations in your local network, c
 
 ### Frontend
 
-- Next.js 14 (App Router)
+- Next.js 15 (App Router)
 - TypeScript
 - TailwindCSS
 - Recharts for graphs
