@@ -377,12 +377,12 @@ generate_htpasswd_if_needed() {
   local user="${BASIC_AUTH_USER:-$(get_env PROMETHEUS_USERNAME)}"
   local pass="${BASIC_AUTH_PASS:-$(get_env PROMETHEUS_AUTH_PASSWORD)}"
 
-  if [[ -n "$BASIC_AUTH_USER" && -n "$BASIC_AUTH_PASS" ]]; then
+  if [[ -n "$user" && -n "$pass" ]]; then
     require_cmd openssl
     local auth_dir; auth_dir="$(dirname "$NGINX_AUTH_FILE")"
     mkdir -p "$auth_dir"
-    local hash; hash=$(openssl passwd -apr1 "$BASIC_AUTH_PASS")
-    echo "${BASIC_AUTH_USER}:${hash}" > "$NGINX_AUTH_FILE"
+    local hash; hash=$(openssl passwd -apr1 "$pass")
+    echo "${user}:${hash}" > "$NGINX_AUTH_FILE"
     chmod 644 "$NGINX_AUTH_FILE"
     log "Создан файл базовой аутентификации: $NGINX_AUTH_FILE"
   else

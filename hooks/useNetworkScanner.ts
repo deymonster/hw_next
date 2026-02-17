@@ -15,11 +15,6 @@ interface ScannerCallbacks {
 	onError?: (error: unknown) => void
 }
 
-type CompletionHandlers = {
-	resolve: (value: NetworkDiscoveredAgent[] | null) => void
-	reject: (reason?: unknown) => void
-}
-
 interface JobEventPayload {
 	status?: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'
 	progress?: number
@@ -37,7 +32,10 @@ export function useNetworkScanner() {
 	const [scanId, setScanId] = useState<string | null>(null)
 	const scanIdRef = useRef<string | null>(null)
 	const eventSourceRef = useRef<EventSource | null>(null)
-	const completionRef = useRef<CompletionHandlers | null>(null)
+	const completionRef = useRef<{
+		resolve: (value: NetworkDiscoveredAgent[] | null) => void
+		reject: (reason?: unknown) => void
+	} | null>(null)
 
 	const closeStream = useCallback(() => {
 		if (eventSourceRef.current) {
@@ -162,12 +160,16 @@ export function useNetworkScanner() {
 						'Failed to start scan'
 					setError(message)
 					setIsScanning(false)
-					const completion =
-						completionRef.current as CompletionHandlers | null
-					if (completion) {
-						completion.reject(message)
-						completionRef.current = null
+					const ref = completionRef.current as {
+						resolve: (
+							value: NetworkDiscoveredAgent[] | null
+						) => void
+						reject: (reason?: unknown) => void
+					} | null
+					if (ref) {
+						ref.reject(new Error(message))
 					}
+					completionRef.current = null
 					onError?.(new Error(message))
 					return null
 				}
@@ -186,12 +188,18 @@ export function useNetworkScanner() {
 						: 'Failed to scan network'
 				)
 				setIsScanning(false)
-				const completion =
-					completionRef.current as CompletionHandlers | null
-				if (completion) {
-					completion.reject(err)
-					completionRef.current = null
+				{
+					const ref = completionRef.current as {
+						resolve: (
+							value: NetworkDiscoveredAgent[] | null
+						) => void
+						reject: (reason?: unknown) => void
+					} | null
+					if (ref) {
+						ref.reject(err)
+					}
 				}
+				completionRef.current = null
 				onError?.(err)
 				return null
 			}

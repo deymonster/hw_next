@@ -354,6 +354,12 @@ export function AddAlertRuleModal({
 				ruleToEdit.threshold !== undefined
 			) {
 				form.setValue('threshold', ruleToEdit.threshold)
+				// Устанавливаем статус агента на основе threshold
+				if (ruleToEdit.category === AlertCategory.AGENT_STATUS) {
+					setAgentStatus(
+						ruleToEdit.threshold === 0 ? 'OFFLINE' : 'ONLINE'
+					)
+				}
 			}
 
 			if (ruleToEdit.operator) {
@@ -361,6 +367,14 @@ export function AddAlertRuleModal({
 					'operator',
 					ruleToEdit.operator as ComparisonOperator
 				)
+			}
+
+			// Восстанавливаем labels (включая instance для конкретного агента)
+			if (ruleToEdit.labels) {
+				const labels = ruleToEdit.labels as Record<string, string>
+				if (labels.instance) {
+					form.setValue('labels.instance', labels.instance)
+				}
 			}
 
 			// Если есть подкатегории, пытаемся найти соответствующую

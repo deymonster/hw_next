@@ -989,6 +989,7 @@
 				"delete": "Delete",
 				"deleteSuccess": "Rule successfully deleted",
 				"deleteError": "Error deleting rule",
+				"createError": "Error creating rule",
 				"enableSuccess": "Rule activated",
 				"disableSuccess": "Rule deactivated",
 				"toggleError": "Error changing rule status",
