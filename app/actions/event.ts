@@ -16,6 +16,40 @@ export async function getUnreadEventCount(userId: string): Promise<number> {
 	}
 }
 
+export async function deleteEvent(eventId: string): Promise<{
+	event?: Event
+	error?: string
+}> {
+	if (!eventId) {
+		return { error: 'Event ID is required' }
+	}
+
+	try {
+		const event = await services.data.event.delete(eventId)
+		return { event }
+	} catch (error) {
+		console.error(`[DELETE_EVENT_ERROR]`, error)
+		return { error: 'Failed to delete event' }
+	}
+}
+
+export async function deleteAllEvents(userId: string): Promise<{
+	count?: number
+	error?: string
+}> {
+	if (!userId) {
+		return { error: 'User ID is required' }
+	}
+
+	try {
+		const result = await services.data.event.deleteMany(userId)
+		return { count: result.count }
+	} catch (error) {
+		console.error(`[DELETE_ALL_EVENTS_ERROR]`, error)
+		return { error: 'Failed to delete all events' }
+	}
+}
+
 export async function findUnreadEvents(
 	userId: string
 ): Promise<{ events?: EventWithDevice[]; error?: string }> {

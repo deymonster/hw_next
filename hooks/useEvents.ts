@@ -6,6 +6,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import {
+	deleteAllEvents,
+	deleteEvent,
 	findAllEvents,
 	findAndMarkAllAsRead,
 	findUnreadEvents,
@@ -217,6 +219,73 @@ export function useEvents() {
 		[fetchUnreadCount]
 	)
 
+	// Удаление отдельного события
+	const removeEvent = useCallback(
+		async (
+			eventId: string,
+			{ onSuccess, onError }: CallbackOptions = {}
+		) => {
+			if (!eventId) return { event: null, error: 'Event ID is required' }
+
+			try {
+				setLoading(true)
+				setError(null)
+				const result = await deleteEvent(eventId)
+
+				if (result.error) {
+					setError(result.error)
+					onError?.(new Error(result.error))
+					return { event: null, error: result.error }
+				}
+
+				onSuccess?.()
+				return { event: result.event, error: undefined }
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : 'Unknown error'
+				setError(errorMessage)
+				onError?.(error)
+				return { event: null, error: errorMessage }
+			} finally {
+				setLoading(false)
+			}
+		},
+		[]
+	)
+
+	// Удаление всех событий
+	const removeAllEvents = useCallback(
+		async ({ onSuccess, onError }: CallbackOptions = {}) => {
+			if (!user?.id) return { error: 'User not authenticated' }
+
+			try {
+				setLoading(true)
+				setError(null)
+				const result = await deleteAllEvents(user.id)
+
+				if (result.error) {
+					setError(result.error)
+					onError?.(new Error(result.error))
+					return { error: result.error }
+				}
+
+				// Обновляем счетчик непрочитанных
+				setUnreadCount(0)
+				onSuccess?.()
+				return { count: result.count, error: undefined }
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : 'Unknown error'
+				setError(errorMessage)
+				onError?.(error)
+				return { error: errorMessage }
+			} finally {
+				setLoading(false)
+			}
+		},
+		[user?.id]
+	)
+
 	// Автоматическое обновление счетчика непрочитанных событий
 	useEffect(() => {
 		if (!user?.id) return
@@ -238,6 +307,8 @@ export function useEvents() {
 		fetchUnreadEvents,
 		fetchAndMarkAllAsRead,
 		fetchAllEvents,
-		markAsRead
+		markAsRead,
+		removeEvent,
+		removeAllEvents
 	}
 }

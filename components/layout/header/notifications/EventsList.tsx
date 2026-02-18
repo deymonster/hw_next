@@ -1,9 +1,10 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
+import { Loader2, Trash2 } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Fragment, useEffect, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useEvents } from '@/hooks/useEvents'
 import { EventWithDevice } from '@/services/event.interfaces'
@@ -15,11 +16,21 @@ interface EventsListProps {
 
 export function EventsList({ onRead }: EventsListProps) {
 	const [events, setEvents] = useState<EventWithDevice[]>([])
-	const { loading, error, fetchAndMarkAllAsRead } = useEvents()
+	const { loading, error, fetchAndMarkAllAsRead, removeAllEvents } =
+		useEvents()
 
 	const t = useTranslations(
 		'layout.header.headerMenu.profileMenu.notifications'
 	)
+
+	async function handleClearAll() {
+		await removeAllEvents({
+			onSuccess: () => {
+				setEvents([])
+				onRead?.()
+			}
+		})
+	}
 
 	useEffect(() => {
 		async function fetchNotifications() {
@@ -41,7 +52,20 @@ export function EventsList({ onRead }: EventsListProps) {
 
 	return (
 		<div className='flex flex-col'>
-			<h2 className='text-center text-lg font-medium'>{t('heading')}</h2>
+			<div className='flex items-center justify-between px-2'>
+				<h2 className='text-lg font-medium'>{t('heading')}</h2>
+				{events.length > 0 && (
+					<Button
+						variant='ghost'
+						size='icon'
+						onClick={handleClearAll}
+						className='size-8'
+						title='Clear all'
+					>
+						<Trash2 className='size-4' />
+					</Button>
+				)}
+			</div>
 			<Separator className='my-3' />
 
 			{loading ? (
