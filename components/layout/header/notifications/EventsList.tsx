@@ -64,35 +64,32 @@ export function EventsList({ onRead }: EventsListProps) {
 
 						return (
 							<Fragment key={index}>
-								<div className='flex items-center gap-x-3 text-sm'>
-									<div className='rounded-full bg-foreground p-2'>
-										<Icon className='size-6 text-secondary' />
+								<div className='flex flex-col gap-1 text-sm'>
+									<div className='flex items-center justify-between'>
+										<span className='font-semibold'>
+											{event.title}
+										</span>
+										<span className='text-xs text-muted-foreground'>
+											{new Date(
+												event.createdAt
+											).toLocaleString('ru-RU')}
+										</span>
 									</div>
-									<div>{event.message}</div>
+									<div className='flex items-start gap-x-3'>
+										<div className='mt-1 rounded-full bg-foreground p-2'>
+											<Icon className='size-4 text-secondary' />
+										</div>
+										<div className='flex-1'>
+											<div className='whitespace-pre-wrap'>
+												{event.message}
+											</div>
+										</div>
+									</div>
 								</div>
 								{index < events.length - 1 && (
 									<Separator className='my-3' />
 								)}
 							</Fragment>
-							// <div
-							//   key={notification.id}
-							//   className="rounded-lg p-3 bg-muted/50"
-							// >
-							//   <div className="flex items-center gap-2">
-							//     {Icon && <Icon className="size-4 shrink-0" />}
-							//     <div className="flex-1">
-							//       <div className="flex items-center justify-between">
-							//         <h3 className="font-medium">{notification.title}</h3>
-							//         <span className="text-xs text-muted-foreground">
-							//           {new Date(notification.createdAt).toLocaleDateString()}
-							//         </span>
-							//       </div>
-							//       <p className="mt-1 text-sm text-muted-foreground">
-							//         {notification.message}
-							//       </p>
-							//     </div>
-							//   </div>
-							// </div>
 						)
 					})}
 				</div>

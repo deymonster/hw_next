@@ -7,6 +7,22 @@ route:
     group_interval: 5m
     repeat_interval: 3h
     receiver: 'api-webhook'
+    routes:
+        - match:
+              severity: critical
+          repeat_interval: 15m
+          receiver: 'api-webhook'
+          continue: false
+        - match:
+              severity: warning
+          repeat_interval: 24h
+          receiver: 'api-webhook'
+          continue: false
+        - match:
+              severity: info
+          repeat_interval: 6h
+          receiver: 'api-webhook'
+          continue: false
 
 receivers:
     - name: 'api-webhook'
