@@ -479,18 +479,48 @@ export class AlertRulesConfigService implements IAlertRulesConfigService {
 			description: `Рабочее место: {{ $labels.instance }}`
 		}
 
+		// Модифицируем выражение для исключения служебных метрик (pushgateway и т.д.)
+		// если правило применяется ко всем агентам (нет конкретного instance)
+		let expr = rule.expression
+		if (
+			rule.category === AlertCategory.AGENT_STATUS &&
+			!rule.labels?.instance
+		) {
+			// Исключаем pushgateway, prometheus, alertmanager из правила "Все агенты"
+			// up == 0 -> up{job!="pushgateway",job!="prometheus",job!="alertmanager"} == 0
+			const exclusionFilter =
+				'job!="pushgateway",job!="prometheus",job!="alertmanager"'
+
+			if (expr.includes('{')) {
+				expr = expr.replace('{', `{${exclusionFilter},`)
+			} else {
+				// Если скобок нет, добавляем их к метрике
+				// Ищем первое вхождение пробела или оператора
+				const match = expr.match(/^([a-zA-Z_:][a-zA-Z0-9_:]*)/)
+				if (match) {
+					const metric = match[1]
+					expr = expr.replace(metric, `${metric}{${exclusionFilter}}`)
+				}
+			}
+		}
+
 		if (rule.category === AlertCategory.HARDWARE_CHANGE) {
 			annotations.summary =
 				'Конфигурация оборудования была изменена на {{ $labels.instance }}'
 			annotations.description =
 				'Рабочее место: {{ $labels.instance }}\nКонфигурация оборудования была изменена с момента последнего запуска.'
-		} else if (rule.threshold !== undefined) {
+		} else if (
+			rule.threshold !== undefined &&
+			rule.category !== AlertCategory.AGENT_STATUS
+		) {
+			// Добавляем значения только если это НЕ статус агента
+			// Для статуса агента (0/1) эти значения неинформативны
 			annotations.description += `\nТекущее значение: {{ $value }}\nПороговое значение: ${rule.threshold}`
 		}
 
 		return {
 			alert: rule.name,
-			expr: rule.expression,
+			expr: expr,
 			for: rule.duration || '0m',
 			labels: {
 				severity: rule.severity.toLowerCase(),
