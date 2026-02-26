@@ -373,7 +373,7 @@
 				"description": "Управляйте устройствами, которые вы мониторите в NITRINO Monitoring"
 			},
 			"columns": {
-				"name": "Название",
+				"name": "Имя устройства",
 				"ipAddress": "IP-адрес",
 				"status": "Статус",
 				"tag": "Тег"

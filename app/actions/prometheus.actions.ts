@@ -54,6 +54,25 @@ export async function getAgentStatuses(ipAddresses: string[]): Promise<{
 
 							if (status.up) {
 								await deviceService.updateLastSeen(device.id)
+
+								try {
+									const systemInfo =
+										await prometheus.getSystemInfo(ip)
+									if (
+										systemInfo &&
+										systemInfo.name &&
+										systemInfo.name !== device.name
+									) {
+										await deviceService.update(device.id, {
+											name: systemInfo.name
+										})
+									}
+								} catch (sysErr) {
+									console.error(
+										`[AGENT_STATUSES_ACTION] Failed to update device name for ${ip}:`,
+										sysErr
+									)
+								}
 							}
 						}
 					} catch (dbError) {
@@ -118,6 +137,25 @@ export async function getAgentStatus(ipAddress?: string): Promise<{
 
 					if (status.up) {
 						await deviceService.updateLastSeen(device.id)
+
+						try {
+							const systemInfo =
+								await prometheus.getSystemInfo(ipAddress)
+							if (
+								systemInfo &&
+								systemInfo.name &&
+								systemInfo.name !== device.name
+							) {
+								await deviceService.update(device.id, {
+									name: systemInfo.name
+								})
+							}
+						} catch (sysErr) {
+							console.error(
+								`[AGENT_STATUS_ACTION] Failed to update device name for ${ipAddress}:`,
+								sysErr
+							)
+						}
 					}
 				}
 			} catch (error) {
