@@ -72,7 +72,7 @@ export default async function GuidePage() {
 	let content = ''
 	try {
 		content = await fs.readFile(filePath, 'utf-8')
-	} catch (error) {
+	} catch {
 		content = `# Guide Not Found\n\nPlease create \`docs/${filename}\` or rename your existing documentation file.`
 	}
 
@@ -152,6 +152,7 @@ export default async function GuidePage() {
 								</code>
 							),
 							img: ({ src, alt, ...props }) => (
+								/* eslint-disable-next-line @next/next/no-img-element */
 								<img
 									src={src}
 									alt={alt}
