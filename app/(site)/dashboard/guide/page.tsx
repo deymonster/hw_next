@@ -152,13 +152,20 @@ export default async function GuidePage() {
 								</code>
 							),
 							img: ({ src, alt, ...props }) => (
-								/* eslint-disable-next-line @next/next/no-img-element */
-								<img
-									src={src}
-									alt={alt}
-									className='my-4 rounded-md border bg-muted'
-									{...props}
-								/>
+								<span className='my-8 flex flex-col items-center'>
+									{/* eslint-disable-next-line @next/next/no-img-element */}
+									<img
+										src={src}
+										alt={alt}
+										className='rounded-md border bg-muted'
+										{...props}
+									/>
+									{alt && (
+										<span className='mt-2 block text-center text-sm text-muted-foreground'>
+											{alt}
+										</span>
+									)}
+								</span>
 							),
 							table: ({ children, ...props }) => (
 								<div className='my-6 w-full overflow-y-auto'>
