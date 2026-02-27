@@ -49,7 +49,7 @@ next-env.d.ts
 *.log
 
 # png files
-*.png
+# *.png
 
 
 
