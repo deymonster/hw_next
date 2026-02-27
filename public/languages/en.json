@@ -46,7 +46,8 @@
 				"departments": "Departments",
 				"inventory": "Inventory",
 				"users": "Users",
-				"license": "License"
+				"license": "License",
+				"guide": "Guide"
 			}
 		}
 	},

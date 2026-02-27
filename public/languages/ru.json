@@ -38,7 +38,8 @@
 				"departments": "Отделы",
 				"inventory": "Инвентаризация",
 				"users": "Сотрудники",
-				"license": "Лицензия"
+				"license": "Лицензия",
+				"guide": "Руководство"
 			},
 			"userNav": {
 				"home": "Главная",

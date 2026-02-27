@@ -1,5 +1,6 @@
 import {
 	Bell,
+	BookOpen,
 	Building,
 	Cpu,
 	Package,
@@ -50,6 +51,11 @@ export function DashboardNav() {
 			label: t('users'),
 			href: '/dashboard/employees',
 			icon: Users
+		},
+		{
+			label: t('guide'),
+			href: '/dashboard/guide',
+			icon: BookOpen
 		}
 	]
 	return (
