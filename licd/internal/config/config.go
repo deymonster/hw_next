@@ -10,13 +10,21 @@ type Config struct {
 	Port        int    `json:"port"`
 	MaxAgents   int    `json:"max_agents"`
 	JobName     string `json:"job_name"`
-	Environment string `json:"environment"`
-	StoragePath string `json:"storage_path"`
+	Environment      string `json:"environment"`
+	StoragePath      string `json:"storage_path"`
+	LicensePublicKey string `json:"license_public_key"`
+	FingerprintSalt  string `json:"fingerprint_salt"`
 }
 
 // Load загружает конфигурацию из переменных окружения
 func Load() (*Config, error) {
-	cfg := &Config{Port: 8081, MaxAgents: 50, JobName: "windows-agents", Environment: "development"}
+	cfg := &Config{
+		Port:            8081,
+		MaxAgents:       50,
+		JobName:         "windows-agents",
+		Environment:     "development",
+		FingerprintSalt: "hw-monitor-default-salt", // Default salt
+	}
 
 	if v := os.Getenv("SERVER_PORT"); v != "" {
 		if n, _ := strconv.Atoi(v); n > 0 {
@@ -43,6 +51,14 @@ func Load() (*Config, error) {
 		cfg.StoragePath = v
 	} else {
 		cfg.StoragePath = "./data/licd.db"
+	}
+
+	if v := os.Getenv("LICENSE_PUBLIC_KEY"); v != "" {
+		cfg.LicensePublicKey = v
+	}
+
+	if v := os.Getenv("FINGERPRINT_SALT"); v != "" {
+		cfg.FingerprintSalt = v
 	}
 
 	return cfg, nil

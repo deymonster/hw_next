@@ -207,3 +207,58 @@ func (h *LicenseHandler) ActivateBatchDevices(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
 }
+
+// ActivateProduct initiates license activation with INN
+// POST /license/register
+func (h *LicenseHandler) ActivateProduct(w http.ResponseWriter, r *http.Request) {
+	type Request struct {
+		INN string `json:"inn"`
+	}
+	var req Request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if req.INN == "" {
+		http.Error(w, "Missing INN", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.deviceUseCase.RequestLicense(r.Context(), req.INN); err != nil {
+		// Temporary error handling for Stage 2
+		http.Error(w, "Activation failed: "+err.Error(), http.StatusNotImplemented)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "activation_requested"})
+}
+
+// UpdateLicense updates the license token manually (admin/offline)
+// POST /license/update
+func (h *LicenseHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
+	type Request struct {
+		Token string `json:"token"`
+	}
+	var req Request
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if req.Token == "" {
+		http.Error(w, "Missing token", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.deviceUseCase.UpdateLicense(r.Context(), req.Token); err != nil {
+		if strings.Contains(err.Error(), "invalid token") || strings.Contains(err.Error(), "fingerprint mismatch") {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, "Failed to update license: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}

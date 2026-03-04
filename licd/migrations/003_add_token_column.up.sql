@@ -1,0 +1,1 @@
+ALTER TABLE license_info ADD COLUMN token TEXT;

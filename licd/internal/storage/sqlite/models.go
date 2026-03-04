@@ -21,6 +21,7 @@ type LicenseInfo struct {
 	ID                int64      `db:"id"`
 	InstallID         string     `db:"install_id"`
 	LicenseKey        *string    `db:"license_key"`
+	Token             *string    `db:"token"`
 	CustomerData      *string    `db:"customer_data"` // JSON строка
 	EncryptedData     []byte     `db:"encrypted_data"`
 	ServerSignature   *string    `db:"server_signature"`

@@ -14,6 +14,7 @@ import (
 	"github.com/deymonster/licd/internal/api/router"
 	"github.com/deymonster/licd/internal/application/usecases"
 	"github.com/deymonster/licd/internal/config"
+	"github.com/deymonster/licd/internal/domain/services"
 	"github.com/deymonster/licd/internal/storage/sqlite"
 	"github.com/joho/godotenv"
 )
@@ -40,10 +41,22 @@ func main() {
 	// 4) Репозитории
 	activationRepo := sqlite.NewActivationRepository(db.DB())
 
-	// 5) UseCases (протягиваем лимит и jobName)
-	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, cfg.MaxAgents, cfg.JobName)
+	// 5) Сервисы
+	var tokenService *services.TokenService
+	if cfg.LicensePublicKey != "" {
+		var err error
+		tokenService, err = services.NewTokenService(cfg.LicensePublicKey)
+		if err != nil {
+			log.Printf("WARN: Failed to initialize token service: %v. Token validation disabled.", err)
+		} else {
+			log.Println("Token service initialized with public key")
+		}
+	}
 
-	// 6) Handlers
+	// 6) UseCases (протягиваем лимит и jobName)
+	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, tokenService, cfg.MaxAgents, cfg.JobName, cfg.FingerprintSalt)
+
+	// 7) Handlers
 	deviceHandler := handlers.NewDeviceHandler(deviceUseCase)
 	licenseHandler := handlers.NewLicenseHandler(deviceUseCase)
 	prometheusHandler := handlers.NewPrometheusHandler(deviceUseCase)

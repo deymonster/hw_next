@@ -7,25 +7,31 @@ import (
 	"time"
 
 	"github.com/deymonster/licd/internal/domain/entities"
+	"github.com/deymonster/licd/internal/domain/services"
+	"github.com/deymonster/licd/internal/fingerprint"
 	"github.com/deymonster/licd/internal/storage/sqlite"
 )
 
 // DeviceUseCase содержит бизнес-логику для работы с устройствами
 type DeviceUseCase struct {
-	activationRepo *sqlite.ActivationRepository
-	maxAgents      int
-	jobName        string
+	activationRepo  *sqlite.ActivationRepository
+	tokenService    *services.TokenService
+	maxAgents       int
+	jobName         string
+	fingerprintSalt string
 }
 
 // NewDeviceUseCase создаёт новый экземпляр DeviceUseCase
-func NewDeviceUseCase(activationRepo *sqlite.ActivationRepository, maxAgents int, jobName string) *DeviceUseCase {
+func NewDeviceUseCase(activationRepo *sqlite.ActivationRepository, tokenService *services.TokenService, maxAgents int, jobName string, fingerprintSalt string) *DeviceUseCase {
 	if jobName == "" {
 		jobName = "windows-agents"
 	}
 	return &DeviceUseCase{
-		activationRepo: activationRepo,
-		maxAgents:      maxAgents,
-		jobName:        jobName,
+		activationRepo:  activationRepo,
+		tokenService:    tokenService,
+		maxAgents:       maxAgents,
+		jobName:         jobName,
+		fingerprintSalt: fingerprintSalt,
 	}
 }
 
@@ -203,6 +209,59 @@ func (uc *DeviceUseCase) DeleteDevice(ctx context.Context, deviceID string) erro
 		return fmt.Errorf("failed to deactivate device: %w", err)
 	}
 	return nil
+}
+
+// GetSystemFingerprint returns the current machine's fingerprint
+func (uc *DeviceUseCase) GetSystemFingerprint() (string, error) {
+	return fingerprint.Generate(uc.fingerprintSalt)
+}
+
+// RequestLicense initiates the license activation flow
+func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
+	fp, err := uc.GetSystemFingerprint()
+	if err != nil {
+		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	}
+
+	// TODO: Stage 3 - Call Vendor License Server with (inn, fp)
+	// resp, err := uc.licenseClient.Activate(ctx, inn, fp)
+	// if err != nil { return err }
+	// token := resp.Token
+
+	// For now, since we don't have the server client, we return an error
+	// indicating this step is pending implementation.
+	return fmt.Errorf("license server client not implemented (Stage 3 pending). Fingerprint: %s", fp)
+}
+
+// UpdateLicense validates and updates the license token (for manual/offline use)
+func (uc *DeviceUseCase) UpdateLicense(ctx context.Context, tokenString string) error {
+	if uc.tokenService == nil {
+		return fmt.Errorf("token service not initialized")
+	}
+
+	// 1. Verify signature and get claims
+	claims, err := uc.tokenService.VerifyToken(tokenString)
+	if err != nil {
+		return fmt.Errorf("invalid token: %w", err)
+	}
+
+	// 2. Verify fingerprint
+	currentFP, err := uc.GetSystemFingerprint()
+	if err != nil {
+		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	}
+
+	if claims.FingerprintHash != currentFP {
+		return fmt.Errorf("fingerprint mismatch: system=%s token=%s", currentFP, claims.FingerprintHash)
+	}
+
+	// 3. Save to DB
+	expiresAt := time.Time{}
+	if claims.ExpiresAt != nil {
+		expiresAt = claims.ExpiresAt.Time
+	}
+
+	return uc.activationRepo.UpdateLicense(ctx, tokenString, claims.MaxAgents, claims.Status, expiresAt)
 }
 
 // GetDeviceStats — просто счётчик

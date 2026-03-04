@@ -113,7 +113,7 @@ func (r *ActivationRepository) ActivateDevice(ctx context.Context, agentKey, ip 
 	}
 
 	// Логируем действие
-	if err := r.logAction(ctx, tx, "activate", agentKey, ip, "success", map[string]interface{}{
+	if err = r.logAction(ctx, tx, "activate", agentKey, ip, "success", map[string]interface{}{
 		"agent_key": agentKey,
 		"ip":        ip,
 		"labels":    labels,
@@ -242,6 +242,33 @@ func (r *ActivationRepository) GetLicenseStatus(ctx context.Context) (*LicenseSt
 		ExpiresAt:      expiresAt,
 		LastHeartbeat:  lastHeartbeat,
 	}, nil
+}
+
+// UpdateLicense обновляет лицензию в БД
+func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, maxAgents int, status string, expiresAt time.Time) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Деактивируем старые лицензии
+	_, err = tx.ExecContext(ctx, "UPDATE license_info SET status = 'inactive' WHERE status = 'active'")
+	if err != nil {
+		return fmt.Errorf("failed to deactivate old licenses: %w", err)
+	}
+
+	// Вставляем новую
+	now := time.Now().UTC()
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO license_info (token, max_agents, status, expires_at, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, token, maxAgents, status, expiresAt, now, now)
+	if err != nil {
+		return fmt.Errorf("failed to insert new license: %w", err)
+	}
+
+	return tx.Commit()
 }
 
 // logAction записывает действие в аудит лог

@@ -9,6 +9,7 @@ type License struct {
 	ID              string       `json:"id"`
 	InstallID       string       `json:"install_id"`
 	LicenseKey      string       `json:"license_key"`
+	Token           string       `json:"token"` // Raw JWT token
 	CustomerData    CustomerData `json:"customer_data"`
 	EncryptedData   []byte       `json:"encrypted_data,omitempty"`
 	ServerSignature string       `json:"server_signature,omitempty"`
