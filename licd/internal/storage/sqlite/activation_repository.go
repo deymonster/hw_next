@@ -195,7 +195,8 @@ func (r *ActivationRepository) GetActivations(ctx context.Context) ([]Activation
 func (r *ActivationRepository) GetLicenseStatus(ctx context.Context) (*LicenseStatus, error) {
 	var used, max int
 	var status string
-	var expiresAt, lastHeartbeat *time.Time
+	var expiresAt, lastHeartbeat, activationDate *time.Time
+	var orgName, inn sql.NullString
 
 	// Получаем количество используемых слотов
 	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM activations").Scan(&used)
@@ -206,12 +207,12 @@ func (r *ActivationRepository) GetLicenseStatus(ctx context.Context) (*LicenseSt
 
 	// Получаем информацию о лицензии
 	err = r.db.QueryRowContext(ctx, `
-	    SELECT COALESCE(max_agents, 0), status, expires_at, last_heartbeat_at
+	    SELECT COALESCE(max_agents, 0), status, expires_at, last_heartbeat_at, org_name, inn, activation_date
 	    FROM license_info 
 	    WHERE status = 'active'
 	    ORDER BY created_at DESC 
 	    LIMIT 1
-	`).Scan(&max, &status, &expiresAt, &lastHeartbeat)
+	`).Scan(&max, &status, &expiresAt, &lastHeartbeat, &orgName, &inn, &activationDate)
 
 	fmt.Printf("[DEBUG] Query error: %v\n", err)
 	fmt.Printf("[DEBUG] Max agents: %d, Status: %s\n", max, status)
@@ -241,11 +242,14 @@ func (r *ActivationRepository) GetLicenseStatus(ctx context.Context) (*LicenseSt
 		Status:         status,
 		ExpiresAt:      expiresAt,
 		LastHeartbeat:  lastHeartbeat,
+		OrgName:        orgName.String,
+		INN:            inn.String,
+		ActivationDate: activationDate,
 	}, nil
 }
 
 // UpdateLicense обновляет лицензию в БД
-func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, installID string, maxAgents int, status string, expiresAt time.Time) error {
+func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, installID string, maxAgents int, status string, expiresAt time.Time, orgName, inn string, activationDate time.Time) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -261,15 +265,18 @@ func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, 
 	// Вставляем новую или обновляем существующую
 	now := time.Now().UTC()
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO license_info (token, install_id, max_agents, status, expires_at, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO license_info (token, install_id, max_agents, status, expires_at, created_at, updated_at, org_name, inn, activation_date)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(install_id) DO UPDATE SET
 			token=excluded.token,
 			max_agents=excluded.max_agents,
 			status=excluded.status,
 			expires_at=excluded.expires_at,
-			updated_at=excluded.updated_at
-	`, token, installID, maxAgents, status, expiresAt, now, now)
+			updated_at=excluded.updated_at,
+			org_name=excluded.org_name,
+			inn=excluded.inn,
+			activation_date=excluded.activation_date
+	`, token, installID, maxAgents, status, expiresAt, now, now, orgName, inn, activationDate)
 	if err != nil {
 		return fmt.Errorf("failed to upsert license: %w", err)
 	}

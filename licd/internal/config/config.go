@@ -3,13 +3,14 @@ package config
 import (
 	"os"
 	"strconv"
+	"time"
 )
 
 // Config содержит конфигурацию приложения
 type Config struct {
-	Port        int    `json:"port"`
-	MaxAgents   int    `json:"max_agents"`
-	JobName     string `json:"job_name"`
+	Port             int    `json:"port"`
+	MaxAgents        int    `json:"max_agents"`
+	JobName          string `json:"job_name"`
 	Environment      string `json:"environment"`
 	StoragePath      string `json:"storage_path"`
 	LicensePublicKey string `json:"license_public_key"`
@@ -20,16 +21,18 @@ type Config struct {
 	TLSCertPath      string `json:"tls_cert_path"`
 	TLSKeyPath       string `json:"tls_key_path"`
 	TLSCACertPath    string `json:"tls_ca_cert_path"`
+
+	HeartbeatInterval time.Duration `json:"heartbeat_interval"`
 }
 
 // Load загружает конфигурацию из переменных окружения
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:            8081,
-		MaxAgents:       50,
-		JobName:         "windows-agents",
-		Environment:     "development",
-		FingerprintSalt: "hw-monitor-default-salt", // Default salt
+		Port:             8081,
+		MaxAgents:        50,
+		JobName:          "windows-agents",
+		Environment:      "development",
+		FingerprintSalt:  "hw-monitor-default-salt",          // Default salt
 		LicenseServerURL: "https://license.hw-monitor.local", // Default URL
 	}
 
@@ -79,6 +82,15 @@ func Load() (*Config, error) {
 	}
 	if v := os.Getenv("TLS_CA_CERT_PATH"); v != "" {
 		cfg.TLSCACertPath = v
+	}
+
+	if v := os.Getenv("HEARTBEAT_INTERVAL"); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.HeartbeatInterval = d
+		}
+	}
+	if cfg.HeartbeatInterval == 0 {
+		cfg.HeartbeatInterval = 24 * time.Hour
 	}
 
 	return cfg, nil

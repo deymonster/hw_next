@@ -41,6 +41,9 @@ type LicenseStatus struct {
 	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 	LastHeartbeat  *time.Time `json:"last_heartbeat,omitempty"`
 	IsOnline       bool       `json:"is_online"`
+	OrgName        string     `json:"org_name"`
+	INN            string     `json:"inn"`
+	ActivationDate *time.Time `json:"activation_date,omitempty"`
 }
 
 // IsValid проверяет валидность лицензии

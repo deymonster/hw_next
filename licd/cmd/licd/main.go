@@ -102,6 +102,41 @@ func main() {
 	r.SetupLicenseRoutes(licenseHandler)
 	r.SetupPrometheusRoutes(prometheusHandler)
 
+	// 7.5) Background Heartbeat (License Refresh)
+	go func() {
+		log.Printf("Starting background license heartbeat (every %v)...", cfg.HeartbeatInterval)
+		// Initial check after start (with random jitter/delay to avoid thundering herd on restart)
+		// If interval is small (testing), jitter should be small too
+		startDelay := 30 * time.Second
+		if cfg.HeartbeatInterval < 5*time.Minute {
+			startDelay = 5 * time.Second
+		}
+		time.Sleep(startDelay + time.Duration(time.Now().Unix()%10)*time.Second)
+
+		// First run
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		if err := deviceUseCase.RefreshLicense(ctx); err != nil {
+			// It's normal if no license is active yet
+			log.Printf("INFO: Initial license refresh result: %v", err)
+		} else {
+			log.Println("Initial license refresh completed successfully")
+		}
+		cancel()
+
+		ticker := time.NewTicker(cfg.HeartbeatInterval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+			if err := deviceUseCase.RefreshLicense(ctx); err != nil {
+				log.Printf("ERROR: Scheduled license refresh failed: %v", err)
+			} else {
+				log.Println("Scheduled license refresh completed successfully")
+			}
+			cancel()
+		}
+	}()
+
 	// 8) HTTP-сервер
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),

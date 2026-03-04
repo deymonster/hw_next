@@ -292,7 +292,14 @@ func (uc *DeviceUseCase) UpdateLicense(ctx context.Context, tokenString string) 
 		expiresAt = claims.ExpiresAt.Time
 	}
 
-	return uc.activationRepo.UpdateLicense(ctx, tokenString, currentFP, claims.MaxAgents, claims.Status, expiresAt)
+	var activationDate time.Time
+	if claims.ActivationDate != "" {
+		if t, err := time.Parse(time.RFC3339, claims.ActivationDate); err == nil {
+			activationDate = t
+		}
+	}
+
+	return uc.activationRepo.UpdateLicense(ctx, tokenString, currentFP, claims.MaxAgents, claims.Status, expiresAt, claims.OrgName, claims.INN, activationDate)
 }
 
 // GetDeviceStats — просто счётчик

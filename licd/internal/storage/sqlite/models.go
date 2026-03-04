@@ -33,6 +33,9 @@ type LicenseInfo struct {
 	KeyVersion        int        `db:"key_version"`
 	CreatedAt         time.Time  `db:"created_at"`
 	UpdatedAt         time.Time  `db:"updated_at"`
+	OrgName           *string    `db:"org_name"`
+	INN               *string    `db:"inn"`
+	ActivationDate    *time.Time `db:"activation_date"`
 }
 
 // LicenseStatus представляет статус лицензии
@@ -44,6 +47,9 @@ type LicenseStatus struct {
 	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
 	LastHeartbeat  *time.Time `json:"last_heartbeat,omitempty"`
 	IsOnline       bool       `json:"is_online"`
+	OrgName        string     `json:"org_name"`
+	INN            string     `json:"inn"`
+	ActivationDate *time.Time `json:"activation_date,omitempty"`
 }
 
 // AuditLog представляет запись аудита

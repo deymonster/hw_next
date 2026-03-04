@@ -66,7 +66,13 @@ func NewDatabase(dbPath string) (*Database, error) {
 func runMigrations(dbPath string) error {
 	// Абсолютный путь к миграциям
 	wd, _ := os.Getwd()
-	migrationsPath := "file://" + filepath.Join(wd, "migrations")
+	migDir := filepath.Join(wd, "migrations")
+	if _, err := os.Stat(migDir); os.IsNotExist(err) {
+		// Try fallback to licd/migrations (if running from project root)
+		migDir = filepath.Join(wd, "licd", "migrations")
+	}
+
+	migrationsPath := "file://" + migDir
 
 	// Отдельное подключение ТОЛЬКО для миграций (без спец. DSN — достаточно базового)
 	mdb, err := sql.Open("sqlite3", dbPath)

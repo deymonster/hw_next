@@ -13,6 +13,7 @@ type LicenseClaims struct {
 	// Custom claims matching the API contract
 	LicenseID       string `json:"lid"`
 	INN             string `json:"inn"`
+	OrgName         string `json:"org"` // Organization Name
 	MaxAgents       int    `json:"max"`
 	FingerprintHash string `json:"fph"`
 	ActivationDate  string `json:"act"` // ISO8601
