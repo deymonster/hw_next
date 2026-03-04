@@ -9,6 +9,7 @@ import (
 	"github.com/deymonster/licd/internal/domain/entities"
 	"github.com/deymonster/licd/internal/domain/services"
 	"github.com/deymonster/licd/internal/fingerprint"
+	"github.com/deymonster/licd/internal/infrastructure/client"
 	"github.com/deymonster/licd/internal/storage/sqlite"
 )
 
@@ -16,19 +17,28 @@ import (
 type DeviceUseCase struct {
 	activationRepo  *sqlite.ActivationRepository
 	tokenService    *services.TokenService
+	licenseClient   *client.LicenseClient
 	maxAgents       int
 	jobName         string
 	fingerprintSalt string
 }
 
 // NewDeviceUseCase создаёт новый экземпляр DeviceUseCase
-func NewDeviceUseCase(activationRepo *sqlite.ActivationRepository, tokenService *services.TokenService, maxAgents int, jobName string, fingerprintSalt string) *DeviceUseCase {
+func NewDeviceUseCase(
+	activationRepo *sqlite.ActivationRepository,
+	tokenService *services.TokenService,
+	licenseClient *client.LicenseClient,
+	maxAgents int,
+	jobName string,
+	fingerprintSalt string,
+) *DeviceUseCase {
 	if jobName == "" {
 		jobName = "windows-agents"
 	}
 	return &DeviceUseCase{
 		activationRepo:  activationRepo,
 		tokenService:    tokenService,
+		licenseClient:   licenseClient,
 		maxAgents:       maxAgents,
 		jobName:         jobName,
 		fingerprintSalt: fingerprintSalt,
@@ -223,14 +233,18 @@ func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 		return fmt.Errorf("failed to generate fingerprint: %w", err)
 	}
 
-	// TODO: Stage 3 - Call Vendor License Server with (inn, fp)
-	// resp, err := uc.licenseClient.Activate(ctx, inn, fp)
-	// if err != nil { return err }
-	// token := resp.Token
+	if uc.licenseClient == nil {
+		return fmt.Errorf("license client not initialized (mTLS config missing)")
+	}
 
-	// For now, since we don't have the server client, we return an error
-	// indicating this step is pending implementation.
-	return fmt.Errorf("license server client not implemented (Stage 3 pending). Fingerprint: %s", fp)
+	// Stage 3 - Call Vendor License Server with (inn, fp)
+	resp, err := uc.licenseClient.Activate(ctx, inn, fp)
+	if err != nil {
+		return fmt.Errorf("failed to activate license via server: %w", err)
+	}
+
+	// Save the received token
+	return uc.UpdateLicense(ctx, resp.Token)
 }
 
 // UpdateLicense validates and updates the license token (for manual/offline use)

@@ -14,6 +14,12 @@ type Config struct {
 	StoragePath      string `json:"storage_path"`
 	LicensePublicKey string `json:"license_public_key"`
 	FingerprintSalt  string `json:"fingerprint_salt"`
+
+	// mTLS Configuration
+	LicenseServerURL string `json:"license_server_url"`
+	TLSCertPath      string `json:"tls_cert_path"`
+	TLSKeyPath       string `json:"tls_key_path"`
+	TLSCACertPath    string `json:"tls_ca_cert_path"`
 }
 
 // Load загружает конфигурацию из переменных окружения
@@ -24,6 +30,7 @@ func Load() (*Config, error) {
 		JobName:         "windows-agents",
 		Environment:     "development",
 		FingerprintSalt: "hw-monitor-default-salt", // Default salt
+		LicenseServerURL: "https://license.hw-monitor.local", // Default URL
 	}
 
 	if v := os.Getenv("SERVER_PORT"); v != "" {
@@ -59,6 +66,19 @@ func Load() (*Config, error) {
 
 	if v := os.Getenv("FINGERPRINT_SALT"); v != "" {
 		cfg.FingerprintSalt = v
+	}
+
+	if v := os.Getenv("LICENSE_SERVER_URL"); v != "" {
+		cfg.LicenseServerURL = v
+	}
+	if v := os.Getenv("TLS_CERT_PATH"); v != "" {
+		cfg.TLSCertPath = v
+	}
+	if v := os.Getenv("TLS_KEY_PATH"); v != "" {
+		cfg.TLSKeyPath = v
+	}
+	if v := os.Getenv("TLS_CA_CERT_PATH"); v != "" {
+		cfg.TLSCACertPath = v
 	}
 
 	return cfg, nil

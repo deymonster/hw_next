@@ -14,10 +14,10 @@ POST /v1/reset (только админ/ручной режим).
 
 licd хранит токен, проверяет подпись публичным ключом.
 
-оля токена: license_id, inn, max_agents, issued_at, expires_at, fingerprint_hash, activation_date, key_version.
+поля токена: license_id, inn, max_agents, issued_at, expires_at, fingerprint_hash, activation_date, key_version.
 
-Этап 2 — Fingerprint для Docker/Linux
-Собирать fingerprint не из изменчивых полей контейнера, а из стабильных host-атрибутов:
+Этап 2 — Fingerprint для Docker/Linux [ГОТОВО]
+[x] Собирать fingerprint не из изменчивых полей контейнера, а из стабильных host-атрибутов:
 
 /etc/machine-id,
 
@@ -27,11 +27,11 @@ CPU-id/модель,
 
 ваша соль.
 
-Формула: fp = SHA256(canonical(host_id + cpu + salt)).
+[x] Формула: fp = SHA256(canonical(host_id + cpu + salt)).
 
 В БД хранить только hash fingerprint, не сырой набор.
 
-Этап 3 — mTLS канал licd -> licensing server
+Этап 3 — mTLS канал licd -> licensing server [В РАБОТЕ]
 В licd добавить отдельный HTTP client с:
 
 client cert/key + pinned CA,

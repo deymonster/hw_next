@@ -15,6 +15,7 @@ import (
 	"github.com/deymonster/licd/internal/application/usecases"
 	"github.com/deymonster/licd/internal/config"
 	"github.com/deymonster/licd/internal/domain/services"
+	"github.com/deymonster/licd/internal/infrastructure/client"
 	"github.com/deymonster/licd/internal/storage/sqlite"
 	"github.com/joho/godotenv"
 )
@@ -53,8 +54,22 @@ func main() {
 		}
 	}
 
+	// 5.5) License Client (mTLS)
+	var licenseClient *client.LicenseClient
+	if cfg.LicenseServerURL != "" && cfg.TLSCertPath != "" && cfg.TLSKeyPath != "" && cfg.TLSCACertPath != "" {
+		var err error
+		licenseClient, err = client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath)
+		if err != nil {
+			log.Printf("WARN: Failed to initialize license client: %v. Automated activation disabled.", err)
+		} else {
+			log.Println("License client initialized (mTLS enabled)")
+		}
+	} else {
+		log.Println("License client not configured (missing URL or certs). Automated activation disabled.")
+	}
+
 	// 6) UseCases (протягиваем лимит и jobName)
-	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, tokenService, cfg.MaxAgents, cfg.JobName, cfg.FingerprintSalt)
+	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, tokenService, licenseClient, cfg.MaxAgents, cfg.JobName, cfg.FingerprintSalt)
 
 	// 7) Handlers
 	deviceHandler := handlers.NewDeviceHandler(deviceUseCase)
