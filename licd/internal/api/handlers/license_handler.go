@@ -225,13 +225,16 @@ func (h *LicenseHandler) ActivateProduct(w http.ResponseWriter, r *http.Request)
 	}
 
 	if err := h.deviceUseCase.RequestLicense(r.Context(), req.INN); err != nil {
-		// Temporary error handling for Stage 2
-		http.Error(w, "Activation failed: "+err.Error(), http.StatusNotImplemented)
+		http.Error(w, "Activation failed: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "activation_requested"})
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"status":  "activated",
+		"message": "License token received and saved",
+	})
 }
 
 // UpdateLicense updates the license token manually (admin/offline)
@@ -261,4 +264,24 @@ func (h *LicenseHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
+}
+
+// RefreshLicense checks with the server for license updates
+// POST /license/refresh
+func (h *LicenseHandler) RefreshLicense(w http.ResponseWriter, r *http.Request) {
+	if err := h.deviceUseCase.RefreshLicense(r.Context()); err != nil {
+		if strings.Contains(err.Error(), "no active license") {
+			http.Error(w, "No active license to refresh", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Refresh failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "refreshed",
+		"message": "License updated from server",
+	})
 }

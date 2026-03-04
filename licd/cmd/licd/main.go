@@ -22,7 +22,11 @@ import (
 
 func main() {
 	// 1) .env (не критично в проде, но удобно локально)
-	_ = godotenv.Load(".env")
+	if err := godotenv.Load(".env"); err != nil {
+		log.Printf("No .env file found or error loading it: %v", err)
+	} else {
+		log.Println("Loaded .env file")
+	}
 
 	// 2) Конфиг
 	cfg, err := config.Load()
@@ -45,13 +49,29 @@ func main() {
 	// 5) Сервисы
 	var tokenService *services.TokenService
 	if cfg.LicensePublicKey != "" {
+		// Если cfg.LicensePublicKey - это путь к файлу, читаем его
+		keyContent := cfg.LicensePublicKey
+		if _, err := os.Stat(keyContent); err == nil {
+			content, err := os.ReadFile(keyContent)
+			if err != nil {
+				log.Printf("WARN: Failed to read public key file %s: %v", keyContent, err)
+			} else {
+				keyContent = string(content)
+				log.Printf("Read public key from file: %s", cfg.LicensePublicKey)
+			}
+		} else {
+			log.Printf("Using public key from config string (not a file path or file not found: %s)", cfg.LicensePublicKey)
+		}
+
 		var err error
-		tokenService, err = services.NewTokenService(cfg.LicensePublicKey)
+		tokenService, err = services.NewTokenService(keyContent)
 		if err != nil {
 			log.Printf("WARN: Failed to initialize token service: %v. Token validation disabled.", err)
 		} else {
 			log.Println("Token service initialized with public key")
 		}
+	} else {
+		log.Println("WARN: LICENSE_PUBLIC_KEY is empty. Token validation disabled.")
 	}
 
 	// 5.5) License Client (mTLS)

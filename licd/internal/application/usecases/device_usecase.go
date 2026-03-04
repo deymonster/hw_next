@@ -228,6 +228,23 @@ func (uc *DeviceUseCase) GetSystemFingerprint() (string, error) {
 
 // RequestLicense initiates the license activation flow
 func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
+	// 1. Check if already activated with valid token
+	tokenString, err := uc.activationRepo.GetActiveToken(ctx)
+	if err == nil && tokenString != "" {
+		// Verify existing token
+		claims, err := uc.tokenService.VerifyToken(tokenString)
+		if err == nil {
+			// Check INN match
+			if claims.INN == inn {
+				// Check expiration
+				if claims.ExpiresAt == nil || claims.ExpiresAt.Time.After(time.Now()) {
+					// Already active and valid
+					return fmt.Errorf("license already activated for INN %s", inn)
+				}
+			}
+		}
+	}
+
 	fp, err := uc.GetSystemFingerprint()
 	if err != nil {
 		return fmt.Errorf("failed to generate fingerprint: %w", err)
@@ -275,7 +292,7 @@ func (uc *DeviceUseCase) UpdateLicense(ctx context.Context, tokenString string) 
 		expiresAt = claims.ExpiresAt.Time
 	}
 
-	return uc.activationRepo.UpdateLicense(ctx, tokenString, claims.MaxAgents, claims.Status, expiresAt)
+	return uc.activationRepo.UpdateLicense(ctx, tokenString, currentFP, claims.MaxAgents, claims.Status, expiresAt)
 }
 
 // GetDeviceStats — просто счётчик
@@ -285,4 +302,43 @@ func (uc *DeviceUseCase) GetDeviceStats(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("failed to get activations: %w", err)
 	}
 	return len(acts), nil
+}
+
+// RefreshLicense checks with the server for any license updates
+func (uc *DeviceUseCase) RefreshLicense(ctx context.Context) error {
+	// 1. Get current active token
+	tokenString, err := uc.activationRepo.GetActiveToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get active license token: %w", err)
+	}
+
+	// 2. Parse token to extract INN
+	claims, err := uc.tokenService.VerifyToken(tokenString)
+	if err != nil {
+		return fmt.Errorf("current license token is invalid: %w", err)
+	}
+
+	inn := claims.INN
+	if inn == "" {
+		return fmt.Errorf("token does not contain INN")
+	}
+
+	// 3. Get system fingerprint
+	fp, err := uc.GetSystemFingerprint()
+	if err != nil {
+		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	}
+
+	if uc.licenseClient == nil {
+		return fmt.Errorf("license client not initialized")
+	}
+
+	// 4. Call server (same as Activate)
+	resp, err := uc.licenseClient.Activate(ctx, inn, fp)
+	if err != nil {
+		return fmt.Errorf("failed to refresh license via server: %w", err)
+	}
+
+	// 5. Update license in DB
+	return uc.UpdateLicense(ctx, resp.Token)
 }
