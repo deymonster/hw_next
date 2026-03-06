@@ -31,35 +31,35 @@ CPU-id/модель,
 
 В БД хранить только hash fingerprint, не сырой набор.
 
-Этап 3 — mTLS канал licd -> licensing server [В РАБОТЕ]
-В licd добавить отдельный HTTP client с:
+Этап 3 — mTLS канал licd -> licensing server [ГОТОВО]
+[x] В licd добавить отдельный HTTP client с:
 
 client cert/key + pinned CA,
 
 строгой проверкой SAN/CN,
 
-timeout/retry/backoff + idempotency key.
+timeout/retry/backoff + idempotency key (частично, требуется доработка retry).
 
-В конфиг licd добавить пути до cert/key/ca и URL сервера.
+[x] В конфиг licd добавить пути до cert/key/ca и URL сервера.
 
-Этап 4 — Новый activation-flow по ИНН
+Этап 4 — Новый activation-flow по ИНН [ГОТОВО]
 На странице лицензии:
 
-поле ИНН,
+[x] поле ИНН,
 
-кнопка “Активировать”,
+[x] кнопка “Активировать”,
 
-вывод статуса: активна/не активна/уже активирована, дата, куплено, занято, доступно.
+[x] вывод статуса: активна/не активна/уже активирована, дата, куплено, занято, доступно.
 
 licd:
 
-принимает ИНН,
+[x] принимает ИНН,
 
-вычисляет fingerprint,
+[x] вычисляет fingerprint,
 
-вызывает ваш server по mTLS,
+[x] вызывает ваш server по mTLS,
 
-сохраняет signed token + metadata в license_info.
+[x] сохраняет signed token + metadata в license_info.
 
 Если уже активировано с тем же fingerprint — возвращать явный ответ “already_activated” + activated_at.
 

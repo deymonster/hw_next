@@ -9,13 +9,27 @@ const LICD_URL = process.env.LICD_URL || 'http://licd:8081'
  * Статус лицензий в системе LICD
  * @interface LicenseStatus
  */
-type LicenseStatus = {
-	/** Максимальное количество агентов по лицензии */
-	max_agents: number
-	/** Количество активных лицензированных агентов */
-	active_licensed: number
-	/** Оставшееся количество доступных лицензий */
-	remaining: number
+export type LicenseStatus = {
+	/** Количество используемых слотов */
+	used_slots: number
+	/** Максимальное количество слотов */
+	max_slots: number
+	/** Оставшееся количество слотов */
+	remaining_slots: number
+	/** Статус лицензии (active, expired, etc) */
+	status: string
+	/** Дата истечения лицензии */
+	expires_at?: string
+	/** Дата последнего heartbeat */
+	last_heartbeat?: string
+	/** Онлайн статус сервера лицензирования */
+	is_online: boolean
+	/** Название организации */
+	org_name?: string
+	/** ИНН */
+	inn?: string
+	/** Дата активации */
+	activation_date?: string
 }
 
 /**
@@ -25,26 +39,6 @@ type LicenseStatus = {
  * и возвращает информацию о состоянии лицензий.
  *
  * @returns {Promise<{success: true, data: LicenseStatus} | {success: false, error: string}>}
- *   Объект с результатом операции:
- *   - При успехе: `{success: true, data: LicenseStatus}`
- *   - При ошибке: `{success: false, error: string}`
- *
- * @example
- * ```typescript
- * const result = await getLicenseStatus()
- * if (result.success) {
- *   console.log(`Доступно лицензий: ${result.data.remaining}`)
- *   console.log(`Активных агентов: ${result.data.active_licensed}`)
- *   console.log(`Максимум агентов: ${result.data.max_agents}`)
- * } else {
- *   console.error(`Ошибка: ${result.error}`)
- * }
- * ```
- *
- * @throws {Error} Возможные ошибки:
- *   - `"HTTP {status}"` - HTTP ошибка от сервера
- *   - `"Malformed status payload from licd"` - Некорректный формат ответа
- *   - `"Failed to reach licd"` - Сервер недоступен
  */
 export async function getLicenseStatus(): Promise<
 	{ success: true; data: LicenseStatus } | { success: false; error: string }
@@ -57,11 +51,14 @@ export async function getLicenseStatus(): Promise<
 			return { success: false, error: `HTTP ${r.status}` }
 		}
 		const data = (await r.json()) as LicenseStatus
+
+		// Проверяем обязательные поля (хотя бы слоты)
 		if (
-			typeof data?.max_agents !== 'number' ||
-			typeof data?.active_licensed !== 'number' ||
-			typeof data?.remaining !== 'number'
+			typeof data?.max_slots !== 'number' ||
+			typeof data?.used_slots !== 'number' ||
+			typeof data?.remaining_slots !== 'number'
 		) {
+			console.error('[LICD][STATUS] Malformed payload:', data)
 			return {
 				success: false,
 				error: 'Malformed status payload from licd'
@@ -70,6 +67,42 @@ export async function getLicenseStatus(): Promise<
 		return { success: true, data }
 	} catch (e) {
 		console.error('[LICD][STATUS] error:', e)
+		return { success: false, error: 'Failed to reach licd' }
+	}
+}
+
+/**
+ * Активирует продукт по ИНН
+ * POST /license/register
+ */
+export async function activateProduct(inn: string): Promise<{
+	success: boolean
+	message?: string
+	error?: string
+}> {
+	try {
+		const r = await fetch(`${LICD_URL}/license/register`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			cache: 'no-store',
+			body: JSON.stringify({ inn })
+		})
+
+		const body = await r.json().catch(() => ({}))
+
+		if (!r.ok) {
+			return {
+				success: false,
+				error: body.message || `HTTP error ${r.status}`
+			}
+		}
+
+		return {
+			success: true,
+			message: body.message
+		}
+	} catch (e) {
+		console.error('[LICD][ACTIVATE_PRODUCT] error:', e)
 		return { success: false, error: 'Failed to reach licd' }
 	}
 }

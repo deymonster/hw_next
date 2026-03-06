@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 
+import { getLicenseStatus } from '@/app/actions/licd.actions'
+import { LicenseManager } from '@/components/features/license/LicenseManager'
 import { CardContainer } from '@/components/ui/elements/CardContainer'
 import { Heading } from '@/components/ui/elements/Heading'
 import { getVersionInfo } from '@/lib/version'
@@ -17,6 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function LicensePage() {
 	const t = await getTranslations('dashboard.license')
 	const info = await getVersionInfo()
+	const statusRes = await getLicenseStatus()
 
 	return (
 		<div className='lg:px-10'>
@@ -44,6 +47,10 @@ export default async function LicensePage() {
 							)}
 						</div>
 					}
+				/>
+
+				<LicenseManager
+					initialStatus={statusRes.success ? statusRes.data : null}
 				/>
 			</div>
 		</div>
