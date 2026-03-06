@@ -28,7 +28,9 @@ subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = localhost
+DNS.2 = license.hw-monitor.local
 IP.1 = 127.0.0.1
+IP.2 = 192.168.13.162
 EOF
 # 6. Подписываем сертификат сервера нашим CA
 openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 365 -sha256 -extfile server-ext.cnf

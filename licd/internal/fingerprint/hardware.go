@@ -19,7 +19,7 @@ const (
 // Generate creates a hardware-based fingerprint for license binding
 // Algorithm:
 // 1. Read /sys/class/dmi/id/product_uuid (motherboard UUID)
-// 2. Read /proc/cpuinfo and compute SHA256 hash
+// 2. Read /proc/cpuinfo and compute SHA256 hash of STABLE fields only
 // 3. Combine: product_uuid + ":" + cpuinfo_hash + ":" + salt
 // 4. Return SHA256 of combined string
 func Generate(salt string) (string, error) {
@@ -43,8 +43,8 @@ func Generate(salt string) (string, error) {
 
 	productUUID = strings.TrimSpace(productUUID)
 
-	// Step 2: Read cpuinfo and compute hash
-	cpuinfoHash, err := hashFile(cpuinfoPath)
+	// Step 2: Read cpuinfo and compute hash (STABLE fields only)
+	cpuinfoHash, err := hashStableCpuInfo(cpuinfoPath)
 	if err != nil {
 		// If cpuinfo is not available, use empty hash (for VMs/containers)
 		cpuinfoHash = "no_cpuinfo"
@@ -80,7 +80,7 @@ func GetHardwareInfo() map[string]string {
 	}
 
 	// CPU Info hash
-	if cpuHash, err := hashFile(cpuinfoPath); err == nil {
+	if cpuHash, err := hashStableCpuInfo(cpuinfoPath); err == nil {
 		info["cpuinfo_hash"] = cpuHash
 	} else {
 		info["cpuinfo_hash"] = ""
@@ -104,12 +104,36 @@ func readFirstLine(path string) (string, error) {
 	return string(data), nil
 }
 
-// hashFile reads a file and returns its SHA256 hash as hex string
-func hashFile(path string) (string, error) {
+// hashStableCpuInfo reads cpuinfo and hashes only stable fields to avoid mismatches due to cpu MHz changes
+func hashStableCpuInfo(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
-	hash := sha256.Sum256(data)
+
+	lines := strings.Split(string(data), "\n")
+	var stableLines []string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Filter only stable fields that do not change at runtime
+		// We EXCLUDE "cpu MHz", "bogomips", etc.
+		if strings.HasPrefix(line, "vendor_id") ||
+			strings.HasPrefix(line, "model name") ||
+			strings.HasPrefix(line, "cache size") ||
+			strings.HasPrefix(line, "microcode") ||
+			strings.HasPrefix(line, "cpu cores") ||
+			strings.HasPrefix(line, "physical id") {
+			stableLines = append(stableLines, line)
+		}
+	}
+
+	if len(stableLines) == 0 {
+		// Fallback to "empty" if no stable lines found, to ensure stability
+		return "empty_stable_cpuinfo", nil
+	}
+
+	input := strings.Join(stableLines, "\n")
+	hash := sha256.Sum256([]byte(input))
 	return hex.EncodeToString(hash[:]), nil
 }
