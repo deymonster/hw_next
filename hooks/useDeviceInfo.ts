@@ -62,7 +62,7 @@ export const useDeviceInfo = () => {
 
 			// Проверяем лицензию
 			const lic = await getLicenseStatus()
-			if (lic.success && lic.data.remaining <= 0) {
+			if (lic.success && lic.data.remaining_slots <= 0) {
 				return {
 					success: false,
 					error: 'License limit reached'
@@ -183,7 +183,7 @@ export const useDeviceInfo = () => {
 			// Для множественного добавления используем batch
 			// 1) Узнаём текущий остаток по лицензии
 			const lic = await getLicenseStatus()
-			let remaining = lic.success ? lic.data.remaining : null
+			let remaining = lic.success ? lic.data.remaining_slots : null
 			if (!lic.success) {
 				console.warn(
 					'[DEVICE_INFO_HOOK] Licd status unavailable:',
