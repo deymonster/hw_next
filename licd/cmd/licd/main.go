@@ -16,6 +16,7 @@ import (
 	"github.com/deymonster/licd/internal/config"
 	"github.com/deymonster/licd/internal/domain/services"
 	"github.com/deymonster/licd/internal/infrastructure/client"
+	"github.com/deymonster/licd/internal/infrastructure/crypto"
 	"github.com/deymonster/licd/internal/storage/sqlite"
 	"github.com/joho/godotenv"
 )
@@ -74,22 +75,30 @@ func main() {
 		log.Println("WARN: LICENSE_PUBLIC_KEY is empty. Token validation disabled.")
 	}
 
-	// 5.5) License Client (mTLS)
+	// 5.5) Key Manager
+	var keyManager *crypto.KeyManager
+	if cfg.TLSCertPath != "" && cfg.TLSKeyPath != "" {
+		keyManager = crypto.NewKeyManager(cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath)
+	}
+
+	// 5.6) License Client (mTLS or Bootstrap)
 	var licenseClient *client.LicenseClient
-	if cfg.LicenseServerURL != "" && cfg.TLSCertPath != "" && cfg.TLSKeyPath != "" && cfg.TLSCACertPath != "" {
+	if cfg.LicenseServerURL != "" {
+		// Initialize client even if certs missing (Bootstrap mode)
+		// Assuming paths are provided in config for future saving
 		var err error
 		licenseClient, err = client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath)
 		if err != nil {
 			log.Printf("WARN: Failed to initialize license client: %v. Automated activation disabled.", err)
 		} else {
-			log.Println("License client initialized (mTLS enabled)")
+			log.Println("License client initialized")
 		}
 	} else {
-		log.Println("License client not configured (missing URL or certs). Automated activation disabled.")
+		log.Println("License client not configured (missing URL). Automated activation disabled.")
 	}
 
 	// 6) UseCases (протягиваем лимит и jobName)
-	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, tokenService, licenseClient, cfg.MaxAgents, cfg.JobName, cfg.FingerprintSalt)
+	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, tokenService, licenseClient, keyManager, cfg.MaxAgents, cfg.JobName, cfg.FingerprintSalt)
 
 	// 7) Handlers
 	deviceHandler := handlers.NewDeviceHandler(deviceUseCase)

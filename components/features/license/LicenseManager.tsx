@@ -12,7 +12,11 @@ import {
 	type TypeActivateSchema
 } from '@/schemas/license/activate.schema'
 
-import { activateProduct, type LicenseStatus } from '@/app/actions/licd.actions'
+import {
+	activateProduct,
+	getLicenseStatus,
+	type LicenseStatus
+} from '@/app/actions/licd.actions'
 import { Button } from '@/components/ui/button'
 import {
 	Card,
@@ -39,7 +43,7 @@ interface LicenseManagerProps {
 
 export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 	const router = useRouter()
-	const [status] = useState<LicenseStatus | null>(initialStatus)
+	const [status, setStatus] = useState<LicenseStatus | null>(initialStatus)
 	const [isLoading, setIsLoading] = useState(false)
 
 	const form = useForm<TypeActivateSchema>({
@@ -57,7 +61,11 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 			if (res.success) {
 				toast.success(res.message || 'Лицензия успешно активирована')
 				// Обновляем страницу для получения нового статуса
-				router.refresh()
+				const statusResult = await getLicenseStatus()
+				if (statusResult.success) {
+					setStatus(statusResult.data)
+					router.refresh()
+				}
 			} else {
 				toast.error(res.error || 'Ошибка активации')
 			}
@@ -199,7 +207,7 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 					<CardHeader>
 						<CardTitle>Активация продукта</CardTitle>
 						<CardDescription>
-							Введите ИНН организации для активации лицензии
+							Введите ИНН организации для активации
 						</CardDescription>
 					</CardHeader>
 					<CardContent>

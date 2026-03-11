@@ -10,6 +10,7 @@ import (
 	"github.com/deymonster/licd/internal/domain/services"
 	"github.com/deymonster/licd/internal/fingerprint"
 	"github.com/deymonster/licd/internal/infrastructure/client"
+	"github.com/deymonster/licd/internal/infrastructure/crypto"
 	"github.com/deymonster/licd/internal/storage/sqlite"
 )
 
@@ -18,6 +19,7 @@ type DeviceUseCase struct {
 	activationRepo  *sqlite.ActivationRepository
 	tokenService    *services.TokenService
 	licenseClient   *client.LicenseClient
+	keyManager      *crypto.KeyManager
 	maxAgents       int
 	jobName         string
 	fingerprintSalt string
@@ -28,6 +30,7 @@ func NewDeviceUseCase(
 	activationRepo *sqlite.ActivationRepository,
 	tokenService *services.TokenService,
 	licenseClient *client.LicenseClient,
+	keyManager *crypto.KeyManager,
 	maxAgents int,
 	jobName string,
 	fingerprintSalt string,
@@ -39,10 +42,66 @@ func NewDeviceUseCase(
 		activationRepo:  activationRepo,
 		tokenService:    tokenService,
 		licenseClient:   licenseClient,
+		keyManager:      keyManager,
 		maxAgents:       maxAgents,
 		jobName:         jobName,
 		fingerprintSalt: fingerprintSalt,
 	}
+}
+
+// RegisterInstance registers the licd instance with the license server
+func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error {
+	if uc.keyManager == nil {
+		return fmt.Errorf("key manager not configured")
+	}
+
+	// 1. Generate Key + CSR
+	keyPEM, csrPEM, err := uc.keyManager.GenerateKeyAndCSR("licd-client")
+	if err != nil {
+		return fmt.Errorf("failed to generate key/CSR: %w", err)
+	}
+
+	// 2. Register (Exchange CSR for Certificate using INN)
+	resp, err := uc.licenseClient.Register(ctx, inn, csrPEM)
+	if err != nil {
+		return fmt.Errorf("registration failed: %w", err)
+	}
+
+	// 3. Save Certs
+	if err = uc.keyManager.SaveKey(keyPEM); err != nil {
+		return fmt.Errorf("failed to save key: %w", err)
+	}
+	if err = uc.keyManager.SaveCert([]byte(resp.Certificate)); err != nil {
+		return fmt.Errorf("failed to save cert: %w", err)
+	}
+	if resp.CACertificate != "" && uc.keyManager.CAPath != "" {
+		if err = uc.keyManager.SaveCA(uc.keyManager.CAPath, []byte(resp.CACertificate)); err != nil {
+			return fmt.Errorf("failed to save CA: %w", err)
+		}
+	}
+
+	// 4. Reload Client
+	if err = uc.licenseClient.Reload(uc.keyManager.CertPath, uc.keyManager.KeyPath, uc.keyManager.CAPath); err != nil {
+		return fmt.Errorf("failed to reload client: %w", err)
+	}
+
+	// 5. Activate License (Get Token) using INN
+	fp, err := uc.GetSystemFingerprint()
+	if err != nil {
+		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	}
+
+	actResp, err := uc.licenseClient.Activate(ctx, inn, fp)
+	if err != nil {
+		return fmt.Errorf("activation failed: %w", err)
+	}
+
+	// Save Token
+	if err = uc.UpdateLicense(ctx, actResp.Token, inn); err != nil {
+		return fmt.Errorf("failed to save license info: %w", err)
+	}
+
+	return nil
 }
 
 // activationToDevice преобразует Activation в Device
@@ -198,6 +257,9 @@ func (uc *DeviceUseCase) GetLicenseStatus(ctx context.Context) (*entities.Licens
 		ExpiresAt:      ls.ExpiresAt,
 		LastHeartbeat:  ls.LastHeartbeat,
 		IsOnline:       true, // локальный licd “в онлайне”
+		OrgName:        ls.OrgName,
+		INN:            ls.INN,
+		ActivationDate: ls.ActivationDate,
 	}, nil
 }
 
@@ -229,17 +291,20 @@ func (uc *DeviceUseCase) GetSystemFingerprint() (string, error) {
 // RequestLicense initiates the license activation flow
 func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 	// 1. Check if already activated with valid token
-	tokenString, err := uc.activationRepo.GetActiveToken(ctx)
-	if err == nil && tokenString != "" {
-		// Verify existing token
-		claims, err := uc.tokenService.VerifyToken(tokenString)
-		if err == nil {
-			// Check INN match
-			if claims.INN == inn {
-				// Check expiration
-				if claims.ExpiresAt == nil || claims.ExpiresAt.Time.After(time.Now()) {
-					// Already active and valid
-					return fmt.Errorf("license already activated for INN %s", inn)
+	if uc.activationRepo != nil {
+		tokenString, err := uc.activationRepo.GetActiveToken(ctx)
+		if err == nil && tokenString != "" {
+			// Verify existing token
+			if uc.tokenService != nil {
+				claims, tokenErr := uc.tokenService.VerifyToken(tokenString)
+				if tokenErr == nil {
+					// Check expiration
+					if claims.ExpiresAt == nil || claims.ExpiresAt.Time.After(time.Now()) {
+						// Already active and valid
+						// Also check if INN matches if we had it stored?
+						// For now just return error
+						return fmt.Errorf("license already activated")
+					}
 				}
 			}
 		}
@@ -261,11 +326,11 @@ func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 	}
 
 	// Save the received token
-	return uc.UpdateLicense(ctx, resp.Token)
+	return uc.UpdateLicense(ctx, resp.Token, inn)
 }
 
 // UpdateLicense validates and updates the license token (for manual/offline use)
-func (uc *DeviceUseCase) UpdateLicense(ctx context.Context, tokenString string) error {
+func (uc *DeviceUseCase) UpdateLicense(ctx context.Context, tokenString string, inn string) error {
 	if uc.tokenService == nil {
 		return fmt.Errorf("token service not initialized")
 	}
@@ -299,7 +364,14 @@ func (uc *DeviceUseCase) UpdateLicense(ctx context.Context, tokenString string) 
 		}
 	}
 
-	return uc.activationRepo.UpdateLicense(ctx, tokenString, currentFP, claims.MaxAgents, claims.Status, expiresAt, claims.OrgName, claims.INN, activationDate)
+	// If inn is empty, try to get it from DB if it exists
+	if inn == "" {
+		if key, err := uc.activationRepo.GetActiveLicenseKey(ctx); err == nil {
+			inn = key
+		}
+	}
+
+	return uc.activationRepo.UpdateLicense(ctx, tokenString, currentFP, claims.MaxAgents, claims.Status, expiresAt, claims.OrgName, claims.INN, activationDate, inn)
 }
 
 // GetDeviceStats — просто счётчик
@@ -319,18 +391,20 @@ func (uc *DeviceUseCase) RefreshLicense(ctx context.Context) error {
 		return fmt.Errorf("failed to get active license token: %w", err)
 	}
 
-	// 2. Parse token to extract INN
-	claims, err := uc.tokenService.VerifyToken(tokenString)
+	// 2. Parse token to verify it's valid structurally (even if expired)
+	_, err = uc.tokenService.VerifyToken(tokenString)
 	if err != nil {
-		return fmt.Errorf("current license token is invalid: %w", err)
+		// If invalid, we still might want to refresh if we have the license key
+		// But let's proceed
 	}
 
-	inn := claims.INN
-	if inn == "" {
-		return fmt.Errorf("token does not contain INN")
+	// 3. Get LicenseKey
+	inn, err := uc.activationRepo.GetActiveLicenseKey(ctx)
+	if err != nil || inn == "" {
+		return fmt.Errorf("failed to get active license key: %w", err)
 	}
 
-	// 3. Get system fingerprint
+	// 4. Get system fingerprint
 	fp, err := uc.GetSystemFingerprint()
 	if err != nil {
 		return fmt.Errorf("failed to generate fingerprint: %w", err)
@@ -340,12 +414,12 @@ func (uc *DeviceUseCase) RefreshLicense(ctx context.Context) error {
 		return fmt.Errorf("license client not initialized")
 	}
 
-	// 4. Call server (same as Activate)
+	// 5. Call server
 	resp, err := uc.licenseClient.Activate(ctx, inn, fp)
 	if err != nil {
 		return fmt.Errorf("failed to refresh license via server: %w", err)
 	}
 
-	// 5. Update license in DB
-	return uc.UpdateLicense(ctx, resp.Token)
+	// 6. Update license in DB
+	return uc.UpdateLicense(ctx, resp.Token, inn)
 }

@@ -24,43 +24,54 @@ type LicenseResponse struct {
 	Token string `json:"token"`
 }
 
-// ActivateRequest represents the request body for activation
+// ActivateRequest represents the request body for license activation
 type ActivateRequest struct {
 	INN         string `json:"inn"`
 	Fingerprint string `json:"fingerprint"`
 	Version     string `json:"version"`
 }
 
-// NewLicenseClient creates a new LicenseClient with mTLS configuration
+// RegisterRequest represents the request body for registration
+type RegisterRequest struct {
+	LicenseKey string `json:"license_key"`
+	CSR        string `json:"csr"`
+}
+
+// RegisterResponse represents the response from the license server
+type RegisterResponse struct {
+	Certificate   string `json:"certificate"`
+	CACertificate string `json:"ca_certificate"`
+}
+
+// NewLicenseClient creates a new LicenseClient
+// If certPath/keyPath are missing, it starts in bootstrap mode (only CA trusted)
 func NewLicenseClient(baseURL, certPath, keyPath, caPath string) (*LicenseClient, error) {
-	// 1. Load client cert/key pair
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load client certificate: %w", err)
-	}
-
-	// 2. Load CA certificate
-	caCert, err := os.ReadFile(caPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CA certificate: %w", err)
-	}
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCert) {
-		return nil, fmt.Errorf("failed to append CA certificate")
-	}
-
-	// 3. Setup TLS config
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
-		MinVersion:   tls.VersionTLS13,
-		// In production, ServerName should be verified against the certificate
-		// ServerName: "license.hw-monitor.local", 
+		MinVersion: tls.VersionTLS13,
 	}
 
-	// 4. Create HTTP client with custom Transport
+	// 1. Load CA certificate (optional for bootstrap if system roots are used, but recommended)
+	if caPath != "" {
+		caCert, err := os.ReadFile(caPath)
+		if err == nil {
+			caCertPool := x509.NewCertPool()
+			if caCertPool.AppendCertsFromPEM(caCert) {
+				tlsConfig.RootCAs = caCertPool
+			}
+		} else if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+		}
+	}
+
+	// 2. Load client cert/key pair (if exist)
+	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+	if err == nil {
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	// 3. Create HTTP client with custom Transport
 	transport := &http.Transport{
-		TLSClientConfig: tlsConfig,
+		TLSClientConfig:   tlsConfig,
 		ForceAttemptHTTP2: true,
 	}
 
@@ -73,6 +84,54 @@ func NewLicenseClient(baseURL, certPath, keyPath, caPath string) (*LicenseClient
 		client:  client,
 		baseURL: baseURL,
 	}, nil
+}
+
+// Reload reinitializes the client with new certificates
+func (c *LicenseClient) Reload(certPath, keyPath, caPath string) error {
+	newClient, err := NewLicenseClient(c.baseURL, certPath, keyPath, caPath)
+	if err != nil {
+		return err
+	}
+	c.client = newClient.client
+	return nil
+}
+
+// Register sends a registration request with CSR
+func (c *LicenseClient) Register(ctx context.Context, licenseKey string, csrPEM []byte) (*RegisterResponse, error) {
+	reqBody := RegisterRequest{
+		LicenseKey: licenseKey,
+		CSR:        string(csrPEM),
+	}
+
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/v1/register", c.baseURL)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("server returned error %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var result RegisterResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return &result, nil
 }
 
 // Activate sends an activation request to the license server

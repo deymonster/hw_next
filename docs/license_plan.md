@@ -42,6 +42,21 @@ timeout/retry/backoff + idempotency key (частично, требуется д
 
 [x] В конфиг licd добавить пути до cert/key/ca и URL сервера.
 
+Этап 3.1 — Автоматический обмен ключами (CSR Flow) [НОВОЕ]
+Вместо ручной генерации ключей для каждого клиента:
+
+1.  **Bootstrap**:
+    - Клиент вводит ИНН в UI `licd`.
+2.  **Key Generation**:
+    - `licd` при старте/активации генерирует пару ключей (ECDSA P-256).
+    - Генерирует CSR (Certificate Signing Request) на CommonName = "licd-client".
+3.  **Exchange**:
+    - `licd` отправляет `POST /v1/register` { "inn": "...", "csr": "..." } на публичный endpoint `li-server`.
+    - `li-server` проверяет валидность ИНН (есть ли купленная лицензия).
+    - `li-server` подписывает CSR своим CA и возвращает клиентский сертификат + CA Root.
+4.  **Persistence**:
+    - `licd` сохраняет сертификаты и использует их для всех последующих mTLS запросов (Heartbeat, Activation).
+
 Этап 4 — Новый activation-flow по ИНН [ГОТОВО]
 На странице лицензии:
 
@@ -55,9 +70,11 @@ licd:
 
 [x] принимает ИНН,
 
+[x] регистрирует инстанс (CSR flow),
+
 [x] вычисляет fingerprint,
 
-[x] вызывает ваш server по mTLS,
+[x] вызывает ваш server по mTLS (Activate),
 
 [x] сохраняет signed token + metadata в license_info.
 
@@ -75,7 +92,7 @@ licd:
 Этап 6 — Ограничение устройств и UX
 Лимит сейчас уже есть — расширить:
 
-единый ответ /license/status с полями: max_slots, used_slots, remaining_slots, status, activated_at, inn, expires_at.
+единый ответ /license/status с полями: max_slots, used_slots, remaining_slots, status, activated_at, inn, expires_at, is_online, org_name.
 
 Привести фронт/бэк к одному контракту (сейчас mismatch формата).
 
@@ -442,3 +459,101 @@ Heartbeat + revoke/reset flows.
 Frontend.
 
 Hardening + нагрузка + документация эксплуатации.
+
+# License Management — ревизия статуса и обновлённый план
+
+Дата ревизии: 2026-03-11.
+
+## 1) Что уже сделано (подтверждено по коду)
+
+### LICD ↔ Main App
+
+- В приложении есть страница лицензии с формой активации по ИНН и запросом в `POST /license/register`.
+- В приложении есть чтение статуса через `GET /license/status`.
+
+### LICD
+
+- Реализован flow активации по ИНН: licd берёт fingerprint, вызывает сервер лицензий, получает токен и сохраняет его после валидации подписи.
+- Реализована проверка подписи токена (Ed25519) на стороне licd.
+- Реализован mTLS-клиент для вызова licensing server (client cert + CA).
+- Есть фоновый periodic refresh лицензии (по таймеру), но он вызывает тот же `/v1/activate`, а не отдельный heartbeat endpoint.
+
+### LI-SERVER
+
+- Поднят mTLS-сервер и endpoint `/v1/activate`.
+- Сервер генерирует подписанный JWT токен.
+
+## 2) Что фактически не завершено / расхождения с планом
+
+1. UI не обновляет карточку статуса «внутри текущего рендера» после активации.
+
+    - Причина: состояние `status` инициализируется из `initialStatus`, но дальше не синхронизируется.
+
+2. Автообмен сертификатами между licd и li-server отсутствует.
+
+    - Сейчас сертификаты ожидаются заранее и генерируются вручную скриптом.
+
+3. li-server пока работает как «заглушка».
+
+    - Нет БД лицензий/организаций.
+    - Нет проверок бизнес-статусов (`payment_not_found`, `revoked`, `expired`, `already_activated` и т.д.).
+    - Токен содержит фиксированный `max=50`, организация не подтягивается.
+
+4. Heartbeat как отдельный протокол не реализован.
+
+    - Нет `/v1/heartbeat` на li-server.
+    - В licd «refresh» сейчас реализован повторным вызовом `/v1/activate`.
+
+5. Админский frontend для li-server отсутствует.
+
+## 3) Текущий этап (по сути)
+
+Проект находится между **MVP Stage 4** и **началом Stage 5**:
+
+- Stage 2/3/4 частично закрыты (fingerprint + mTLS + активация по ИНН + сохранение токена).
+- Stage 5+ (heartbeat/grace/revoke/transfer/admin) — в основном впереди.
+
+## 4) Приоритетный обновлённый план
+
+### P0 — стабилизация текущего UX и контракта (быстро)
+
+1. Исправить live-обновление вкладки лицензии сразу после успешной активации.
+    - Вариант A: не держать `status` в `useState`, использовать `initialStatus` напрямую.
+    - Вариант B: добавить синхронизацию `useEffect(() => setStatus(initialStatus), [initialStatus])`.
+2. Зафиксировать единый контракт `/license/status` (поля, типы, статусы).
+3. Добавить e2e smoke для сценария: «пустая БД → активация по ИНН → статус на экране обновился без F5».
+
+### P1 — полноценный backend лицензирования (li-server)
+
+1. Добавить БД li-server:
+    - `organizations`, `licenses`, `activations`, `heartbeats`, `audit_events`, `key_versions`.
+2. Реализовать бизнес-логику активации:
+    - проверка ИНН;
+    - проверка существующей активации по fingerprint;
+    - выдача статусов (`active`, `already_activated`, `expired`, `revoked`, `payment_not_found`, `transfer_required`).
+3. Формировать токен из данных БД, а не из констант (`max=50` убрать).
+
+### P2 — heartbeat / grace / revoke
+
+1. Добавить endpoint `POST /v1/heartbeat` на li-server.
+2. Перевести licd refresh на heartbeat-протокол.
+3. Реализовать grace window (например, 72ч) и правила деградации.
+4. Добавить revoke flow: после revoke блокировать новые активации устройств.
+
+### P3 — автоматизация PKI и mTLS onboarding
+
+1. Ввести bootstrap endpoint для выдачи short-lived enrollment token (one-time).
+2. Реализовать выпуск клиентского сертификата для licd через CSR (`/v1/pki/enroll`).
+3. Настроить ротацию клиентских сертификатов (до истечения, без простоя).
+4. Описать политику доверия (CA pinning, CRL/OCSP или свой deny-list серийников).
+
+### P4 — административный frontend li-server
+
+1. Web UI для:
+    - организаций,
+    - лицензий и лимитов слотов,
+    - активаций по fingerprint,
+    - revoke/reset/transfer,
+    - аудита операций.
+2. Роли: support/admin/auditor.
+3. Поиск и фильтры по ИНН, license_id, fingerprint, статусам.

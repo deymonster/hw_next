@@ -208,13 +208,13 @@ func (h *LicenseHandler) ActivateBatchDevices(w http.ResponseWriter, r *http.Req
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
-// ActivateProduct initiates license activation with INN
+// RegisterInstance registers the licd instance with the license server using a license key
 // POST /license/register
-func (h *LicenseHandler) ActivateProduct(w http.ResponseWriter, r *http.Request) {
-	type Request struct {
+func (h *LicenseHandler) RegisterInstance(w http.ResponseWriter, r *http.Request) {
+	type RegisterRequest struct {
 		INN string `json:"inn"`
 	}
-	var req Request
+	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
@@ -224,16 +224,16 @@ func (h *LicenseHandler) ActivateProduct(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.deviceUseCase.RequestLicense(r.Context(), req.INN); err != nil {
-		http.Error(w, "Activation failed: "+err.Error(), http.StatusBadGateway)
+	if err := h.deviceUseCase.RegisterInstance(r.Context(), req.INN); err != nil {
+		http.Error(w, "Registration failed: "+err.Error(), http.StatusBadGateway)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"status":  "activated",
-		"message": "License token received and saved",
+		"status":  "registered",
+		"message": "Instance registered successfully. Certificates saved.",
 	})
 }
 
@@ -253,7 +253,7 @@ func (h *LicenseHandler) UpdateLicense(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.deviceUseCase.UpdateLicense(r.Context(), req.Token); err != nil {
+	if err := h.deviceUseCase.UpdateLicense(r.Context(), req.Token, ""); err != nil {
 		if strings.Contains(err.Error(), "invalid token") || strings.Contains(err.Error(), "fingerprint mismatch") {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		} else {

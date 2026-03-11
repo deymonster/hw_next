@@ -72,10 +72,10 @@ export async function getLicenseStatus(): Promise<
 }
 
 /**
- * Активирует продукт по ИНН
+ * Регистрирует инстанс licd по ключу лицензии
  * POST /license/register
  */
-export async function activateProduct(inn: string): Promise<{
+export async function activateProduct(licenseKey: string): Promise<{
 	success: boolean
 	message?: string
 	error?: string
@@ -85,7 +85,7 @@ export async function activateProduct(inn: string): Promise<{
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			cache: 'no-store',
-			body: JSON.stringify({ inn })
+			body: JSON.stringify({ licenseKey })
 		})
 
 		const body = await r.json().catch(() => ({}))
@@ -102,7 +102,7 @@ export async function activateProduct(inn: string): Promise<{
 			message: body.message
 		}
 	} catch (e) {
-		console.error('[LICD][ACTIVATE_PRODUCT] error:', e)
+		console.error('[LICD][REGISTER] error:', e)
 		return { success: false, error: 'Failed to reach licd' }
 	}
 }

@@ -57,7 +57,7 @@ func (r *Router) SetupLicenseRoutes(licenseHandler *handlers.LicenseHandler) {
 	r.mux.HandleFunc("POST /license/activate", licenseHandler.ActivateDevice)
 	r.mux.HandleFunc("POST /license/activate-batch", licenseHandler.ActivateBatchDevices)
 	r.mux.HandleFunc("POST /license/deactivate", licenseHandler.DeactivateDevice)
-	r.mux.HandleFunc("POST /license/register", licenseHandler.ActivateProduct)
+	r.mux.HandleFunc("POST /license/register", licenseHandler.RegisterInstance)
 	r.mux.HandleFunc("POST /license/update", licenseHandler.UpdateLicense)
 	r.mux.HandleFunc("POST /license/refresh", licenseHandler.RefreshLicense)
 }

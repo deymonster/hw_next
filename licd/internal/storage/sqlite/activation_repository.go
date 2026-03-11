@@ -249,7 +249,7 @@ func (r *ActivationRepository) GetLicenseStatus(ctx context.Context) (*LicenseSt
 }
 
 // UpdateLicense обновляет лицензию в БД
-func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, installID string, maxAgents int, status string, expiresAt time.Time, orgName, inn string, activationDate time.Time) error {
+func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, installID string, maxAgents int, status string, expiresAt time.Time, orgName, inn string, activationDate time.Time, licenseKey string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -265,8 +265,8 @@ func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, 
 	// Вставляем новую или обновляем существующую
 	now := time.Now().UTC()
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO license_info (token, install_id, max_agents, status, expires_at, created_at, updated_at, org_name, inn, activation_date)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO license_info (token, install_id, max_agents, status, expires_at, created_at, updated_at, org_name, inn, activation_date, license_key)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(install_id) DO UPDATE SET
 			token=excluded.token,
 			max_agents=excluded.max_agents,
@@ -275,13 +275,30 @@ func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, 
 			updated_at=excluded.updated_at,
 			org_name=excluded.org_name,
 			inn=excluded.inn,
-			activation_date=excluded.activation_date
-	`, token, installID, maxAgents, status, expiresAt, now, now, orgName, inn, activationDate)
+			activation_date=excluded.activation_date,
+			license_key=excluded.license_key
+	`, token, installID, maxAgents, status, expiresAt, now, now, orgName, inn, activationDate, licenseKey)
 	if err != nil {
 		return fmt.Errorf("failed to upsert license: %w", err)
 	}
 
 	return tx.Commit()
+}
+
+// GetActiveLicenseKey возвращает ключ активной лицензии
+func (r *ActivationRepository) GetActiveLicenseKey(ctx context.Context) (string, error) {
+	var key string
+	err := r.db.QueryRowContext(ctx, `
+		SELECT license_key
+		FROM license_info
+		WHERE status = 'active'
+		ORDER BY created_at DESC
+		LIMIT 1
+	`).Scan(&key)
+	if err != nil {
+		return "", err
+	}
+	return key, nil
 }
 
 // GetActiveToken возвращает токен активной лицензии
