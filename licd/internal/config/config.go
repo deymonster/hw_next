@@ -21,6 +21,7 @@ type Config struct {
 	TLSCertPath      string `json:"tls_cert_path"`
 	TLSKeyPath       string `json:"tls_key_path"`
 	TLSCACertPath    string `json:"tls_ca_cert_path"`
+	SkipTLSVerify    bool   `json:"skip_tls_verify"`
 
 	HeartbeatInterval time.Duration `json:"heartbeat_interval"`
 }

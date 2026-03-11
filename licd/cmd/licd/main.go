@@ -87,7 +87,7 @@ func main() {
 		// Initialize client even if certs missing (Bootstrap mode)
 		// Assuming paths are provided in config for future saving
 		var err error
-		licenseClient, err = client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath)
+		licenseClient, err = client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath, cfg.SkipTLSVerify)
 		if err != nil {
 			log.Printf("WARN: Failed to initialize license client: %v. Automated activation disabled.", err)
 		} else {

@@ -15,8 +15,9 @@ import (
 
 // LicenseClient handles communication with the central licensing server
 type LicenseClient struct {
-	client  *http.Client
-	baseURL string
+	client     *http.Client
+	baseURL    string
+	skipVerify bool
 }
 
 // LicenseResponse represents the response from the license server
@@ -45,9 +46,10 @@ type RegisterResponse struct {
 
 // NewLicenseClient creates a new LicenseClient
 // If certPath/keyPath are missing, it starts in bootstrap mode (only CA trusted)
-func NewLicenseClient(baseURL, certPath, keyPath, caPath string) (*LicenseClient, error) {
+func NewLicenseClient(baseURL, certPath, keyPath, caPath string, skipVerify bool) (*LicenseClient, error) {
 	tlsConfig := &tls.Config{
-		MinVersion: tls.VersionTLS13,
+		MinVersion:         tls.VersionTLS13,
+		InsecureSkipVerify: skipVerify,
 	}
 
 	// 1. Load CA certificate (optional for bootstrap if system roots are used, but recommended)
@@ -81,14 +83,15 @@ func NewLicenseClient(baseURL, certPath, keyPath, caPath string) (*LicenseClient
 	}
 
 	return &LicenseClient{
-		client:  client,
-		baseURL: baseURL,
+		client:     client,
+		baseURL:    baseURL,
+		skipVerify: skipVerify,
 	}, nil
 }
 
 // Reload reinitializes the client with new certificates
 func (c *LicenseClient) Reload(certPath, keyPath, caPath string) error {
-	newClient, err := NewLicenseClient(c.baseURL, certPath, keyPath, caPath)
+	newClient, err := NewLicenseClient(c.baseURL, certPath, keyPath, caPath, c.skipVerify)
 	if err != nil {
 		return err
 	}
