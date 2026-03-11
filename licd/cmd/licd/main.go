@@ -34,8 +34,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	log.Printf("Config loaded: port=%d max_agents=%d job=%s db=%s",
-		cfg.Port, cfg.MaxAgents, cfg.JobName, cfg.StoragePath)
+	log.Printf("Config loaded: port=%d max_agents=%d job=%s db=%s server_url=%s skip_tls=%v",
+		cfg.Port, cfg.MaxAgents, cfg.JobName, cfg.StoragePath, cfg.LicenseServerURL, cfg.SkipTLSVerify)
 
 	// 3) БД + миграции
 	db, err := sqlite.NewDatabase(cfg.StoragePath)
@@ -89,9 +89,10 @@ func main() {
 		var err error
 		licenseClient, err = client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath, cfg.SkipTLSVerify)
 		if err != nil {
-			log.Printf("WARN: Failed to initialize license client: %v. Automated activation disabled.", err)
+			log.Printf("WARN: Failed to initialize license client (URL: %s, SkipTLS: %v): %v. Automated activation disabled.",
+				cfg.LicenseServerURL, cfg.SkipTLSVerify, err)
 		} else {
-			log.Println("License client initialized")
+			log.Printf("License client initialized (URL: %s, SkipTLS: %v)", cfg.LicenseServerURL, cfg.SkipTLSVerify)
 		}
 	} else {
 		log.Println("License client not configured (missing URL). Automated activation disabled.")
