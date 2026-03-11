@@ -42,20 +42,29 @@ timeout/retry/backoff + idempotency key (частично, требуется д
 
 [x] В конфиг licd добавить пути до cert/key/ca и URL сервера.
 
-Этап 3.1 — Автоматический обмен ключами (CSR Flow) [НОВОЕ]
+Этап 3.1 — Автоматический обмен ключами (CSR Flow) [ГОТОВО]
 Вместо ручной генерации ключей для каждого клиента:
 
 1.  **Bootstrap**:
-    - Клиент вводит ИНН в UI `licd`.
+    - Клиент вводит ИНН в UI `licd` (или через API).
 2.  **Key Generation**:
-    - `licd` при старте/активации генерирует пару ключей (ECDSA P-256).
+    - `licd` при старте/активации генерирует пару ключей (ECDSA P-256) используя `KeyManager`.
     - Генерирует CSR (Certificate Signing Request) на CommonName = "licd-client".
 3.  **Exchange**:
-    - `licd` отправляет `POST /v1/register` { "inn": "...", "csr": "..." } на публичный endpoint `li-server`.
-    - `li-server` проверяет валидность ИНН (есть ли купленная лицензия).
-    - `li-server` подписывает CSR своим CA и возвращает клиентский сертификат + CA Root.
-4.  **Persistence**:
-    - `licd` сохраняет сертификаты и использует их для всех последующих mTLS запросов (Heartbeat, Activation).
+    - `licd` отправляет `POST /v1/register` { "inn": "...", "csr": "..." } на публичный endpoint `lic-server`.
+    - `lic-server` проверяет валидность ИНН (существует ли активная лицензия в БД).
+    - `lic-server` подписывает CSR своим CA и возвращает клиентский сертификат + CA Root.
+4.  **Persistence & Reload**:
+    - `licd` сохраняет сертификаты в volume (persistent storage).
+    - `licd` на лету перезагружает `LicenseClient` с новыми сертификатами (без рестарта демона).
+5.  **Activation**:
+    - Сразу после получения сертификатов `licd` выполняет `POST /v1/activate` уже по защищенному mTLS каналу.
+
+Этап 3.2 — Периодическое обновление ключей (Key Rotation) [ПЛАНИРУЕТСЯ]
+
+- Scheduler в `licd` (раз в 30-60 дней) генерирует новый ключ/CSR.
+- Отправляет на `/v1/register` (или новый endpoint `/v1/rotate`).
+- Бесшовно подменяет сертификаты.
 
 Этап 4 — Новый activation-flow по ИНН [ГОТОВО]
 На странице лицензии:

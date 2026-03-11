@@ -74,6 +74,16 @@ func Load() (*Config, error) {
 	if v := os.Getenv("LICENSE_SERVER_URL"); v != "" {
 		cfg.LicenseServerURL = v
 	}
+	if v := os.Getenv("CERT_PATH"); v != "" {
+		cfg.TLSCertPath = v
+	}
+	if v := os.Getenv("KEY_PATH"); v != "" {
+		cfg.TLSKeyPath = v
+	}
+	if v := os.Getenv("CA_PATH"); v != "" {
+		cfg.TLSCACertPath = v
+	}
+	// Legacy support (optional)
 	if v := os.Getenv("TLS_CERT_PATH"); v != "" {
 		cfg.TLSCertPath = v
 	}

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+    lic-server:
+        build: .
+        container_name: lic-server
+        environment:
+            - SERVER_ADDRESS=:8080
+            - DB_PATH=/data/lic-server.db
+            - CA_PATH=/certs/ca.crt
+            - CA_KEY_PATH=/certs/ca.key
+            - SERVER_CERT_PATH=/certs/server.crt
+            - SERVER_KEY_PATH=/certs/server.key
+            - LICENSE_KEY_PATH=/certs/license.key
+        ports:
+            - '8080:8080'
+        volumes:
+            - ./data:/data
+            - ./certs:/certs
+        restart: unless-stopped

@@ -19,7 +19,7 @@ func TestDeviceUseCase_RequestLicense(t *testing.T) {
 	}
 
 	// Verify we hit the missing client error (Stage 3 logic)
-	expectedErrorPart := "license client not initialized"
+	expectedErrorPart := "key manager not configured"
 	if !strings.Contains(err.Error(), expectedErrorPart) {
 		t.Errorf("Expected error containing %q, got %q", expectedErrorPart, err.Error())
 	}

@@ -296,13 +296,11 @@ func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 		if err == nil && tokenString != "" {
 			// Verify existing token
 			if uc.tokenService != nil {
+				// Use new variable for error to avoid shadowing
 				claims, tokenErr := uc.tokenService.VerifyToken(tokenString)
 				if tokenErr == nil {
 					// Check expiration
 					if claims.ExpiresAt == nil || claims.ExpiresAt.Time.After(time.Now()) {
-						// Already active and valid
-						// Also check if INN matches if we had it stored?
-						// For now just return error
 						return fmt.Errorf("license already activated")
 					}
 				}
@@ -310,23 +308,12 @@ func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 		}
 	}
 
-	fp, err := uc.GetSystemFingerprint()
-	if err != nil {
-		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	// 2. Register first (CSR Flow)
+	if err := uc.RegisterInstance(ctx, inn); err != nil {
+		return fmt.Errorf("failed to register instance: %w", err)
 	}
 
-	if uc.licenseClient == nil {
-		return fmt.Errorf("license client not initialized (mTLS config missing)")
-	}
-
-	// Stage 3 - Call Vendor License Server with (inn, fp)
-	resp, err := uc.licenseClient.Activate(ctx, inn, fp)
-	if err != nil {
-		return fmt.Errorf("failed to activate license via server: %w", err)
-	}
-
-	// Save the received token
-	return uc.UpdateLicense(ctx, resp.Token, inn)
+	return nil
 }
 
 // UpdateLicense validates and updates the license token (for manual/offline use)

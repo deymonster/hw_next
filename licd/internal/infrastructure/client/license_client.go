@@ -33,8 +33,8 @@ type ActivateRequest struct {
 
 // RegisterRequest represents the request body for registration
 type RegisterRequest struct {
-	LicenseKey string `json:"license_key"`
-	CSR        string `json:"csr"`
+	INN string `json:"inn"`
+	CSR string `json:"csr"`
 }
 
 // RegisterResponse represents the response from the license server
@@ -97,10 +97,10 @@ func (c *LicenseClient) Reload(certPath, keyPath, caPath string) error {
 }
 
 // Register sends a registration request with CSR
-func (c *LicenseClient) Register(ctx context.Context, licenseKey string, csrPEM []byte) (*RegisterResponse, error) {
+func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte) (*RegisterResponse, error) {
 	reqBody := RegisterRequest{
-		LicenseKey: licenseKey,
-		CSR:        string(csrPEM),
+		INN: inn,
+		CSR: string(csrPEM),
 	}
 
 	body, err := json.Marshal(reqBody)
