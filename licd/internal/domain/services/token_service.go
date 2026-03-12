@@ -42,6 +42,31 @@ func NewTokenService(pemPublicKey string) (*TokenService, error) {
 	}, nil
 }
 
+// UpdatePublicKey updates the public key used for token verification
+func (s *TokenService) UpdatePublicKey(pemPublicKey string) error {
+	if pemPublicKey == "" {
+		return errors.New("public key is empty")
+	}
+
+	block, _ := pem.Decode([]byte(pemPublicKey))
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return errors.New("failed to decode PEM block containing public key")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return fmt.Errorf("failed to parse public key: %w", err)
+	}
+
+	edPub, ok := pub.(ed25519.PublicKey)
+	if !ok {
+		return errors.New("public key is not of type Ed25519")
+	}
+
+	s.publicKey = edPub
+	return nil
+}
+
 // VerifyToken verifies the JWT token and returns the claims
 func (s *TokenService) VerifyToken(tokenString string) (*entities.LicenseClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &entities.LicenseClaims{}, func(token *jwt.Token) (interface{}, error) {

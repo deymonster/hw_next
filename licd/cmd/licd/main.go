@@ -78,7 +78,7 @@ func main() {
 	// 5.5) Key Manager
 	var keyManager *crypto.KeyManager
 	if cfg.TLSCertPath != "" && cfg.TLSKeyPath != "" {
-		keyManager = crypto.NewKeyManager(cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath)
+		keyManager = crypto.NewKeyManager(cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath, cfg.LicensePublicKey)
 	}
 
 	// 5.6) License Client (mTLS or Bootstrap)

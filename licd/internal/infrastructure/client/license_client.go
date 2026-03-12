@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
+
+	"github.com/deymonster/licd/internal/embedded"
 )
 
 // LicenseClient handles communication with the central licensing server
@@ -42,6 +43,7 @@ type RegisterRequest struct {
 type RegisterResponse struct {
 	Certificate   string `json:"certificate"`
 	CACertificate string `json:"ca_certificate"`
+	PublicKey     string `json:"public_key"`
 }
 
 // NewLicenseClient creates a new LicenseClient
@@ -52,23 +54,21 @@ func NewLicenseClient(baseURL, certPath, keyPath, caPath string, skipVerify bool
 		InsecureSkipVerify: skipVerify,
 	}
 
-	// 1. Load CA certificate (optional for bootstrap if system roots are used, but recommended)
-	if caPath != "" {
-		caCert, err := os.ReadFile(caPath)
-		if err == nil {
-			caCertPool := x509.NewCertPool()
-			if caCertPool.AppendCertsFromPEM(caCert) {
-				tlsConfig.RootCAs = caCertPool
-			}
-		} else if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("failed to read CA certificate: %w", err)
-		}
+	// 1. Load embedded CA certificate (Pinned CA)
+	// We ignore caPath here and use the embedded CA for strict pinning
+	caCertPool := x509.NewCertPool()
+	if ok := caCertPool.AppendCertsFromPEM(embedded.CACert); !ok {
+		return nil, fmt.Errorf("failed to append embedded CA certificate")
 	}
+	tlsConfig.RootCAs = caCertPool
+	fmt.Printf("Using embedded CA certificate (%d bytes)\n", len(embedded.CACert))
 
 	// 2. Load client cert/key pair (if exist)
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err == nil {
-		tlsConfig.Certificates = []tls.Certificate{cert}
+	if certPath != "" && keyPath != "" {
+		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err == nil {
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
 	}
 
 	// 3. Create HTTP client with custom Transport

@@ -52,12 +52,32 @@ func NewCAService(certPath, keyPath string) (*CAService, error) {
 		return nil, fmt.Errorf("failed to decode CA key PEM")
 	}
 
-	// Try parsing as EC first (default for us)
-	key, err := x509.ParseECPrivateKey(keyBlock.Bytes)
+	var key interface{}
+	switch keyBlock.Type {
+	case "EC PRIVATE KEY":
+		key, err = x509.ParseECPrivateKey(keyBlock.Bytes)
+	case "RSA PRIVATE KEY":
+		key, err = x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
+	case "PRIVATE KEY":
+		key, err = x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
+	default:
+		// Try to parse as generic if type is unexpected but valid
+		if k, err2 := x509.ParsePKCS8PrivateKey(keyBlock.Bytes); err2 == nil {
+			key = k
+			err = nil
+		} else if k, err2 := x509.ParseECPrivateKey(keyBlock.Bytes); err2 == nil {
+			key = k
+			err = nil
+		} else if k, err2 := x509.ParsePKCS1PrivateKey(keyBlock.Bytes); err2 == nil {
+			key = k
+			err = nil
+		} else {
+			return nil, fmt.Errorf("unknown private key type: %s", keyBlock.Type)
+		}
+	}
+
 	if err != nil {
-		// Fallback to PKCS8 or PKCS1 if needed, but for now just fail or try generic
-		// If user provided RSA key, this will fail. Let's assume EC for now as we generate EC.
-		return nil, fmt.Errorf("failed to parse CA key (expected EC): %w", err)
+		return nil, fmt.Errorf("failed to parse CA key: %w", err)
 	}
 
 	return &CAService{

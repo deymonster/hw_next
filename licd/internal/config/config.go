@@ -30,7 +30,7 @@ type Config struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		Port:             8081,
-		MaxAgents:        50,
+		MaxAgents:        0,
 		JobName:          "windows-agents",
 		Environment:      "development",
 		FingerprintSalt:  "hw-monitor-default-salt",          // Default salt
@@ -83,6 +83,11 @@ func Load() (*Config, error) {
 	}
 	if v := os.Getenv("CA_PATH"); v != "" {
 		cfg.TLSCACertPath = v
+	}
+	if v := os.Getenv("SKIP_TLS_VERIFY"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.SkipTLSVerify = b
+		}
 	}
 	// Legacy support (optional)
 	if v := os.Getenv("TLS_CERT_PATH"); v != "" {

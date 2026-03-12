@@ -10,6 +10,16 @@ Lightweight HTTP service that:
 
 go run ./cmd/licd
 
+## Secure Build (Production)
+
+To build a secure, obfuscated binary with embedded CA certificate:
+
+```bash
+make build-secure-licd
+```
+
+This uses `garble` to obfuscate the code and pins the CA certificate.
+
 ## Endpoints
 
 - GET /license/status

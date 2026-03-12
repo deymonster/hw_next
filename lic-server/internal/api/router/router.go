@@ -39,6 +39,7 @@ type RegisterRequest struct {
 type RegisterResponse struct {
 	Certificate   string `json:"certificate"`
 	CACertificate string `json:"ca_certificate"`
+	PublicKey     string `json:"public_key"`
 }
 
 func (api *Router) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +62,7 @@ func (api *Router) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Call Service
-	certPEM, caPEM, err := api.svc.RegisterInstance(r.Context(), req.INN, []byte(req.CSR))
+	certPEM, caPEM, pubKeyPEM, err := api.svc.RegisterInstance(r.Context(), req.INN, []byte(req.CSR))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("registration failed: %v", err), http.StatusInternalServerError)
 		return
@@ -71,6 +72,7 @@ func (api *Router) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	resp := RegisterResponse{
 		Certificate:   string(certPEM),
 		CACertificate: string(caPEM),
+		PublicKey:     string(pubKeyPEM),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

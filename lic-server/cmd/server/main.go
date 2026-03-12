@@ -33,9 +33,18 @@ func main() {
 	// 2.1 Ensure Server Certs
 	if _, statErr := os.Stat(cfg.ServerCertPath); os.IsNotExist(statErr) {
 		log.Println("Generating server certificate...")
-		ips := []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("192.168.13.162")}
+		// Пытаемся определить локальный IP для SAN
+		localIPs := []net.IP{net.ParseIP("127.0.0.1")}
+		addrs, _ := net.InterfaceAddrs()
+		for _, addr := range addrs {
+			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+				if ipnet.IP.To4() != nil {
+					localIPs = append(localIPs, ipnet.IP)
+				}
+			}
+		}
 		dns := []string{"localhost", "lic-server", "license.hw-monitor.local"}
-		if genErr := ca.GenerateServerCert(cfg.ServerCertPath, cfg.ServerKeyPath, "lic-server", dns, ips); genErr != nil {
+		if genErr := ca.GenerateServerCert(cfg.ServerCertPath, cfg.ServerKeyPath, "lic-server", dns, localIPs); genErr != nil {
 			log.Fatalf("Failed to generate server cert: %v", genErr)
 		}
 	}

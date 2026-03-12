@@ -287,7 +287,7 @@ func (r *ActivationRepository) UpdateLicense(ctx context.Context, token string, 
 
 // GetActiveLicenseKey возвращает ключ активной лицензии
 func (r *ActivationRepository) GetActiveLicenseKey(ctx context.Context) (string, error) {
-	var key string
+	var key sql.NullString
 	err := r.db.QueryRowContext(ctx, `
 		SELECT license_key
 		FROM license_info
@@ -298,7 +298,7 @@ func (r *ActivationRepository) GetActiveLicenseKey(ctx context.Context) (string,
 	if err != nil {
 		return "", err
 	}
-	return key, nil
+	return key.String, nil
 }
 
 // GetActiveToken возвращает токен активной лицензии

@@ -44,22 +44,21 @@ func (r *Router) setupBaseRoutes() {
 
 // SetupDeviceRoutes регистрирует маршруты для устройств
 func (r *Router) SetupDeviceRoutes(deviceHandler *handlers.DeviceHandler) {
-	r.mux.HandleFunc("POST /api/devices", deviceHandler.CreateDevice)
-	r.mux.HandleFunc("GET /api/devices/active", deviceHandler.GetActiveDevices)
-
-	// УБРАНО: /api/prometheus/targets — теперь отдаём только /sd/targets
-	// r.mux.HandleFunc("GET /api/prometheus/targets", deviceHandler.GetPrometheusTargets)
+	r.mux.HandleFunc("POST /api/v1/devices", deviceHandler.CreateDevice)
+	r.mux.HandleFunc("GET /api/v1/devices/active", deviceHandler.GetActiveDevices)
 }
 
 // SetupLicenseRoutes регистрирует маршруты для лицензий
 func (r *Router) SetupLicenseRoutes(licenseHandler *handlers.LicenseHandler) {
-	r.mux.HandleFunc("GET /license/status", licenseHandler.GetLicenseStatus)
-	r.mux.HandleFunc("POST /license/activate", licenseHandler.ActivateDevice)
-	r.mux.HandleFunc("POST /license/activate-batch", licenseHandler.ActivateBatchDevices)
-	r.mux.HandleFunc("POST /license/deactivate", licenseHandler.DeactivateDevice)
-	r.mux.HandleFunc("POST /license/register", licenseHandler.RegisterInstance)
-	r.mux.HandleFunc("POST /license/update", licenseHandler.UpdateLicense)
-	r.mux.HandleFunc("POST /license/refresh", licenseHandler.RefreshLicense)
+	r.mux.HandleFunc("GET /api/v1/license/status", licenseHandler.GetLicenseStatus)
+	r.mux.HandleFunc("POST /api/v1/license/register", licenseHandler.RegisterInstance)
+
+	// Deprecated / Internal methods:
+	// r.mux.HandleFunc("POST /api/v1/license/activate", licenseHandler.ActivateDevice) // Use POST /api/v1/devices
+	// r.mux.HandleFunc("POST /api/v1/license/activate-batch", licenseHandler.ActivateBatchDevices)
+	// r.mux.HandleFunc("POST /api/v1/license/deactivate", licenseHandler.DeactivateDevice)
+	// r.mux.HandleFunc("POST /api/v1/license/update", licenseHandler.UpdateLicense)
+	// r.mux.HandleFunc("POST /api/v1/license/refresh", licenseHandler.RefreshLicense)
 }
 
 // SetupPrometheusRoutes регистрирует маршруты для Prometheus SD

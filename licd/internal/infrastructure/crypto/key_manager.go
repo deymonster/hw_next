@@ -13,18 +13,28 @@ import (
 
 // KeyManager handles cryptographic operations
 type KeyManager struct {
-	CertPath string
-	KeyPath  string
-	CAPath   string
+	CertPath       string
+	KeyPath        string
+	CAPath         string
+	LicenseKeyPath string
 }
 
 // NewKeyManager creates a new KeyManager
-func NewKeyManager(certPath, keyPath, caPath string) *KeyManager {
+func NewKeyManager(certPath, keyPath, caPath, licenseKeyPath string) *KeyManager {
 	return &KeyManager{
-		CertPath: certPath,
-		KeyPath:  keyPath,
-		CAPath:   caPath,
+		CertPath:       certPath,
+		KeyPath:        keyPath,
+		CAPath:         caPath,
+		LicenseKeyPath: licenseKeyPath,
 	}
+}
+
+// SaveLicenseKey saves the license public key to disk
+func (km *KeyManager) SaveLicenseKey(content []byte) error {
+	if km.LicenseKeyPath == "" {
+		return fmt.Errorf("license key path not configured")
+	}
+	return os.WriteFile(km.LicenseKeyPath, content, 0644)
 }
 
 // GenerateKeyAndCSR generates a new private key and a CSR

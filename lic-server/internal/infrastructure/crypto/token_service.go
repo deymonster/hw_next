@@ -15,6 +15,16 @@ type TokenService struct {
 	privateKey ed25519.PrivateKey
 }
 
+func (s *TokenService) GetPublicKeyPEM() ([]byte, error) {
+	pub := s.privateKey.Public().(ed25519.PublicKey)
+	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal public key: %w", err)
+	}
+	block := &pem.Block{Type: "PUBLIC KEY", Bytes: pubBytes}
+	return pem.EncodeToMemory(block), nil
+}
+
 func NewTokenService(keyPath string) (*TokenService, error) {
 	// Try to load key
 	keyBytes, err := os.ReadFile(keyPath)

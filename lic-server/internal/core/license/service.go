@@ -25,6 +25,7 @@ type CAService interface {
 // TokenService defines the interface for token generation
 type TokenService interface {
 	SignToken(claims jwt.Claims) (string, error)
+	GetPublicKeyPEM() ([]byte, error)
 }
 
 // Service implements the license business logic
@@ -44,38 +45,44 @@ func NewService(db Repository, ca CAService, token TokenService) *Service {
 }
 
 // RegisterInstance handles the CSR flow: validates INN, signs CSR, returns Client Cert + CA Cert
-func (s *Service) RegisterInstance(ctx context.Context, inn string, csrPEM []byte) ([]byte, []byte, error) {
+func (s *Service) RegisterInstance(ctx context.Context, inn string, csrPEM []byte) ([]byte, []byte, []byte, error) {
 	// 1. Verify INN exists
 	lic, err := s.db.GetLicenseByINN(ctx, inn)
 	if err != nil {
-		return nil, nil, fmt.Errorf("license check failed: %w", err)
+		return nil, nil, nil, fmt.Errorf("license check failed: %w", err)
 	}
 	if lic == nil {
-		return nil, nil, fmt.Errorf("license not found for INN %s", inn)
+		return nil, nil, nil, fmt.Errorf("license not found for INN %s", inn)
 	}
 
 	// 2. Parse CSR
 	block, _ := pem.Decode(csrPEM)
 	if block == nil {
-		return nil, nil, fmt.Errorf("failed to decode CSR PEM")
+		return nil, nil, nil, fmt.Errorf("failed to decode CSR PEM")
 	}
 	csr, err := x509.ParseCertificateRequest(block.Bytes)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse CSR: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to parse CSR: %w", err)
 	}
 
 	// 3. Verify CSR signature
 	if sigErr := csr.CheckSignature(); sigErr != nil {
-		return nil, nil, fmt.Errorf("invalid CSR signature: %w", sigErr)
+		return nil, nil, nil, fmt.Errorf("invalid CSR signature: %w", sigErr)
 	}
 
 	// 4. Sign CSR
 	certPEM, err := s.ca.SignCSR(csr)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to sign CSR: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to sign CSR: %w", err)
 	}
 
-	return certPEM, s.ca.GetCACertPEM(), nil
+	// 5. Get Public Key
+	pubKeyPEM, err := s.token.GetPublicKeyPEM()
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to get public key: %w", err)
+	}
+
+	return certPEM, s.ca.GetCACertPEM(), pubKeyPEM, nil
 }
 
 // ActivateInstance verifies the license and generates a JWT token for the agent

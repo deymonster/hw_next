@@ -3,6 +3,15 @@
 # Выход при ошибке
 set -e
 
+echo "=== Configuration ==="
+# IP-адрес сервера (по умолчанию пытаемся определить локальный IP или используем 127.0.0.1)
+DEFAULT_IP=$(ifconfig | grep "inet " | grep -v 127.0.0.1 | awk '{print $2}' | head -n 1)
+SERVER_IP=${1:-$DEFAULT_IP}
+if [ -z "$SERVER_IP" ]; then
+    SERVER_IP="127.0.0.1"
+fi
+echo "Generating certificates for Server IP: $SERVER_IP"
+
 # Папка для сертификатов
 CERT_DIR="../certs"
 mkdir -p "$CERT_DIR"
@@ -30,7 +39,7 @@ subjectAltName = @alt_names
 DNS.1 = localhost
 DNS.2 = license.hw-monitor.local
 IP.1 = 127.0.0.1
-IP.2 = 192.168.13.162
+IP.2 = $SERVER_IP
 EOF
 # 6. Подписываем сертификат сервера нашим CA
 openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 365 -sha256 -extfile server-ext.cnf
