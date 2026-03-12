@@ -57,9 +57,10 @@ func (r *Router) SetupLicenseRoutes(licenseHandler *handlers.LicenseHandler) {
 	// Frontend compatibility routes (without /api/v1 prefix)
 	r.mux.HandleFunc("GET /license/status", licenseHandler.GetLicenseStatus)
 	r.mux.HandleFunc("POST /license/register", licenseHandler.RegisterInstance)
+	r.mux.HandleFunc("POST /license/activate", licenseHandler.ActivateDevice)
 
 	// Deprecated / Internal methods:
-	// r.mux.HandleFunc("POST /api/v1/license/activate", licenseHandler.ActivateDevice) // Use POST /api/v1/devices
+	r.mux.HandleFunc("POST /api/v1/license/activate", licenseHandler.ActivateDevice) // Keeping for backward compatibility
 	// r.mux.HandleFunc("POST /api/v1/license/activate-batch", licenseHandler.ActivateBatchDevices)
 	// r.mux.HandleFunc("POST /api/v1/license/deactivate", licenseHandler.DeactivateDevice)
 	// r.mux.HandleFunc("POST /api/v1/license/update", licenseHandler.UpdateLicense)
