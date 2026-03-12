@@ -41,7 +41,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
       -o /out/licd ${PKG}
 
 FROM alpine:3.19
-RUN apk add --no-cache ca-certificates wget sqlite
+RUN apk add --no-cache ca-certificates wget sqlite dbus
+# Генерируем machine-id, если его нет
+RUN dbus-uuidgen > /etc/machine-id
 # Создаем директории /data и /certs с правильными правами
 RUN mkdir -p /data /certs && \
     chown -R 65532:65532 /data /certs

@@ -175,7 +175,6 @@ volumes:
         name: nextjs_prometheus_config
         driver: local
     licd_data:
-    certs_data:
 
 networks:
     hw-network:
