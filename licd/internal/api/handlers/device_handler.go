@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/deymonster/licd/internal/application/usecases"
@@ -32,18 +33,22 @@ func (h *DeviceHandler) CreateDevice(w http.ResponseWriter, r *http.Request) {
 	// Читаем JSON из запроса
 	var req CreateDeviceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("ERROR: Failed to decode request body: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	// Создаем устройство через Use Case
+	log.Printf("Creating device: agent_key=%s, ip=%s, port=%d", req.AgentKey, req.IP, req.Port)
 	device, err := h.deviceUseCase.CreateDevice(r.Context(), req.AgentKey, req.IP, req.Port)
 	if err != nil {
+		log.Printf("ERROR: Failed to create device: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// Возвращаем созданное устройство
+	log.Printf("Device created successfully: id=%s", device.ID)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(device)

@@ -50,8 +50,13 @@ func (r *Router) SetupDeviceRoutes(deviceHandler *handlers.DeviceHandler) {
 
 // SetupLicenseRoutes регистрирует маршруты для лицензий
 func (r *Router) SetupLicenseRoutes(licenseHandler *handlers.LicenseHandler) {
+	// API v1 routes
 	r.mux.HandleFunc("GET /api/v1/license/status", licenseHandler.GetLicenseStatus)
 	r.mux.HandleFunc("POST /api/v1/license/register", licenseHandler.RegisterInstance)
+
+	// Frontend compatibility routes (without /api/v1 prefix)
+	r.mux.HandleFunc("GET /license/status", licenseHandler.GetLicenseStatus)
+	r.mux.HandleFunc("POST /license/register", licenseHandler.RegisterInstance)
 
 	// Deprecated / Internal methods:
 	// r.mux.HandleFunc("POST /api/v1/license/activate", licenseHandler.ActivateDevice) // Use POST /api/v1/devices

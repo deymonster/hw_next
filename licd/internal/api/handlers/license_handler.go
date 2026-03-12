@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -36,6 +37,13 @@ func (h *LicenseHandler) GetLicenseStatus(w http.ResponseWriter, r *http.Request
 // ActivateDevice активирует устройство
 // POST /license/activate
 func (h *LicenseHandler) ActivateDevice(w http.ResponseWriter, r *http.Request) {
+	log.Printf("DEBUG: ActivateDevice called. Method: %s, URL: %s", r.Method, r.URL.String())
+	if r.Method != http.MethodPost {
+		log.Printf("ERROR: Invalid method %s for ActivateDevice", r.Method)
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	type ActivateRequest struct {
 		DeviceID  string `json:"deviceId"`
 		AgentKey  string `json:"agentKey"`
@@ -45,10 +53,12 @@ func (h *LicenseHandler) ActivateDevice(w http.ResponseWriter, r *http.Request) 
 
 	var req ActivateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("ERROR: Failed to decode request: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 	if req.AgentKey == "" || req.IPAddress == "" {
+		log.Printf("ERROR: Missing required fields: agentKey=%s, ipAddress=%s", req.AgentKey, req.IPAddress)
 		http.Error(w, "Missing agentKey or ipAddress", http.StatusBadRequest)
 		return
 	}
@@ -56,19 +66,23 @@ func (h *LicenseHandler) ActivateDevice(w http.ResponseWriter, r *http.Request) 
 		req.Port = 9182
 	}
 
+	log.Printf("INFO: Activating device: agentKey=%s, ip=%s, port=%d", req.AgentKey, req.IPAddress, req.Port)
 	device, err := h.deviceUseCase.CreateDevice(r.Context(), req.AgentKey, req.IPAddress, req.Port)
 	if err != nil {
 		// Лицензионный лимит
 		if strings.Contains(err.Error(), "license limit exceeded") {
+			log.Printf("WARN: License limit exceeded for agentKey=%s", req.AgentKey)
 			http.Error(w, "License limit exceeded", http.StatusForbidden)
 			return
 		}
+		log.Printf("ERROR: Failed to activate device: %v", err)
 		http.Error(w, "Failed to activate device: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	resp := map[string]any{
 		"success": true,
+		"ok":      true, // Frontend compatibility
 		"device":  device,
 		"message": "Device activated successfully",
 	}
@@ -212,19 +226,31 @@ func (h *LicenseHandler) ActivateBatchDevices(w http.ResponseWriter, r *http.Req
 // POST /license/register
 func (h *LicenseHandler) RegisterInstance(w http.ResponseWriter, r *http.Request) {
 	type RegisterRequest struct {
-		INN string `json:"inn"`
+		INN        string `json:"inn"`
+		LicenseKey string `json:"licenseKey"`
 	}
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("ERROR: Failed to decode RegisterInstance request: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	if req.INN == "" {
-		http.Error(w, "Missing INN", http.StatusBadRequest)
+
+	// Support both INN and licenseKey (frontend sends licenseKey)
+	identifier := req.INN
+	if identifier == "" {
+		identifier = req.LicenseKey
+	}
+
+	if identifier == "" {
+		log.Printf("ERROR: Missing INN or licenseKey in request")
+		http.Error(w, "Missing INN or licenseKey", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.deviceUseCase.RegisterInstance(r.Context(), req.INN); err != nil {
+	log.Printf("INFO: Registering instance with identifier: %s", identifier)
+	if err := h.deviceUseCase.RegisterInstance(r.Context(), identifier); err != nil {
+		log.Printf("ERROR: Registration failed: %v", err)
 		http.Error(w, "Registration failed: "+err.Error(), http.StatusBadGateway)
 		return
 	}
