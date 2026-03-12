@@ -160,7 +160,6 @@ services:
             - '8081'
         volumes:
             - licd_data:/data
-            - certs_data:/certs
         networks:
             - hw-network
         restart: unless-stopped
