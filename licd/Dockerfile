@@ -42,8 +42,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates wget sqlite
-# Создаем директорию /data с правильными правами
-RUN mkdir -p /data && chown 65532:65532 /data
+# Создаем директории /data и /certs с правильными правами
+RUN mkdir -p /data /certs && \
+    chown -R 65532:65532 /data /certs
 USER 65532:65532
 WORKDIR /app
 
