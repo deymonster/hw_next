@@ -40,14 +40,27 @@ RUN --mount=type=cache,target=/go/pkg/mod \
         -X github.com/deymonster/licd/internal/version.Date=${DATE}" \
       -o /out/licd ${PKG}
 
-FROM alpine:3.19
-RUN apk add --no-cache ca-certificates wget sqlite util-linux
-# Генерируем machine-id (32 hex chars)
-RUN uuidgen | tr -d '-' > /etc/machine-id
-# Создаем директории /data и /certs с правильными правами
-RUN mkdir -p /data /certs && \
-    chown -R 65532:65532 /data /certs
-USER 65532:65532
+FROM ubuntu:22.04
+
+# Устанавливаем сертификаты, sqlite3 и dbus для machine-id
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    wget \
+    sqlite3 \
+    dbus \
+    && rm -rf /var/lib/apt/lists/*
+
+# Генерируем machine-id
+RUN dbus-uuidgen > /etc/machine-id
+
+# Создаем директории /data и /certs с правильными правами (пользователь licd)
+# Используем UID 65532 (как в distroless)
+RUN groupadd -g 65532 nonroot && \
+    useradd -u 65532 -g nonroot -m -s /bin/bash nonroot && \
+    mkdir -p /data /certs && \
+    chown -R nonroot:nonroot /data /certs
+
+USER nonroot:nonroot
 WORKDIR /app
 
 # Копируем бинарник
