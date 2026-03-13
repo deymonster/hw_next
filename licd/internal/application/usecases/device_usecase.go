@@ -79,10 +79,7 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 			return fmt.Errorf("failed to save CA: %w", err)
 		}
 	}
-	if resp.PublicKey != "" && uc.keyManager.LicenseKeyPath != "" {
-		if err = uc.keyManager.SaveLicenseKey([]byte(resp.PublicKey)); err != nil {
-			return fmt.Errorf("failed to save license public key: %w", err)
-		}
+	if resp.PublicKey != "" {
 		// Update TokenService dynamically
 		if uc.tokenService != nil {
 			if err := uc.tokenService.UpdatePublicKey(resp.PublicKey); err != nil {
@@ -94,6 +91,13 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 				return fmt.Errorf("failed to initialize token service: %w", err)
 			}
 			uc.tokenService = ts
+		}
+
+		// Try to save to disk if path is configured
+		if uc.keyManager.LicenseKeyPath != "" {
+			if err = uc.keyManager.SaveLicenseKey([]byte(resp.PublicKey)); err != nil {
+				return fmt.Errorf("failed to save license public key: %w", err)
+			}
 		}
 	}
 
