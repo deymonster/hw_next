@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/deymonster/licd/internal/domain/entities"
@@ -67,6 +68,9 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 		return fmt.Errorf("registration failed: %w", err)
 	}
 
+	log.Printf("DEBUG: Register response: CertLen=%d, CALen=%d, PubKeyLen=%d",
+		len(resp.Certificate), len(resp.CACertificate), len(resp.PublicKey))
+
 	// 3. Save Certs
 	if err = uc.keyManager.SaveKey(keyPEM); err != nil {
 		return fmt.Errorf("failed to save key: %w", err)
@@ -82,11 +86,12 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 	if resp.PublicKey != "" {
 		// Update TokenService dynamically
 		if uc.tokenService != nil {
-			if err := uc.tokenService.UpdatePublicKey(resp.PublicKey); err != nil {
+			if err = uc.tokenService.UpdatePublicKey(resp.PublicKey); err != nil {
 				return fmt.Errorf("failed to update public key in memory: %w", err)
 			}
 		} else {
-			ts, err := services.NewTokenService(resp.PublicKey)
+			var ts *services.TokenService
+			ts, err = services.NewTokenService(resp.PublicKey)
 			if err != nil {
 				return fmt.Errorf("failed to initialize token service: %w", err)
 			}
@@ -98,6 +103,12 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 			if err = uc.keyManager.SaveLicenseKey([]byte(resp.PublicKey)); err != nil {
 				return fmt.Errorf("failed to save license public key: %w", err)
 			}
+		}
+	} else {
+		log.Printf("WARN: Server did not return a public key in register response!")
+		// If we don't have a public key, we cannot proceed with activation verification
+		if uc.tokenService == nil {
+			return fmt.Errorf("server did not return public key and no local key available")
 		}
 	}
 
@@ -340,6 +351,11 @@ func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 // UpdateLicense validates and updates the license token (for manual/offline use)
 func (uc *DeviceUseCase) UpdateLicense(ctx context.Context, tokenString string, inn string) error {
 	if uc.tokenService == nil {
+		// If token service is nil, try to initialize it from config/file or default
+		// But here we might not have the key yet if it wasn't saved.
+		// However, in RegisterInstance we just set it.
+		// If we are here and it is still nil, it means something went wrong in RegisterInstance logic
+		// OR we are calling this from somewhere else without key.
 		return fmt.Errorf("token service not initialized")
 	}
 

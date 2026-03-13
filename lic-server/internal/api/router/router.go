@@ -68,6 +68,8 @@ func (api *Router) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("DEBUG: Register response: CertLen=%d, CALen=%d, PubKeyLen=%d\n", len(certPEM), len(caPEM), len(pubKeyPEM))
+
 	// 3. Return Response
 	resp := RegisterResponse{
 		Certificate:   string(certPEM),

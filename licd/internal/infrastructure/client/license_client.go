@@ -129,8 +129,11 @@ func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte)
 		return nil, fmt.Errorf("server returned error %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	fmt.Printf("DEBUG: Register response body: %s\n", string(bodyBytes))
+
 	var result RegisterResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+	if err := json.Unmarshal(bodyBytes, &result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
