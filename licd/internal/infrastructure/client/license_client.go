@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -101,6 +102,8 @@ func (c *LicenseClient) Reload(certPath, keyPath, caPath string) error {
 
 // Register sends a registration request with CSR
 func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte) (*RegisterResponse, error) {
+	log.Printf("DEBUG: Register called. INN: %s", inn)
+
 	reqBody := RegisterRequest{
 		INN: inn,
 		CSR: string(csrPEM),
@@ -112,28 +115,33 @@ func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte)
 	}
 
 	url := fmt.Sprintf("%s/v1/register", c.baseURL)
+	log.Printf("DEBUG: Registering with URL: %s", url)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	log.Printf("DEBUG: Sending HTTP request to %s...", url)
 	resp, err := c.client.Do(req)
 	if err != nil {
+		log.Printf("ERROR: Failed to send request: %v", err)
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("ERROR: Server returned %d: %s", resp.StatusCode, string(bodyBytes))
 		return nil, fmt.Errorf("server returned error %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
-	fmt.Printf("DEBUG: Register response body: %s\n", string(bodyBytes))
+	log.Printf("DEBUG: Register response body: %s", string(bodyBytes))
 
 	var result RegisterResponse
 	if err := json.Unmarshal(bodyBytes, &result); err != nil {
+		log.Printf("ERROR: Failed to unmarshal response: %v", err)
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
@@ -142,6 +150,8 @@ func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte)
 
 // Activate sends an activation request to the license server
 func (c *LicenseClient) Activate(ctx context.Context, inn, fingerprint string) (*LicenseResponse, error) {
+	log.Printf("DEBUG: Activate called. INN: %s, Fingerprint: %s", inn, fingerprint)
+
 	reqBody := ActivateRequest{
 		INN:         inn,
 		Fingerprint: fingerprint,
@@ -154,6 +164,7 @@ func (c *LicenseClient) Activate(ctx context.Context, inn, fingerprint string) (
 	}
 
 	url := fmt.Sprintf("%s/v1/activate", c.baseURL)
+	log.Printf("DEBUG: Activating with URL: %s", url)
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

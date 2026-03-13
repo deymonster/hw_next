@@ -92,8 +92,11 @@ services:
         container_name: licd_dev
         environment:
             - MAX_AGENTS=50
-            - JOB_NAME=windows-agents
             - DB_PATH=/data/licd.db
+        env_file:
+            - .env
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
         ports:
             - '8082:8081'
         expose:
