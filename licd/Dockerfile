@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1.6
 
-FROM golang:1.23-alpine AS builder
+FROM golang:1.23 AS builder
 WORKDIR /app
 
-# Устанавливаем необходимые пакеты для CGO и SQLite
-RUN apk add --no-cache ca-certificates gcc musl-dev sqlite-dev
+# Устанавливаем необходимые пакеты для CGO и SQLite (Debian names)
+RUN apt-get update && apt-get install -y gcc libsqlite3-dev
 
 # 1) Кешируем зависимости
 COPY go.mod ./
