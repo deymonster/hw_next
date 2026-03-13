@@ -19,7 +19,8 @@ COPY . .
 # ВКЛЮЧАЕМ CGO для работы с SQLite
 ENV CGO_ENABLED=1
 ENV GOOS=linux
-ENV GOARCH=amd64
+# Убираем жесткий GOARCH, пусть Docker сам решит (важно для ARM/M1)
+# ENV GOARCH=amd64
 
 # 3) Аргументы версии
 ARG VERSION=dev
@@ -40,7 +41,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
         -X github.com/deymonster/licd/internal/version.Date=${DATE}" \
       -o /out/licd ${PKG}
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 # Устанавливаем сертификаты, sqlite3 и dbus для machine-id
 RUN apt-get update && apt-get install -y --no-install-recommends \
