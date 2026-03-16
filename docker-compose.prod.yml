@@ -151,13 +151,15 @@ services:
         environment:
             - JOB_NAME=windows-agents
             - STORAGE_FILE_PATH=/data/licd.db
-            - CERT_PATH=/certs/client.crt
-            - KEY_PATH=/certs/client.key
-            - CA_PATH=/certs/ca.crt
-            - LICENSE_SERVER_URL=https://192.168.13.162:8080
+            - CERT_PATH=/data/client.crt
+            - KEY_PATH=/data/client.key
+            - CA_PATH=/data/ca.crt
+            - LICENSE_SERVER_URL=https://host.docker.internal:8443
             - SKIP_TLS_VERIFY=true
         expose:
             - '8081'
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
         volumes:
             - licd_data:/data
         networks:

@@ -16,7 +16,7 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		ServerAddress:  getEnv("SERVER_ADDRESS", ":8080"),
+		ServerAddress:  getEnv("SERVER_ADDRESS", ":8443"),
 		DBPath:         getEnv("DB_PATH", "data/lic-server.db"),
 		CAPath:         getEnv("CA_PATH", "certs/ca.crt"),
 		CAKeyPath:      getEnv("CA_KEY_PATH", "certs/ca.key"),

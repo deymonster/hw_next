@@ -11,5 +11,5 @@ FROM alpine:3.18
 WORKDIR /app
 COPY --from=builder /app/server /app/server
 RUN apk add --no-cache sqlite ca-certificates
-EXPOSE 8080
+EXPOSE 8443
 CMD ["/app/server"]
