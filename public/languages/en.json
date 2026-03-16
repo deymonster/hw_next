@@ -358,12 +358,45 @@
 		},
 		"license": {
 			"header": {
-				"heading": "License",
-				"description": "License information and terms of use"
+				"heading": "License Status",
+				"description": "Current license information and limitations"
+			},
+			"status": {
+				"title": "Status",
+				"active": "ACTIVE",
+				"inactive": "INACTIVE",
+				"organization": "Organization",
+				"notSpecified": "Not specified",
+				"inn": "INN",
+				"activationDate": "Activation Date",
+				"expiresAt": "Expires",
+				"indefinite": "Indefinite",
+				"usedSlots": "Used Slots",
+				"available": "Available for connection",
+				"devices": "devices",
+				"noData": "No license data"
+			},
+			"activation": {
+				"title": "Product Activation",
+				"description": "Enter organization INN for activation",
+				"innLabel": "INN",
+				"innPlaceholder": "Enter INN...",
+				"button": "Activate",
+				"buttonLoading": "Activating...",
+				"footer": "Internet connection required for activation. License server will verify INN and hardware validity."
 			},
 			"notice": {
 				"demoTitle": "Demonstration version",
 				"demo": "Demonstration version. Resale, commercial distribution, rental or any paid use is prohibited. Use is permitted for internal testing only. All rights reserved."
+			},
+			"messages": {
+				"success": "License activated successfully",
+				"LICENSE_NOT_FOUND": "License not found for this INN",
+				"LICENSE_SERVER_UNAVAILABLE": "License server is unavailable",
+				"LICENSE_EXPIRED": "License has expired",
+				"LICENSE_INVALID": "Invalid license format",
+				"INN_REQUIRED": "INN is required",
+				"UNKNOWN_ERROR": "An unknown error occurred during activation"
 			}
 		},
 		"devices": {

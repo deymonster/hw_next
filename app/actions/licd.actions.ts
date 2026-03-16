@@ -93,7 +93,7 @@ export async function activateProduct(licenseKey: string): Promise<{
 		if (!r.ok) {
 			return {
 				success: false,
-				error: body.message || `HTTP error ${r.status}`
+				error: body.error || body.message || `HTTP error ${r.status}`
 			}
 		}
 

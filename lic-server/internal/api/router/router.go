@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/deymonster/lic-server/internal/core/license"
 	"github.com/go-chi/chi/v5"
@@ -31,6 +32,13 @@ func NewRouter(svc *license.Service) *chi.Mux {
 	return r
 }
 
+// respondError sends a JSON error response
+func respondError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
 type RegisterRequest struct {
 	INN string `json:"inn"`
 	CSR string `json:"csr"`
@@ -46,25 +54,29 @@ func (api *Router) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	// 1. Parse Request
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "failed to read body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "failed to read body")
 		return
 	}
 
 	var req RegisterRequest
 	if jsonErr := json.Unmarshal(body, &req); jsonErr != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
 
 	if req.INN == "" || req.CSR == "" {
-		http.Error(w, "inn and csr are required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "inn and csr are required")
 		return
 	}
 
 	// 2. Call Service
 	certPEM, caPEM, pubKeyPEM, err := api.svc.RegisterInstance(r.Context(), req.INN, []byte(req.CSR))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("registration failed: %v", err), http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "not found") {
+			respondError(w, http.StatusNotFound, "license not found for this INN")
+		} else {
+			respondError(w, http.StatusInternalServerError, fmt.Sprintf("registration failed: %v", err))
+		}
 		return
 	}
 
@@ -95,25 +107,29 @@ func (api *Router) HandleActivate(w http.ResponseWriter, r *http.Request) {
 	// 1. Parse Request
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "failed to read body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "failed to read body")
 		return
 	}
 
 	var req ActivateRequest
 	if jsonErr := json.Unmarshal(body, &req); jsonErr != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
 
 	if req.INN == "" || req.Fingerprint == "" {
-		http.Error(w, "inn and fingerprint are required", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "inn and fingerprint are required")
 		return
 	}
 
 	// 2. Call Service
 	token, err := api.svc.ActivateInstance(r.Context(), req.INN, req.Fingerprint, req.Version)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("activation failed: %v", err), http.StatusInternalServerError)
+		if strings.Contains(err.Error(), "not found") {
+			respondError(w, http.StatusNotFound, "license not found for this INN")
+		} else {
+			respondError(w, http.StatusInternalServerError, fmt.Sprintf("activation failed: %v", err))
+		}
 		return
 	}
 

@@ -126,14 +126,31 @@ func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		log.Printf("ERROR: Failed to send request: %v", err)
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		// Check for common network errors to provide user-friendly message
+		return nil, fmt.Errorf("license server unavailable: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		log.Printf("ERROR: Server returned %d: %s", resp.StatusCode, string(bodyBytes))
-		return nil, fmt.Errorf("server returned error %d: %s", resp.StatusCode, string(bodyBytes))
+		errorMsg := string(bodyBytes)
+
+		// Try to parse JSON error
+		var errResp map[string]string
+		if json.Unmarshal(bodyBytes, &errResp) == nil && errResp["error"] != "" {
+			errorMsg = errResp["error"]
+		}
+
+		log.Printf("ERROR: Server returned %d: %s", resp.StatusCode, errorMsg)
+
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("license not found for this INN")
+		}
+		if resp.StatusCode == http.StatusBadGateway || resp.StatusCode == http.StatusServiceUnavailable {
+			return nil, fmt.Errorf("license server unavailable (502/503)")
+		}
+
+		return nil, fmt.Errorf("%s", errorMsg)
 	}
 
 	bodyBytes, _ := io.ReadAll(resp.Body)
@@ -173,13 +190,31 @@ func (c *LicenseClient) Activate(ctx context.Context, inn, fingerprint string) (
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		log.Printf("ERROR: Failed to send activation request: %v", err)
+		return nil, fmt.Errorf("license server unavailable: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("server returned error %d: %s", resp.StatusCode, string(bodyBytes))
+		errorMsg := string(bodyBytes)
+
+		// Try to parse JSON error
+		var errResp map[string]string
+		if json.Unmarshal(bodyBytes, &errResp) == nil && errResp["error"] != "" {
+			errorMsg = errResp["error"]
+		}
+
+		log.Printf("ERROR: Activation failed. Server returned %d: %s", resp.StatusCode, errorMsg)
+
+		if resp.StatusCode == http.StatusNotFound {
+			return nil, fmt.Errorf("license not found for this INN")
+		}
+		if resp.StatusCode == http.StatusBadGateway || resp.StatusCode == http.StatusServiceUnavailable {
+			return nil, fmt.Errorf("license server unavailable (502/503)")
+		}
+
+		return nil, fmt.Errorf("%s", errorMsg)
 	}
 
 	var result LicenseResponse

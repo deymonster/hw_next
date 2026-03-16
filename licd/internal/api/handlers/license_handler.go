@@ -251,7 +251,29 @@ func (h *LicenseHandler) RegisterInstance(w http.ResponseWriter, r *http.Request
 	log.Printf("INFO: Registering instance with identifier: %s", identifier)
 	if err := h.deviceUseCase.RegisterInstance(r.Context(), identifier); err != nil {
 		log.Printf("ERROR: Registration failed: %v", err)
-		http.Error(w, "Registration failed: "+err.Error(), http.StatusBadGateway)
+
+		w.Header().Set("Content-Type", "application/json")
+
+		statusCode := http.StatusInternalServerError
+		errorMsg := err.Error()
+		errorCode := "UNKNOWN_ERROR"
+
+		if strings.Contains(errorMsg, "license not found") {
+			statusCode = http.StatusNotFound
+			errorCode = "LICENSE_NOT_FOUND"
+		} else if strings.Contains(errorMsg, "unavailable") {
+			statusCode = http.StatusServiceUnavailable
+			errorCode = "LICENSE_SERVER_UNAVAILABLE"
+		} else if strings.Contains(errorMsg, "inn and csr are required") {
+			statusCode = http.StatusBadRequest
+			errorCode = "INN_REQUIRED"
+		}
+
+		w.WriteHeader(statusCode)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error":   errorCode,
+			"message": errorMsg,
+		})
 		return
 	}
 

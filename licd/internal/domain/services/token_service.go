@@ -69,6 +69,10 @@ func (s *TokenService) UpdatePublicKey(pemPublicKey string) error {
 
 // VerifyToken verifies the JWT token and returns the claims
 func (s *TokenService) VerifyToken(tokenString string) (*entities.LicenseClaims, error) {
+	if s == nil {
+		return nil, errors.New("token service not initialized (missing public key)")
+	}
+
 	token, err := jwt.ParseWithClaims(tokenString, &entities.LicenseClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

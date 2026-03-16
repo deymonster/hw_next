@@ -15,6 +15,7 @@ import (
 	"github.com/deymonster/licd/internal/application/usecases"
 	"github.com/deymonster/licd/internal/config"
 	"github.com/deymonster/licd/internal/domain/services"
+	"github.com/deymonster/licd/internal/embedded"
 	"github.com/deymonster/licd/internal/infrastructure/client"
 	"github.com/deymonster/licd/internal/infrastructure/crypto"
 	"github.com/deymonster/licd/internal/storage/sqlite"
@@ -49,9 +50,15 @@ func main() {
 
 	// 5) Сервисы
 	var tokenService *services.TokenService
-	if cfg.LicensePublicKey != "" {
-		// Если cfg.LicensePublicKey - это путь к файлу, читаем его
-		keyContent := cfg.LicensePublicKey
+
+	keyContent := cfg.LicensePublicKey
+	if keyContent == "" && len(embedded.LicensePublicKey) > 0 {
+		keyContent = string(embedded.LicensePublicKey)
+		log.Println("Using embedded public key for license verification")
+	}
+
+	if keyContent != "" {
+		// Если это путь к файлу, читаем его
 		if _, err := os.Stat(keyContent); err == nil {
 			content, err := os.ReadFile(keyContent)
 			if err != nil {
@@ -61,7 +68,9 @@ func main() {
 				log.Printf("Read public key from file: %s", cfg.LicensePublicKey)
 			}
 		} else {
-			log.Printf("Using public key from config string (not a file path or file not found: %s)", cfg.LicensePublicKey)
+			if cfg.LicensePublicKey != "" {
+				log.Printf("Using public key from config string")
+			}
 		}
 
 		var err error
@@ -69,10 +78,10 @@ func main() {
 		if err != nil {
 			log.Printf("WARN: Failed to initialize token service: %v. Token validation disabled.", err)
 		} else {
-			log.Println("Token service initialized with public key")
+			log.Println("Token service initialized successfully")
 		}
 	} else {
-		log.Println("WARN: LICENSE_PUBLIC_KEY is empty. Token validation disabled.")
+		log.Println("WARN: LICENSE_PUBLIC_KEY is empty and no embedded key found. Token validation disabled.")
 	}
 
 	// 5.5) Key Manager

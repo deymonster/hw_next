@@ -416,10 +416,12 @@ func (uc *DeviceUseCase) RefreshLicense(ctx context.Context) error {
 	}
 
 	// 2. Parse token to verify it's valid structurally (even if expired)
-	_, err = uc.tokenService.VerifyToken(tokenString)
-	if err != nil {
-		// If invalid, we still might want to refresh if we have the license key
-		// But let's proceed
+	if uc.tokenService != nil {
+		_, err = uc.tokenService.VerifyToken(tokenString)
+		if err != nil {
+			// If invalid, we still might want to refresh if we have the license key
+			// But let's proceed
+		}
 	}
 
 	// 3. Get LicenseKey

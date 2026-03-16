@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Shield, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -42,6 +43,7 @@ interface LicenseManagerProps {
 }
 
 export function LicenseManager({ initialStatus }: LicenseManagerProps) {
+	const t = useTranslations('dashboard.license')
 	const router = useRouter()
 	const [status, setStatus] = useState<LicenseStatus | null>(initialStatus)
 	const [isLoading, setIsLoading] = useState(false)
@@ -59,7 +61,7 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 			const res = await activateProduct(data.inn)
 
 			if (res.success) {
-				toast.success(res.message || 'Лицензия успешно активирована')
+				toast.success(t('messages.success'))
 				// Обновляем страницу для получения нового статуса
 				const statusResult = await getLicenseStatus()
 				if (statusResult.success) {
@@ -67,11 +69,19 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 					router.refresh()
 				}
 			} else {
-				toast.error(res.error || 'Ошибка активации')
+				const errorKey = res.error || 'UNKNOWN_ERROR'
+				const messageKey = `messages.${errorKey}`
+				// @ts-ignore
+				if (t.has && t.has(messageKey)) {
+					// @ts-ignore
+					toast.error(t(messageKey))
+				} else {
+					toast.error(t('messages.UNKNOWN_ERROR'))
+				}
 			}
 		} catch (error) {
 			console.error('Activation error:', error)
-			toast.error('Произошла неизвестная ошибка')
+			toast.error(t('messages.UNKNOWN_ERROR'))
 		} finally {
 			setIsLoading(false)
 		}
@@ -86,11 +96,9 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 				<CardHeader>
 					<CardTitle className='flex items-center gap-2'>
 						<Shield className='size-5' />
-						Статус лицензии
+						{t('header.heading')}
 					</CardTitle>
-					<CardDescription>
-						Информация о текущей лицензии и ограничениях
-					</CardDescription>
+					<CardDescription>{t('header.description')}</CardDescription>
 				</CardHeader>
 				<CardContent className='space-y-4'>
 					{status ? (
@@ -103,7 +111,7 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 										<ShieldAlert className='size-5 text-red-500' />
 									)}
 									<span className='font-medium'>
-										Состояние
+										{t('status.title')}
 									</span>
 								</div>
 								<span
@@ -114,31 +122,32 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 									}`}
 								>
 									{status.status === 'active'
-										? 'АКТИВНА'
-										: 'НЕ АКТИВНА'}
+										? t('status.active')
+										: t('status.inactive')}
 								</span>
 							</div>
 
 							<div className='grid grid-cols-2 gap-4 text-sm'>
 								<div className='space-y-1'>
 									<span className='text-muted-foreground'>
-										Организация
+										{t('status.organization')}
 									</span>
 									<p className='font-medium'>
-										{status.org_name || 'Не указана'}
+										{status.org_name ||
+											t('status.notSpecified')}
 									</p>
 								</div>
 								<div className='space-y-1'>
 									<span className='text-muted-foreground'>
-										ИНН
+										{t('status.inn')}
 									</span>
 									<p className='font-medium'>
-										{status.inn || 'Не указан'}
+										{status.inn || t('status.notSpecified')}
 									</p>
 								</div>
 								<div className='space-y-1'>
 									<span className='text-muted-foreground'>
-										Дата активации
+										{t('status.activationDate')}
 									</span>
 									<p className='font-medium'>
 										{status.activation_date
@@ -150,14 +159,14 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 								</div>
 								<div className='space-y-1'>
 									<span className='text-muted-foreground'>
-										Истекает
+										{t('status.expiresAt')}
 									</span>
 									<p className='font-medium'>
 										{status.expires_at
 											? new Date(
 													status.expires_at
 												).toLocaleDateString('ru-RU')
-											: 'Бессрочно'}
+											: t('status.indefinite')}
 									</p>
 								</div>
 							</div>
@@ -167,7 +176,7 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 							<div className='space-y-2'>
 								<div className='flex justify-between text-sm'>
 									<span className='text-muted-foreground'>
-										Использовано слотов
+										{t('status.usedSlots')}
 									</span>
 									<span className='font-medium'>
 										{status.used_slots} / {status.max_slots}
@@ -187,15 +196,16 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 									/>
 								</div>
 								<p className='text-xs text-muted-foreground'>
-									Доступно для подключения:{' '}
-									{status.remaining_slots} устройств
+									{t('status.available')}:{' '}
+									{status.remaining_slots}{' '}
+									{t('status.devices')}
 								</p>
 							</div>
 						</div>
 					) : (
 						<div className='flex flex-col items-center justify-center py-6 text-muted-foreground'>
 							<ShieldAlert className='mb-2 size-8 opacity-50' />
-							<p>Нет данных о лицензии</p>
+							<p>{t('status.noData')}</p>
 						</div>
 					)}
 				</CardContent>
@@ -205,9 +215,9 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 			{!isActivated && (
 				<Card>
 					<CardHeader>
-						<CardTitle>Активация продукта</CardTitle>
+						<CardTitle>{t('activation.title')}</CardTitle>
 						<CardDescription>
-							Введите ИНН организации для активации
+							{t('activation.description')}
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
@@ -221,10 +231,14 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 									name='inn'
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>ИНН</FormLabel>
+											<FormLabel>
+												{t('activation.innLabel')}
+											</FormLabel>
 											<FormControl>
 												<Input
-													placeholder='Введите ИНН...'
+													placeholder={t(
+														'activation.innPlaceholder'
+													)}
 													disabled={isLoading}
 													{...field}
 												/>
@@ -239,18 +253,14 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 									disabled={isLoading}
 								>
 									{isLoading
-										? 'Активация...'
-										: 'Активировать'}
+										? t('activation.buttonLoading')
+										: t('activation.button')}
 								</Button>
 							</form>
 						</Form>
 					</CardContent>
 					<CardFooter className='flex flex-col items-start gap-2 text-xs text-muted-foreground'>
-						<p>
-							Для активации требуется подключение к интернету.
-							Сервер лицензирования проверит валидность ИНН и
-							оборудования.
-						</p>
+						<p>{t('activation.footer')}</p>
 					</CardFooter>
 				</Card>
 			)}
