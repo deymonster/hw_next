@@ -71,10 +71,10 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 			} else {
 				const errorKey = res.error || 'UNKNOWN_ERROR'
 				const messageKey = `messages.${errorKey}`
-				// @ts-ignore
-				if (t.has && t.has(messageKey)) {
-					// @ts-ignore
-					toast.error(t(messageKey))
+
+				// Используем приведение типов для проверки наличия ключа и вызова с динамическим ключом
+				if ((t as any).has && (t as any).has(messageKey)) {
+					toast.error(t(messageKey as any))
 				} else {
 					toast.error(t('messages.UNKNOWN_ERROR'))
 				}
