@@ -121,6 +121,52 @@ func main() {
 	r.SetupLicenseRoutes(licenseHandler)
 	r.SetupPrometheusRoutes(prometheusHandler)
 
+	// 7.2) Auto-Registration (Bootstrap / Certificate Recovery)
+	certExists := false
+	if cfg.TLSCertPath != "" {
+		if _, err := os.Stat(cfg.TLSCertPath); err == nil {
+			certExists = true
+		}
+	}
+
+	if !certExists {
+		// Сертификатов нет. Проверяем, есть ли у нас уже активная лицензия (и INN) в БД.
+		// Если есть, мы должны автоматически восстановить сертификаты.
+		// Если нет, мы просто ждем ручной активации через UI.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		savedINN, _ := activationRepo.GetActiveLicenseKey(ctx)
+		cancel()
+
+		if savedINN != "" {
+			log.Printf("INFO: Found existing license for INN %s but certificates are missing. Attempting certificate recovery...", savedINN)
+
+			// Wait a bit for server to be fully ready if started together
+			time.Sleep(2 * time.Second)
+
+			ctxReg, cancelReg := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancelReg()
+
+			if err := deviceUseCase.RegisterInstance(ctxReg, savedINN, cfg.EnrollmentToken); err != nil {
+				log.Printf("ERROR: Certificate recovery failed: %v", err)
+			} else {
+				log.Printf("INFO: Certificate recovery successful. Certificates saved.")
+
+				// Перезагружаем клиент с новыми сертификатами
+				if keyManager != nil && licenseClient != nil {
+					newClient, reloadErr := client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.SkipTLSVerify)
+					if reloadErr != nil {
+						log.Printf("WARN: Failed to reload certificates into client: %v", reloadErr)
+					} else {
+						*licenseClient = *newClient
+						log.Printf("INFO: Certificates reloaded into license client successfully")
+					}
+				}
+			}
+		} else {
+			log.Printf("INFO: Certificates are missing and no active license found in DB. Waiting for activation via UI.")
+		}
+	}
+
 	// 7.5) Background Heartbeat (License Refresh)
 	go func() {
 		log.Printf("Starting background license heartbeat (every %v)...", cfg.HeartbeatInterval)
