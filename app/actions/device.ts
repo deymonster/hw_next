@@ -8,6 +8,7 @@ import {
 	EventType
 } from '@prisma/client'
 
+import { activateDevice } from './licd.actions'
 import { getAgentStatuses } from './prometheus.actions'
 import { logAuditEvent } from './utils/audit-events'
 
@@ -38,15 +39,79 @@ export async function createDevice(data: IDeviceCreateInput): Promise<{
 			'info',
 			`[CREATE_DEVICE] Creating device: ${data.name} (${data.ipAddress})`
 		)
-		const newDevice = await services.data.device.create({
-			...data,
-			type: data.type || DeviceType.WINDOWS
-		})
-		await logAction(
-			LoggerService.DEVICE_SERVICE,
-			'info',
-			`[CREATE_DEVICE] Device created successfully: ${newDevice.id}`
-		)
+
+		let newDevice: Device
+		try {
+			newDevice = await services.data.device.create({
+				...data,
+				type: data.type || DeviceType.WINDOWS
+			})
+			await logAction(
+				LoggerService.DEVICE_SERVICE,
+				'info',
+				`[CREATE_DEVICE] Device created successfully: ${newDevice.id}`
+			)
+		} catch (createError: any) {
+			// Handle unique constraint violation (P2002) - Device might already exist
+			if (createError.code === 'P2002') {
+				await logAction(
+					LoggerService.DEVICE_SERVICE,
+					'warn',
+					`[CREATE_DEVICE] Device already exists, trying to find it: ${data.agentKey}`
+				)
+				const existingDevice =
+					await services.data.device.findByAgentKey(data.agentKey)
+				if (existingDevice) {
+					newDevice = existingDevice
+					await logAction(
+						LoggerService.DEVICE_SERVICE,
+						'info',
+						`[CREATE_DEVICE] Found existing device: ${newDevice.id}`
+					)
+				} else {
+					throw createError
+				}
+			} else {
+				throw createError
+			}
+		}
+
+		// Activate device in LICD
+		try {
+			const activationResult = await activateDevice({
+				deviceId: newDevice.id,
+				agentKey: newDevice.agentKey,
+				ipAddress: newDevice.ipAddress,
+				port: 9182 // Default port
+			})
+
+			if (!activationResult.success) {
+				await logAction(
+					LoggerService.DEVICE_SERVICE,
+					'error',
+					`[CREATE_DEVICE] Failed to activate device in LICD: ${
+						'reason' in activationResult
+							? activationResult.reason
+							: 'Unknown error'
+					}`
+				)
+				// Note: We don't rollback device creation, but we log the error.
+				// User will see the device but it won't be monitored until activated.
+			} else {
+				await logAction(
+					LoggerService.DEVICE_SERVICE,
+					'info',
+					`[CREATE_DEVICE] Device activated in LICD successfully`
+				)
+			}
+		} catch (activationError) {
+			await logAction(
+				LoggerService.DEVICE_SERVICE,
+				'error',
+				`[CREATE_DEVICE] Exception during LICD activation`,
+				activationError
+			)
+		}
 
 		await logAuditEvent({
 			type: EventType.DEVICE,

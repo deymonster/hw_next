@@ -148,6 +148,8 @@ services:
     licd:
         image: deymonster/hw-monitor-licd:latest
         container_name: licd
+        env_file:
+            - .env.prod
         environment:
             - JOB_NAME=remote-agent
             - STORAGE_FILE_PATH=/data/licd.db
