@@ -27,7 +27,7 @@ import (
 
 func TestLicenseHandler_RegisterInstance_InvalidJSON(t *testing.T) {
 	// Setup
-	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test", "salt")
+	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test", "salt", "")
 	h := handlers.NewLicenseHandler(uc)
 
 	// Execute
@@ -45,7 +45,7 @@ func TestLicenseHandler_RegisterInstance_InvalidJSON(t *testing.T) {
 
 func TestLicenseHandler_RegisterInstance_MissingINN(t *testing.T) {
 	// Setup
-	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test", "salt")
+	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test", "salt", "")
 	h := handlers.NewLicenseHandler(uc)
 
 	// Execute
@@ -70,7 +70,7 @@ func TestLicenseHandler_RegisterInstance_Success_Mock(t *testing.T) {
 	// Since we cannot mock the struct methods directly in Go without an interface,
 	// we verify that it calls the UseCase and returns the error from it.
 
-	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test", "salt")
+	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test", "salt", "")
 	h := handlers.NewLicenseHandler(uc)
 
 	reqBody := []byte(`{"inn": "1234567890"}`)
@@ -79,8 +79,8 @@ func TestLicenseHandler_RegisterInstance_Success_Mock(t *testing.T) {
 
 	h.RegisterInstance(w, req)
 
-	// Expect 502 BadGateway because KeyManager is nil in UseCase
-	if w.Code != http.StatusBadGateway {
-		t.Errorf("Expected status BadGateway (due to nil dep), got %v", w.Code)
+	// Expect 500 Internal Server Error because handler returns 500 for generic errors
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status InternalServerError (due to nil dep), got %v", w.Code)
 	}
 }

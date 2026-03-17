@@ -25,10 +25,12 @@ func main() {
 	log.Printf("Starting lic-server on %s (TLS enabled)", cfg.ServerAddress)
 
 	// 2. Initialize Crypto (CA)
+	log.Printf("Initializing CA service... (CertPath: %s, KeyPath: %s)", cfg.CAPath, cfg.CAKeyPath)
 	ca, err := crypto.NewCAService(cfg.CAPath, cfg.CAKeyPath)
 	if err != nil {
 		log.Fatalf("Failed to initialize CA service: %v", err)
 	}
+	log.Println("CA Service initialized successfully")
 
 	// 2.1 Ensure Server Certs
 	if _, statErr := os.Stat(cfg.ServerCertPath); os.IsNotExist(statErr) {
@@ -63,14 +65,30 @@ func main() {
 	defer db.Close()
 
 	// 4. Initialize Core Service
-	svc := license.NewService(db, ca, tokenService)
+	svc := license.NewService(db, ca, tokenService, cfg.StaticEnrollmentToken)
 
 	// 4.1 Seed Test Data (DEV ONLY)
 	// TODO: Remove in production or move to admin API
-	if seedErr := db.CreateLicense(context.Background(), "1234567890", "Test Org", 100); seedErr != nil {
+	testINN := "1234567890"
+	if seedErr := db.CreateLicense(context.Background(), testINN, "Test Org", 100); seedErr != nil {
 		log.Printf("Failed to seed test license: %v", seedErr)
 	} else {
-		log.Println("Seeded test license for INN: 1234567890")
+		log.Printf("Seeded test license for INN: %s", testINN)
+	}
+
+	// 4.2 Generate Enrollment Token for Test INN (DEV ONLY)
+	// This helps with local verification without manual DB insertion
+	if cfg.StaticEnrollmentToken == "" {
+		token, tokenErr := db.CreateEnrollmentToken(context.Background(), testINN, 24*time.Hour)
+		if tokenErr != nil {
+			log.Printf("Failed to create enrollment token: %v", tokenErr)
+		} else {
+			log.Printf("Generated Enrollment Token for INN %s: %s", testINN, token)
+			log.Printf("Use this token to start licd: ENROLLMENT_TOKEN=%s go run ./cmd/licd", token)
+		}
+	} else {
+		log.Printf("Using STATIC ENROLLMENT TOKEN from config: %s", cfg.StaticEnrollmentToken)
+		log.Printf("Use this token to start licd: ENROLLMENT_TOKEN=%s go run ./cmd/licd", cfg.StaticEnrollmentToken)
 	}
 
 	// 5. Initialize Router

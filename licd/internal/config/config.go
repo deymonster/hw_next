@@ -13,6 +13,7 @@ type Config struct {
 	JobName          string `json:"job_name"`
 	Environment      string `json:"environment"`
 	StoragePath      string `json:"storage_path"`
+	EnrollmentToken  string `json:"enrollment_token"`
 	LicensePublicKey string `json:"license_public_key"`
 	FingerprintSalt  string `json:"fingerprint_salt"`
 
@@ -20,7 +21,6 @@ type Config struct {
 	LicenseServerURL string `json:"license_server_url"`
 	TLSCertPath      string `json:"tls_cert_path"`
 	TLSKeyPath       string `json:"tls_key_path"`
-	TLSCACertPath    string `json:"tls_ca_cert_path"`
 	SkipTLSVerify    bool   `json:"skip_tls_verify"`
 
 	HeartbeatInterval time.Duration `json:"heartbeat_interval"`
@@ -64,6 +64,10 @@ func Load() (*Config, error) {
 		cfg.StoragePath = "./data/licd.db"
 	}
 
+	if v := os.Getenv("ENROLLMENT_TOKEN"); v != "" {
+		cfg.EnrollmentToken = v
+	}
+
 	if v := os.Getenv("LICENSE_PUBLIC_KEY"); v != "" {
 		cfg.LicensePublicKey = v
 	}
@@ -81,9 +85,6 @@ func Load() (*Config, error) {
 	if v := os.Getenv("KEY_PATH"); v != "" {
 		cfg.TLSKeyPath = v
 	}
-	if v := os.Getenv("CA_PATH"); v != "" {
-		cfg.TLSCACertPath = v
-	}
 	if v := os.Getenv("SKIP_TLS_VERIFY"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			cfg.SkipTLSVerify = b
@@ -96,8 +97,10 @@ func Load() (*Config, error) {
 	if v := os.Getenv("TLS_KEY_PATH"); v != "" {
 		cfg.TLSKeyPath = v
 	}
-	if v := os.Getenv("TLS_CA_CERT_PATH"); v != "" {
-		cfg.TLSCACertPath = v
+
+	// Enforce strict security in production
+	if cfg.Environment == "production" {
+		cfg.SkipTLSVerify = false
 	}
 
 	if v := os.Getenv("HEARTBEAT_INTERVAL"); v != "" {

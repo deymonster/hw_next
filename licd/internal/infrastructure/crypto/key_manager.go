@@ -15,16 +15,14 @@ import (
 type KeyManager struct {
 	CertPath       string
 	KeyPath        string
-	CAPath         string
 	LicenseKeyPath string
 }
 
 // NewKeyManager creates a new KeyManager
-func NewKeyManager(certPath, keyPath, caPath, licenseKeyPath string) *KeyManager {
+func NewKeyManager(certPath, keyPath, licenseKeyPath string) *KeyManager {
 	return &KeyManager{
 		CertPath:       certPath,
 		KeyPath:        keyPath,
-		CAPath:         caPath,
 		LicenseKeyPath: licenseKeyPath,
 	}
 }

@@ -228,6 +228,7 @@ func (h *LicenseHandler) RegisterInstance(w http.ResponseWriter, r *http.Request
 	type RegisterRequest struct {
 		INN        string `json:"inn"`
 		LicenseKey string `json:"licenseKey"`
+		Token      string `json:"token"`
 	}
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -249,7 +250,7 @@ func (h *LicenseHandler) RegisterInstance(w http.ResponseWriter, r *http.Request
 	}
 
 	log.Printf("INFO: Registering instance with identifier: %s", identifier)
-	if err := h.deviceUseCase.RegisterInstance(r.Context(), identifier); err != nil {
+	if err := h.deviceUseCase.RegisterInstance(r.Context(), identifier, req.Token); err != nil {
 		log.Printf("ERROR: Registration failed: %v", err)
 
 		w.Header().Set("Content-Type", "application/json")

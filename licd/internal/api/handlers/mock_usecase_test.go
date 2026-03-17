@@ -14,14 +14,14 @@ import (
 // For this test, we will create a separate interface in the test package that matches the methods we need
 type DeviceUseCaseInterface interface {
 	GetLicenseStatus(ctx context.Context) (*entities.LicenseStatus, error)
-	RegisterInstance(ctx context.Context, inn string) error
+	RegisterInstance(ctx context.Context, inn, token string) error
 	UpdateLicense(ctx context.Context, token string, inn string) error
 	RefreshLicense(ctx context.Context) error
 }
 
 type MockDeviceUseCase struct {
 	GetLicenseStatusFunc func(ctx context.Context) (*entities.LicenseStatus, error)
-	RegisterInstanceFunc func(ctx context.Context, inn string) error
+	RegisterInstanceFunc func(ctx context.Context, inn, token string) error
 	UpdateLicenseFunc    func(ctx context.Context, token string, inn string) error
 	RefreshLicenseFunc   func(ctx context.Context) error
 }
@@ -33,9 +33,9 @@ func (m *MockDeviceUseCase) GetLicenseStatus(ctx context.Context) (*entities.Lic
 	return &entities.LicenseStatus{}, nil
 }
 
-func (m *MockDeviceUseCase) RegisterInstance(ctx context.Context, inn string) error {
+func (m *MockDeviceUseCase) RegisterInstance(ctx context.Context, inn, token string) error {
 	if m.RegisterInstanceFunc != nil {
-		return m.RegisterInstanceFunc(ctx, inn)
+		return m.RegisterInstanceFunc(ctx, inn, token)
 	}
 	return nil
 }

@@ -260,6 +260,15 @@ ensure_env_file() {
     read -rp "Отправитель (имя) [${SMTP_FROM_NAME}]: " v; SMTP_FROM_NAME="${v:-$SMTP_FROM_NAME}"
   fi
 
+
+  # Licensing
+  ENROLLMENT_TOKEN="${ENROLLMENT_TOKEN:-$(get_env ENROLLMENT_TOKEN)}"
+  
+  if [[ -z "$ENROLLMENT_TOKEN" ]] && [[ "$NON_INTERACTIVE" != "1" ]]; then
+    read -rp "Введите ENROLLMENT_TOKEN (токен для регистрации лицензий): " v
+    ENROLLMENT_TOKEN="${v:-}"
+  fi
+  
   # Secrets (безопасная инициализация при set -u)
   local NEXTAUTH_SECRET_FROM_FILE; NEXTAUTH_SECRET_FROM_FILE="$(get_env NEXTAUTH_SECRET)"
   local ENCRYPTION_KEY_FROM_FILE; ENCRYPTION_KEY_FROM_FILE="$(get_env ENCRYPTION_KEY)"
@@ -335,7 +344,11 @@ REDIS_PORT=${REDIS_PORT}
 REDIS_URL=${REDIS_URL}
 
 # Auth
-NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+  NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+
+# Licensing
+ENROLLMENT_TOKEN=${ENROLLMENT_TOKEN}
+
 EOF
 
   # Also provide .env for compose files that reference env_file: .env

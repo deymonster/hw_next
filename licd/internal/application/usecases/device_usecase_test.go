@@ -10,7 +10,7 @@ import (
 
 func TestDeviceUseCase_RequestLicense(t *testing.T) {
 	// Initialize with nil dependencies as RequestLicense only uses fingerprint generation currently
-	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test-job", "test-salt")
+	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test-job", "test-salt", "")
 
 	// Test requesting a license with a dummy INN
 	err := uc.RequestLicense(context.Background(), "1234567890")
@@ -26,7 +26,7 @@ func TestDeviceUseCase_RequestLicense(t *testing.T) {
 }
 
 func TestDeviceUseCase_GetSystemFingerprint(t *testing.T) {
-	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test-job", "test-salt")
+	uc := usecases.NewDeviceUseCase(nil, nil, nil, nil, 10, "test-job", "test-salt", "")
 
 	fp, err := uc.GetSystemFingerprint()
 	if err != nil {

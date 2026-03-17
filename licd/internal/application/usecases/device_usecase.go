@@ -24,6 +24,7 @@ type DeviceUseCase struct {
 	maxAgents       int
 	jobName         string
 	fingerprintSalt string
+	enrollmentToken string
 }
 
 // NewDeviceUseCase создаёт новый экземпляр DeviceUseCase
@@ -35,6 +36,7 @@ func NewDeviceUseCase(
 	maxAgents int,
 	jobName string,
 	fingerprintSalt string,
+	enrollmentToken string,
 ) *DeviceUseCase {
 	if jobName == "" {
 		jobName = "windows-agents"
@@ -47,13 +49,20 @@ func NewDeviceUseCase(
 		maxAgents:       maxAgents,
 		jobName:         jobName,
 		fingerprintSalt: fingerprintSalt,
+		enrollmentToken: enrollmentToken,
 	}
 }
 
 // RegisterInstance registers the licd instance with the license server
-func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error {
+func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn, token string) error {
 	if uc.keyManager == nil {
 		return fmt.Errorf("key manager not configured")
+	}
+
+	// Use provided token or fallback to config
+	effectiveToken := token
+	if effectiveToken == "" {
+		effectiveToken = uc.enrollmentToken
 	}
 
 	// 1. Generate Key + CSR
@@ -63,7 +72,7 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 	}
 
 	// 2. Register (Exchange CSR for Certificate using INN)
-	resp, err := uc.licenseClient.Register(ctx, inn, csrPEM)
+	resp, err := uc.licenseClient.Register(ctx, inn, effectiveToken, csrPEM)
 	if err != nil {
 		return fmt.Errorf("registration failed: %w", err)
 	}
@@ -78,11 +87,12 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 	if err = uc.keyManager.SaveCert([]byte(resp.Certificate)); err != nil {
 		return fmt.Errorf("failed to save cert: %w", err)
 	}
-	if resp.CACertificate != "" && uc.keyManager.CAPath != "" {
-		if err = uc.keyManager.SaveCA(uc.keyManager.CAPath, []byte(resp.CACertificate)); err != nil {
-			return fmt.Errorf("failed to save CA: %w", err)
-		}
-	}
+	// CAPath removed from KeyManager, assuming we trust embedded CA or system CA
+	// if resp.CACertificate != "" && uc.keyManager.CAPath != "" {
+	// 	if err = uc.keyManager.SaveCA(uc.keyManager.CAPath, []byte(resp.CACertificate)); err != nil {
+	// 		return fmt.Errorf("failed to save CA: %w", err)
+	// 	}
+	// }
 	if resp.PublicKey != "" {
 		// Update TokenService dynamically
 		if uc.tokenService != nil {
@@ -113,7 +123,7 @@ func (uc *DeviceUseCase) RegisterInstance(ctx context.Context, inn string) error
 	}
 
 	// 4. Reload Client
-	if err = uc.licenseClient.Reload(uc.keyManager.CertPath, uc.keyManager.KeyPath, uc.keyManager.CAPath); err != nil {
+	if err = uc.licenseClient.Reload(uc.keyManager.CertPath, uc.keyManager.KeyPath); err != nil {
 		return fmt.Errorf("failed to reload client: %w", err)
 	}
 
@@ -333,7 +343,8 @@ func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 				if tokenErr == nil {
 					// Check expiration
 					if claims.ExpiresAt == nil || claims.ExpiresAt.Time.After(time.Now()) {
-						return fmt.Errorf("license already activated")
+						log.Printf("License already activated (expires: %s)", claims.ExpiresAt)
+						return nil
 					}
 				}
 			}
@@ -341,7 +352,7 @@ func (uc *DeviceUseCase) RequestLicense(ctx context.Context, inn string) error {
 	}
 
 	// 2. Register first (CSR Flow)
-	if err := uc.RegisterInstance(ctx, inn); err != nil {
+	if err := uc.RegisterInstance(ctx, inn, ""); err != nil {
 		return fmt.Errorf("failed to register instance: %w", err)
 	}
 
@@ -416,36 +427,56 @@ func (uc *DeviceUseCase) RefreshLicense(ctx context.Context) error {
 	}
 
 	// 2. Parse token to verify it's valid structurally (even if expired)
+	var claims *entities.LicenseClaims
 	if uc.tokenService != nil {
-		_, err = uc.tokenService.VerifyToken(tokenString)
-		if err != nil {
+		// Use a local error variable to avoid shadowing if we needed it, but here we assign to outer err/claims
+		var verErr error
+		claims, verErr = uc.tokenService.VerifyToken(tokenString)
+		if verErr != nil {
 			// If invalid, we still might want to refresh if we have the license key
-			// But let's proceed
+			// But let's proceed to Activate
+			claims = nil
 		}
-	}
-
-	// 3. Get LicenseKey
-	inn, err := uc.activationRepo.GetActiveLicenseKey(ctx)
-	if err != nil || inn == "" {
-		return fmt.Errorf("failed to get active license key: %w", err)
-	}
-
-	// 4. Get system fingerprint
-	fp, err := uc.GetSystemFingerprint()
-	if err != nil {
-		return fmt.Errorf("failed to generate fingerprint: %w", err)
 	}
 
 	if uc.licenseClient == nil {
 		return fmt.Errorf("license client not initialized")
 	}
 
-	// 5. Call server
+	// 3. Try Heartbeat if token is valid and not expiring soon
+	if claims != nil {
+		expiry := claims.GetExpiresAt()
+		// If expiry is zero (no expiry) or far in future (> 24h), try heartbeat
+		// This reduces load on server (no token signing) and DB writes on client
+		if expiry.IsZero() || time.Until(expiry) > 24*time.Hour {
+			if hbErr := uc.licenseClient.Heartbeat(ctx); hbErr == nil {
+				// Heartbeat successful, license is active and binding is valid.
+				return nil
+			} else {
+				// If heartbeat failed, log and fall through to Activate
+				log.Printf("WARN: Heartbeat failed, attempting full activation: %v", hbErr)
+			}
+		}
+	}
+
+	// 4. Get LicenseKey
+	inn, err := uc.activationRepo.GetActiveLicenseKey(ctx)
+	if err != nil || inn == "" {
+		return fmt.Errorf("failed to get active license key: %w", err)
+	}
+
+	// 5. Get system fingerprint
+	fp, err := uc.GetSystemFingerprint()
+	if err != nil {
+		return fmt.Errorf("failed to generate fingerprint: %w", err)
+	}
+
+	// 6. Call server
 	resp, err := uc.licenseClient.Activate(ctx, inn, fp)
 	if err != nil {
 		return fmt.Errorf("failed to refresh license via server: %w", err)
 	}
 
-	// 6. Update license in DB
+	// 7. Update license in DB
 	return uc.UpdateLicense(ctx, resp.Token, inn)
 }

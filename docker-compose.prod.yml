@@ -149,17 +149,20 @@ services:
         image: deymonster/hw-monitor-licd:latest
         container_name: licd
         environment:
-            - JOB_NAME=windows-agents
+            - JOB_NAME=remote-agent
             - STORAGE_FILE_PATH=/data/licd.db
             - CERT_PATH=/data/client.crt
             - KEY_PATH=/data/client.key
-            - CA_PATH=/data/ca.crt
-            - LICENSE_SERVER_URL=https://host.docker.internal:8443
+            - LICENSE_SERVER_URL=https://192.168.13.162:8443
+            # В продакшене лучше false, но если самоподписанный сертификат без доверенного CA - true
             - SKIP_TLS_VERIFY=true
+            # Токен передавать через внешний .env файл или переменную окружения при запуске
+            - ENROLLMENT_TOKEN=${ENROLLMENT_TOKEN}
         expose:
             - '8081'
-        extra_hosts:
-            - 'host.docker.internal:host-gateway'
+        # Пробрасываем порт наружу, чтобы можно было дергать API
+        ports:
+            - '8081:8081'
         volumes:
             - licd_data:/data
         networks:

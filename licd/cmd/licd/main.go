@@ -35,8 +35,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
-	log.Printf("Config loaded: port=%d max_agents=%d job=%s db=%s server_url=%s skip_tls=%v",
-		cfg.Port, cfg.MaxAgents, cfg.JobName, cfg.StoragePath, cfg.LicenseServerURL, cfg.SkipTLSVerify)
+	log.Printf("Config loaded: port=%d max_agents=%d job=%s db=%s server_url=%s skip_tls=%v cert_path=%s key_path=%s",
+		cfg.Port, cfg.MaxAgents, cfg.JobName, cfg.StoragePath, cfg.LicenseServerURL, cfg.SkipTLSVerify, cfg.TLSCertPath, cfg.TLSKeyPath)
 
 	// 3) БД + миграции
 	db, err := sqlite.NewDatabase(cfg.StoragePath)
@@ -87,7 +87,7 @@ func main() {
 	// 5.5) Key Manager
 	var keyManager *crypto.KeyManager
 	if cfg.TLSCertPath != "" && cfg.TLSKeyPath != "" {
-		keyManager = crypto.NewKeyManager(cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath, cfg.LicensePublicKey)
+		keyManager = crypto.NewKeyManager(cfg.TLSCertPath, cfg.TLSKeyPath, cfg.LicensePublicKey)
 	}
 
 	// 5.6) License Client (mTLS or Bootstrap)
@@ -96,7 +96,7 @@ func main() {
 		// Initialize client even if certs missing (Bootstrap mode)
 		// Assuming paths are provided in config for future saving
 		var err error
-		licenseClient, err = client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.TLSCACertPath, cfg.SkipTLSVerify)
+		licenseClient, err = client.NewLicenseClient(cfg.LicenseServerURL, cfg.TLSCertPath, cfg.TLSKeyPath, cfg.SkipTLSVerify)
 		if err != nil {
 			log.Printf("WARN: Failed to initialize license client (URL: %s, SkipTLS: %v): %v. Automated activation disabled.",
 				cfg.LicenseServerURL, cfg.SkipTLSVerify, err)
@@ -108,7 +108,7 @@ func main() {
 	}
 
 	// 6) UseCases (протягиваем лимит и jobName)
-	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, tokenService, licenseClient, keyManager, cfg.MaxAgents, cfg.JobName, cfg.FingerprintSalt)
+	deviceUseCase := usecases.NewDeviceUseCase(activationRepo, tokenService, licenseClient, keyManager, cfg.MaxAgents, cfg.JobName, cfg.FingerprintSalt, cfg.EnrollmentToken)
 
 	// 7) Handlers
 	deviceHandler := handlers.NewDeviceHandler(deviceUseCase)

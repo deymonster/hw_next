@@ -49,14 +49,14 @@ type RegisterResponse struct {
 
 // NewLicenseClient creates a new LicenseClient
 // If certPath/keyPath are missing, it starts in bootstrap mode (only CA trusted)
-func NewLicenseClient(baseURL, certPath, keyPath, caPath string, skipVerify bool) (*LicenseClient, error) {
+func NewLicenseClient(baseURL, certPath, keyPath string, skipVerify bool) (*LicenseClient, error) {
 	tlsConfig := &tls.Config{
 		MinVersion:         tls.VersionTLS13,
 		InsecureSkipVerify: skipVerify,
 	}
 
 	// 1. Load embedded CA certificate (Pinned CA)
-	// We ignore caPath here and use the embedded CA for strict pinning
+	// We use the embedded CA for strict pinning
 	caCertPool := x509.NewCertPool()
 	if ok := caCertPool.AppendCertsFromPEM(embedded.CACert); !ok {
 		return nil, fmt.Errorf("failed to append embedded CA certificate")
@@ -69,7 +69,12 @@ func NewLicenseClient(baseURL, certPath, keyPath, caPath string, skipVerify bool
 		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 		if err == nil {
 			tlsConfig.Certificates = []tls.Certificate{cert}
+			log.Printf("Successfully loaded client certificate from %s and key from %s", certPath, keyPath)
+		} else {
+			log.Printf("Failed to load client certificate from %s and key from %s: %v", certPath, keyPath, err)
 		}
+	} else {
+		log.Printf("Client certificate/key paths not provided (cert: '%s', key: '%s'). Starting in bootstrap mode.", certPath, keyPath)
 	}
 
 	// 3. Create HTTP client with custom Transport
@@ -91,8 +96,8 @@ func NewLicenseClient(baseURL, certPath, keyPath, caPath string, skipVerify bool
 }
 
 // Reload reinitializes the client with new certificates
-func (c *LicenseClient) Reload(certPath, keyPath, caPath string) error {
-	newClient, err := NewLicenseClient(c.baseURL, certPath, keyPath, caPath, c.skipVerify)
+func (c *LicenseClient) Reload(certPath, keyPath string) error {
+	newClient, err := NewLicenseClient(c.baseURL, certPath, keyPath, c.skipVerify)
 	if err != nil {
 		return err
 	}
@@ -101,12 +106,17 @@ func (c *LicenseClient) Reload(certPath, keyPath, caPath string) error {
 }
 
 // Register sends a registration request with CSR
-func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte) (*RegisterResponse, error) {
+func (c *LicenseClient) Register(ctx context.Context, inn, token string, csrPEM []byte) (*RegisterResponse, error) {
 	log.Printf("DEBUG: Register called. INN: %s", inn)
 
-	reqBody := RegisterRequest{
-		INN: inn,
-		CSR: string(csrPEM),
+	reqBody := struct {
+		INN   string `json:"inn"`
+		CSR   string `json:"csr"`
+		Token string `json:"token"`
+	}{
+		INN:   inn,
+		CSR:   string(csrPEM),
+		Token: token,
 	}
 
 	body, err := json.Marshal(reqBody)
@@ -163,6 +173,28 @@ func (c *LicenseClient) Register(ctx context.Context, inn string, csrPEM []byte)
 	}
 
 	return &result, nil
+}
+
+// Heartbeat checks if the license and certificate are still valid
+func (c *LicenseClient) Heartbeat(ctx context.Context) error {
+	url := fmt.Sprintf("%s/v1/heartbeat", c.baseURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("heartbeat failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("heartbeat failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil
 }
 
 // Activate sends an activation request to the license server
