@@ -353,6 +353,47 @@ export async function activateBatchDevices(
 		const body = (await r.json().catch(() => ({}))) as BatchActivateResponse
 
 		if (!r.ok || !body?.ok) {
+			if (r.status === 404 || r.status === 405) {
+				const fallbackResults: BatchActivateResult[] = []
+				let fallbackSuccessCount = 0
+
+				for (const device of params.devices) {
+					const singleResult = await activateDevice({
+						deviceId: device.deviceId,
+						agentKey: device.agentKey,
+						ipAddress: device.ipAddress,
+						port: device.port,
+						tenantId: device.tenantId
+					})
+
+					if (singleResult.success) {
+						fallbackSuccessCount++
+						fallbackResults.push({
+							deviceId: device.deviceId,
+							ipAddress: device.ipAddress,
+							success: true
+						})
+					} else {
+						fallbackResults.push({
+							deviceId: device.deviceId,
+							ipAddress: device.ipAddress,
+							success: false,
+							error: singleResult.reason
+						})
+					}
+				}
+
+				return {
+					success: fallbackSuccessCount > 0,
+					successCount: fallbackSuccessCount,
+					totalCount: params.devices.length,
+					results: fallbackResults,
+					reason:
+						fallbackSuccessCount > 0
+							? undefined
+							: 'batch_endpoint_not_available'
+				}
+			}
 			const reason: string =
 				body?.reason ||
 				(r.status === 409
