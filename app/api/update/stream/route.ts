@@ -36,7 +36,7 @@ export async function GET(_req: NextRequest) {
 		res.on('end', async () => {
 			try {
 				await writer.close()
-			} catch (e) {
+			} catch {
 				// Ignore close errors
 			}
 		})
@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest) {
 					encoder.encode(`event: error\ndata: ${err.message}\n\n`)
 				)
 				await writer.close()
-			} catch (e) {
+			} catch {
 				// Ignore errors
 			}
 		})
