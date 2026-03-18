@@ -371,7 +371,10 @@ install_hwctl() {
 
     if [[ -f "$hwctl_src" ]]; then
         mkdir -p "$INSTALL_DIR"
-        cp "$hwctl_src" "$hwctl_dst"
+        # Check if source and dest are the same file
+        if [[ "$(realpath "$hwctl_src")" != "$(realpath "$hwctl_dst")" ]]; then
+             cp "$hwctl_src" "$hwctl_dst"
+        fi
         chmod +x "$hwctl_dst" || true
     elif [[ -f "$hwctl_dst" ]]; then
         # Уже скачан fetch_scripts_if_available
