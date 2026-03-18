@@ -17,8 +17,17 @@ import {
 } from '@/components/ui/dialog'
 
 interface VersionInfoModalProps {
-	info: any
-	licdVersion: any
+	info: {
+		version?: string
+		dockerHub?: {
+			tag?: string
+			updated?: string
+		}
+	} | null
+	licdVersion: {
+		version?: string
+		date?: string
+	} | null
 }
 
 export function VersionInfoModal({ info, licdVersion }: VersionInfoModalProps) {

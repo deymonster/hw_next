@@ -16,52 +16,56 @@ async function callAgent(
 	path: string,
 	method: string = 'POST'
 ): Promise<AgentResponse> {
-	return new Promise((resolve, reject) => {
+	return new Promise(resolve => {
 		const options = {
 			socketPath: AGENT_SOCKET_PATH,
 			path: path,
 			method: method
 		}
 
-		const req = http.request(options, (res: any) => {
-			let data = ''
-			res.on('data', (chunk: any) => {
-				data += chunk
-			})
-			res.on('end', () => {
-				try {
-					if (
-						res.statusCode &&
-						res.statusCode >= 200 &&
-						res.statusCode < 300
-					) {
-						const json = JSON.parse(data)
-						resolve(json)
-					} else {
-						// Try to parse error from body if json
-						try {
+		const req = http.request(
+			options,
+			(res: NodeJS.ReadableStream & { statusCode?: number }) => {
+				let data = ''
+				res.on('data', (chunk: Buffer | string) => {
+					data += chunk.toString()
+				})
+				res.on('end', () => {
+					try {
+						if (
+							res.statusCode &&
+							res.statusCode >= 200 &&
+							res.statusCode < 300
+						) {
 							const json = JSON.parse(data)
-							resolve({
-								success: false,
-								error: json.error || `Status ${res.statusCode}`
-							})
-						} catch {
-							resolve({
-								success: false,
-								error: `Agent returned status ${res.statusCode}: ${data}`
-							})
+							resolve(json)
+						} else {
+							// Try to parse error from body if json
+							try {
+								const json = JSON.parse(data)
+								resolve({
+									success: false,
+									error:
+										json.error || `Status ${res.statusCode}`
+								})
+							} catch {
+								resolve({
+									success: false,
+									error: `Agent returned status ${res.statusCode}: ${data}`
+								})
+							}
 						}
+					} catch (e) {
+						resolve({
+							success: false,
+							error: `Failed to parse agent response: ${e instanceof Error ? e.message : String(e)}`
+						})
 					}
-				} catch (e: any) {
-					resolve({
-						success: false,
-						error: `Failed to parse agent response: ${e.message}`
-					})
-				}
-			})
-		})
+				})
+			}
+		)
 
-		req.on('error', (e: any) => {
+		req.on('error', (e: Error) => {
 			resolve({
 				success: false,
 				error: `Agent communication error: ${e.message}. Is the agent running and socket mapped?`
@@ -84,9 +88,12 @@ export async function checkUpdate() {
 			}
 		}
 		return { success: true, hasUpdate: true, message: 'Ready to update' }
-	} catch (error: any) {
+	} catch (error) {
 		console.error('[UPDATE] Check failed:', error)
-		return { success: false, error: error.message }
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : String(error)
+		}
 	}
 }
 
@@ -95,8 +102,11 @@ export async function updateSystem() {
 		console.log('[UPDATE] Update requested via UI')
 		const result = await callAgent('/update', 'POST')
 		return result
-	} catch (error: any) {
+	} catch (error) {
 		console.error('[UPDATE] Update failed:', error)
-		return { success: false, error: error.message }
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : String(error)
+		}
 	}
 }

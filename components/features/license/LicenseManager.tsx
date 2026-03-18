@@ -73,8 +73,15 @@ export function LicenseManager({ initialStatus }: LicenseManagerProps) {
 				const messageKey = `messages.${errorKey}`
 
 				// Используем приведение типов для проверки наличия ключа и вызова с динамическим ключом
-				if ((t as any).has && (t as any).has(messageKey)) {
-					toast.error(t(messageKey as any))
+				type TranslationFunction = ReturnType<typeof useTranslations>
+				if (
+					(t as unknown as { has?: (key: string) => boolean }).has?.(
+						messageKey
+					)
+				) {
+					toast.error(
+						t(messageKey as Parameters<TranslationFunction>[0])
+					)
 				} else {
 					toast.error(t('messages.UNKNOWN_ERROR'))
 				}
