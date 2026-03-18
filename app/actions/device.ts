@@ -5,7 +5,8 @@ import {
 	DeviceStatus,
 	DeviceType,
 	EventSeverity,
-	EventType
+	EventType,
+	Prisma
 } from '@prisma/client'
 
 import { activateDevice } from './licd.actions'
@@ -51,9 +52,12 @@ export async function createDevice(data: IDeviceCreateInput): Promise<{
 				'info',
 				`[CREATE_DEVICE] Device created successfully: ${newDevice.id}`
 			)
-		} catch (createError: any) {
+		} catch (createError) {
 			// Handle unique constraint violation (P2002) - Device might already exist
-			if (createError.code === 'P2002') {
+			if (
+				createError instanceof Prisma.PrismaClientKnownRequestError &&
+				createError.code === 'P2002'
+			) {
 				await logAction(
 					LoggerService.DEVICE_SERVICE,
 					'warn',

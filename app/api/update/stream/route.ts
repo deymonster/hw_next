@@ -6,7 +6,7 @@ const AGENT_SOCKET_PATH = '/app/agent.sock'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
 	const encoder = new TextEncoder()
 
 	// Create a transform stream to pass data from the socket to the response
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 				encoder.encode(`event: error\ndata: ${err.message}\n\n`)
 			)
 			await writer.close()
-		} catch (e) {
+		} catch {
 			// Ignore errors
 		}
 	})
