@@ -18,15 +18,15 @@ import {
 
 interface VersionInfoModalProps {
 	info: {
-		version?: string
+		version?: string | null
 		dockerHub?: {
-			tag?: string
-			updated?: string
-		}
+			tag?: string | null
+			updated?: string | null
+		} | null
 	} | null
 	licdVersion: {
-		version?: string
-		date?: string
+		version?: string | null
+		date?: string | null
 	} | null
 }
 
