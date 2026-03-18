@@ -166,7 +166,8 @@ fetch_scripts_if_available() {
   chmod +x "$hwctl_dst" 2>/dev/null || true
 
   log " -> hw-agent"
-  curl -fsSL "https://storage.deymonster.ru/s/zdFfe6p7nGkP7HW/download/hw-agent" -o "$agent_dst" || warn "Не удалось скачать hw-agent по прямой ссылке"
+  AGENT_URL="${AGENT_URL:-https://storage.deymonster.ru/s/wjCcxbBZYHdfbib/download}"
+  curl -fsSL "$AGENT_URL" -o "$agent_dst" || warn "Не удалось скачать hw-agent по прямой ссылке"
   chmod +x "$agent_dst" 2>/dev/null || true
 }
 
