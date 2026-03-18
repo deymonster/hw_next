@@ -1,10 +1,17 @@
 'use client'
 
-import { Info, RefreshCw, X } from 'lucide-react'
+import {
+	AlertCircle,
+	CheckCircle2,
+	Info,
+	Loader2,
+	RefreshCw
+} from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
+import { checkUpdate } from '@/app/actions/update.actions'
 import { Button } from '@/components/ui/button'
 import {
 	Dialog,
@@ -35,8 +42,33 @@ export function VersionInfoModal({ info, licdVersion }: VersionInfoModalProps) {
 	const [isOpen, setIsOpen] = useState(false)
 	const [isUpdating, setIsUpdating] = useState(false)
 	const [logs, setLogs] = useState<string[]>([])
+	const [updateStatus, setUpdateStatus] = useState<
+		'idle' | 'checking' | 'available' | 'uptodate' | 'error'
+	>('idle')
 	const eventSourceRef = useRef<EventSource | null>(null)
 	const logsEndRef = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		if (isOpen) {
+			setUpdateStatus('checking')
+			checkUpdate().then(res => {
+				if (res.success) {
+					if (res.updateAvailable) {
+						setUpdateStatus('available')
+					} else {
+						setUpdateStatus('uptodate')
+					}
+				} else {
+					console.error('Update check failed:', res.error)
+					setUpdateStatus('error')
+				}
+			})
+		} else {
+			// Reset status when closed, or keep it? Resetting is safer to re-check next time
+			setUpdateStatus('idle')
+			setLogs([]) // Clear logs on close/re-open? Maybe better to clear on close (handleClose)
+		}
+	}, [isOpen])
 
 	useEffect(() => {
 		if (logsEndRef.current) {
@@ -186,7 +218,28 @@ export function VersionInfoModal({ info, licdVersion }: VersionInfoModalProps) {
 					)}
 				</div>
 
-				<div className='flex justify-end gap-3'>
+				<div className='flex items-center justify-end gap-3'>
+					{updateStatus === 'checking' && (
+						<div className='flex items-center text-sm text-muted-foreground'>
+							<Loader2 className='mr-2 size-3 animate-spin' />
+							Checking...
+						</div>
+					)}
+					{updateStatus === 'uptodate' && (
+						<div className='flex items-center text-sm text-green-500'>
+							<CheckCircle2 className='mr-2 size-4' />
+							{t('version.uptodate', {
+								fallback: 'Latest version'
+							})}
+						</div>
+					)}
+					{updateStatus === 'error' && (
+						<div className='flex items-center text-sm text-destructive'>
+							<AlertCircle className='mr-2 size-4' />
+							Check failed
+						</div>
+					)}
+
 					<Button
 						variant='outline'
 						onClick={handleClose}
@@ -194,20 +247,17 @@ export function VersionInfoModal({ info, licdVersion }: VersionInfoModalProps) {
 					>
 						{t('version.close', { fallback: 'Закрыть' })}
 					</Button>
-					<Button onClick={handleUpdate} disabled={isUpdating}>
-						{isUpdating ? (
-							<RefreshCw className='mr-2 size-4 animate-spin' />
-						) : (
-							<RefreshCw className='mr-2 size-4' />
-						)}
-						{isUpdating
-							? t('version.updating', {
-									fallback: 'Обновление...'
-								})
-							: t('version.update', {
-									fallback: 'Проверить и обновить'
-								})}
-					</Button>
+
+					{updateStatus === 'available' && (
+						<Button onClick={handleUpdate} disabled={isUpdating}>
+							{isUpdating ? (
+								<RefreshCw className='mr-2 size-4 animate-spin' />
+							) : (
+								<RefreshCw className='mr-2 size-4' />
+							)}
+							{t('version.update', { fallback: 'Обновить' })}
+						</Button>
+					)}
 				</div>
 			</DialogContent>
 		</Dialog>

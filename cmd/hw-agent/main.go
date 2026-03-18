@@ -94,6 +94,7 @@ func run(cfg Config, logger *slog.Logger) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", agent.handleHealth)
 	mux.HandleFunc("/update", agent.handleUpdate)
+	mux.HandleFunc("/check-update", agent.handleCheckUpdate)
 	mux.HandleFunc("/restart", agent.handleRestart)
 
 	// Wrap mux with logging middleware
@@ -183,7 +184,7 @@ func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := cmd.Start(); err != nil {
+	if err = cmd.Start(); err != nil {
 		fmt.Fprintf(w, "data: Error starting command: %v\n\n", err)
 		flusher.Flush()
 		return
@@ -193,7 +194,7 @@ func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		buf := make([]byte, 1024)
 		for {
-			n, err := stdout.Read(buf)
+			n, readErr := stdout.Read(buf)
 			if n > 0 {
 				chunk := string(buf[:n])
 				// Clean up newlines for SSE format
@@ -203,7 +204,7 @@ func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
 					f.Flush()
 				}
 			}
-			if err != nil {
+			if readErr != nil {
 				break
 			}
 		}
@@ -212,7 +213,7 @@ func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		buf := make([]byte, 1024)
 		for {
-			n, err := stderr.Read(buf)
+			n, readErr := stderr.Read(buf)
 			if n > 0 {
 				chunk := string(buf[:n])
 				fmt.Fprintf(w, "data: %s\n\n", chunk)
@@ -220,7 +221,7 @@ func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
 					f.Flush()
 				}
 			}
-			if err != nil {
+			if readErr != nil {
 				break
 			}
 		}
@@ -240,6 +241,61 @@ func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
 	// Send a special event to close the connection
 	fmt.Fprintf(w, "event: close\ndata: closed\n\n")
 	flusher.Flush()
+}
+
+func (a *Agent) handleCheckUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.logger.Info("check update requested")
+
+	// Run hwctl check
+	// Exit code 10 means updates available
+	// Exit code 0 means up to date
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, a.cfg.HwctlPath, "check")
+	output, err := cmd.CombinedOutput()
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		if exitErr.ExitCode() == 10 {
+			// Update available
+			respondJSON(w, Response{
+				Success: true,
+				Message: "Update available",
+			})
+			return
+		} else {
+			// Real error
+			a.logger.Error("check update failed", "error", err, "output", string(output))
+			respondJSON(w, Response{
+				Success: false,
+				Error:   fmt.Sprintf("Check failed: %v. Output: %s", err, string(output)),
+			})
+			return
+		}
+	} else if err != nil {
+		// Other error
+		a.logger.Error("check update failed", "error", err, "output", string(output))
+		respondJSON(w, Response{
+			Success: false,
+			Error:   fmt.Sprintf("Check failed: %v. Output: %s", err, string(output)),
+		})
+		return
+	}
+
+	// No error, exit code 0
+	respondJSON(w, Response{
+		Success: true,
+		Message: "Up to date",
+	})
 }
 
 func (a *Agent) handleRestart(w http.ResponseWriter, r *http.Request) {

@@ -41,23 +41,74 @@ refresh_compose_from_remote() {
 }
 
 check_updates() {
-  local images any=0
-  images="$(get_project_images || true)"
-  [[ -z "$images" ]] && { echo "⚠️ Не найдено образов проекта в $COMPOSE_FILE"; exit 0; }
-  while read -r img; do
-    [[ -z "$img" ]] && continue
-    out="$(docker pull "$img" 2>&1 || true)"
-    if echo "$out" | grep -qi 'Downloaded newer image'; then
-      echo "⬆️ Доступно обновление: $img"
-      any=1
-    else
-      echo "✓ Актуально: $img"
-    fi
-  done <<< "$images"
-  if [[ "$any" == "1" ]]; then
-    exit 10
+  # This function checks if there are updates available without applying them
+  # Returns exit code 10 if updates are available, 0 if up to date, 1 on error
+  
+  if [[ ! -f "$COMPOSE_FILE" ]]; then
+      echo "❌ Compose file not found: $COMPOSE_FILE"
+      exit 1
+  fi
+
+  # First, pull the latest compose file to see if image tags changed
+  local old_hash new_hash
+  if [[ -n "${COMPOSE_FILE_URL:-}" ]]; then
+      old_hash=$(md5sum "$COMPOSE_FILE" 2>/dev/null | awk '{print $1}')
+      # Download to temp file
+      local tmp_compose=$(mktemp)
+      if curl -fsSL "$COMPOSE_FILE_URL" -o "$tmp_compose"; then
+          new_hash=$(md5sum "$tmp_compose" 2>/dev/null | awk '{print $1}')
+          if [[ "$old_hash" != "$new_hash" ]]; then
+               echo "⬆️ New compose file available"
+               rm "$tmp_compose"
+               exit 10
+          fi
+          rm "$tmp_compose"
+      fi
+  fi
+
+  # Check for docker image updates
+  # We use 'docker compose pull --dry-run' if available, or manually check digests
+  # Since dry-run is not always available, we'll try to compare remote digests with local ones
+  
+  local services=$(docker compose -f "$COMPOSE_FILE" config --services)
+  local updates_found=0
+  
+  for svc in $services; do
+      # Only check our images. 
+      # Note: 'docker compose config' expands the file, so we can't grep simply.
+      # But we can check if the image name contains our repo.
+      local image=$(docker compose -f "$COMPOSE_FILE" config "$svc" | grep "image:" | awk '{print $2}')
+      
+      if [[ "$image" == *"deymonster/hw-monitor"* ]]; then
+          # Get running container ID
+          local container_id=$(docker compose -f "$COMPOSE_FILE" ps -q "$svc" 2>/dev/null)
+          
+          if [[ -n "$container_id" ]]; then
+              local running_image_id=$(docker inspect --format='{{.Image}}' "$container_id" 2>/dev/null)
+              
+              # Pull latest image to update local cache
+              docker pull "$image" >/dev/null 2>&1
+              local latest_image_id=$(docker inspect --format='{{.Id}}' "$image" 2>/dev/null)
+              
+              if [[ "$running_image_id" != "$latest_image_id" ]]; then
+                  echo "⬆️ Update available for $svc ($image)"
+                  updates_found=1
+              fi
+          else
+             # If service is not running, we consider it an "update" (or rather, a pending install)
+             # But maybe we should check if we have the image locally?
+             # Let's just say update found if the image is ours.
+             echo "⬆️ Service $svc is not running (install pending)"
+             updates_found=1
+          fi
+      fi
+  done
+
+  if [[ "$updates_found" -eq 1 ]]; then
+      exit 10
   else
-    exit 0
+      echo "✅ System is up to date"
+      exit 0
   fi
 }
 

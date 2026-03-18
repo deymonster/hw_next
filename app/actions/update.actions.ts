@@ -78,40 +78,17 @@ async function callAgent(
 
 export async function checkUpdate() {
 	try {
-		// In a real scenario, we might ask the agent to check for updates without applying them
-		// For now, we'll just check if the agent is alive
-		const health = await callAgent('/health', 'GET')
-		if (!health.success) {
-			return {
-				success: false,
-				error: 'Agent not reachable: ' + health.error
-			}
+		console.log('[UPDATE] Check update requested')
+		const result = await callAgent('/check-update', 'GET')
+
+		// If message is "Update available", return true
+		if (result.success && result.message === 'Update available') {
+			return { success: true, updateAvailable: true }
 		}
-		return { success: true, hasUpdate: true, message: 'Ready to update' }
+
+		return { success: true, updateAvailable: false }
 	} catch (error) {
 		console.error('[UPDATE] Check failed:', error)
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : String(error)
-		}
-	}
-}
-
-export async function updateSystem() {
-	// Since the agent now streams the response, we can't just return a simple JSON
-	// We'll need to handle the streaming on the client side, or buffer it here.
-	// For now, let's just trigger it and return a success message,
-	// assuming the client will poll or use a different mechanism to track progress.
-	// OR, better yet, we can't use a server action to stream directly to the client easily without experimental features.
-	// So we might need to expose a route handler that proxies the SSE stream.
-
-	try {
-		console.log('[UPDATE] Update requested via UI')
-		// We are NOT calling callAgent here because we want to stream the response
-		// This function might be deprecated or changed to just kick off the process
-		return { success: true, message: 'Update started' }
-	} catch (error) {
-		console.error('[UPDATE] Update failed:', error)
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : String(error)
