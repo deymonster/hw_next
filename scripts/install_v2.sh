@@ -400,8 +400,13 @@ setup_agent_service() {
     
     log "Настройка службы hw-agent..."
 
-    # Проверка наличия бинарника
-    if [[ ! -f "$agent_bin" ]]; then
+    local downloaded="${INSTALL_DIR%/}/hw-agent"
+    
+    if [[ -f "$downloaded" ]]; then
+         log "Установка/обновление бинарника hw-agent из $downloaded"
+         sudo cp "$downloaded" "$agent_bin"
+         sudo chmod +x "$agent_bin"
+    elif [[ ! -f "$agent_bin" ]]; then
         # Пытаемся собрать/скачать агент
         # В данном сценарии предполагаем, что он либо собирается из исходников, либо скачивается
         # Для простоты: если есть исходники в папке установки, соберем их
@@ -415,14 +420,10 @@ setup_agent_service() {
              sudo cp "$local_bin" "$agent_bin"
              sudo chmod +x "$agent_bin"
         else
-             # Попытка найти уже скомпилированный или скачанный
+             # Попытка найти уже скомпилированный
              local prebuilt_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-             local downloaded="${INSTALL_DIR%/}/hw-agent"
              
-             if [[ -f "$downloaded" ]]; then
-                  sudo cp "$downloaded" "$agent_bin"
-                  sudo chmod +x "$agent_bin"
-             elif [[ -f "$prebuilt_dir/hw-agent" ]]; then
+             if [[ -f "$prebuilt_dir/hw-agent" ]]; then
                   sudo cp "$prebuilt_dir/hw-agent" "$agent_bin"
                   sudo chmod +x "$agent_bin"
              else
