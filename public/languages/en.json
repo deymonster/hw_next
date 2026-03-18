@@ -402,7 +402,8 @@
 				"title": "System Information",
 				"description": "System component versions",
 				"close": "Close",
-				"update": "Check and Update"
+				"update": "Check and Update",
+				"uptodate": "Latest version installed"
 			},
 			"update": {
 				"success": "Update request sent",
