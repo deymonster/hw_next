@@ -424,10 +424,10 @@ setup_agent_service() {
                   sudo chmod +x "$agent_bin"
              else
                   warn "Бинарник hw-agent не найден. Пропускаю настройку агента."
-                  return
+                  return 0
              fi
         fi
-    }
+    fi
 
     sudo mkdir -p "$socket_dir"
     sudo chmod 755 "$socket_dir"
