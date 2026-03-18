@@ -157,10 +157,17 @@ fetch_scripts_if_available() {
   require_cmd curl
 
   local hwctl_dst="${INSTALL_DIR%/}/hwctl.sh"
+  local agent_dst="${INSTALL_DIR%/}/hw-agent"
 
-  log "Скачиваю hwctl.sh с Nextcloud (прямая ссылка)"
-  curl -fsSL "https://storage.deymonster.ru/s/zdFfe6p7nGkP7HW/download/hwctl.sh" -o "$hwctl_dst" || die "Не удалось скачать hwctl.sh по прямой ссылке"
+  log "Скачиваю скрипты с Nextcloud (прямые ссылки)"
+  
+  log " -> hwctl.sh"
+  curl -fsSL "https://storage.deymonster.ru/s/zdFfe6p7nGkP7HW/download/hwctl.sh" -o "$hwctl_dst" || warn "Не удалось скачать hwctl.sh по прямой ссылке"
   chmod +x "$hwctl_dst" 2>/dev/null || true
+
+  log " -> hw-agent"
+  curl -fsSL "https://storage.deymonster.ru/s/zdFfe6p7nGkP7HW/download/hw-agent" -o "$agent_dst" || warn "Не удалось скачать hw-agent по прямой ссылке"
+  chmod +x "$agent_dst" 2>/dev/null || true
 }
 
 fetch_compose_if_needed() {
@@ -399,15 +406,20 @@ setup_agent_service() {
         # Здесь мы предполагаем, что бинарник должен быть доставлен вместе с пакетом установки
         # Если его нет, пробуем найти в текущей директории
         
-        local local_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")/../cmd/hw-agent" && go build -o hw-agent main.go && echo "$(pwd)/hw-agent")"
+        local local_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")/../cmd/hw-agent" 2>/dev/null && go build -o hw-agent main.go && echo "$(pwd)/hw-agent" || echo "")"
         if [[ -f "$local_bin" ]]; then
              sudo cp "$local_bin" "$agent_bin"
              sudo chmod +x "$agent_bin"
         else
-             # Попытка найти уже скомпилированный рядом
-             local prebuilt="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/hw-agent"
-             if [[ -f "$prebuilt" ]]; then
-                  sudo cp "$prebuilt" "$agent_bin"
+             # Попытка найти уже скомпилированный или скачанный
+             local prebuilt_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+             local downloaded="${INSTALL_DIR%/}/hw-agent"
+             
+             if [[ -f "$downloaded" ]]; then
+                  sudo cp "$downloaded" "$agent_bin"
+                  sudo chmod +x "$agent_bin"
+             elif [[ -f "$prebuilt_dir/hw-agent" ]]; then
+                  sudo cp "$prebuilt_dir/hw-agent" "$agent_bin"
                   sudo chmod +x "$agent_bin"
              else
                   warn "Бинарник hw-agent не найден. Пропускаю настройку агента."

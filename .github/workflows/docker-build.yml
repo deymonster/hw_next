@@ -239,6 +239,12 @@ jobs:
                   echo "Итоговые строки:"
                   grep -nE 'image:\s*deymonster/(hw-monitor|hw-monitor-licd|hw-monitor-nginx-combined):' docker-compose.prod.yml || true
 
+            - name: Setup Go
+              if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+              uses: actions/setup-go@v5
+              with:
+                  go-version: '1.22'
+
             - name: Upload deploy files to Nextcloud
               if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
               env:
@@ -255,10 +261,17 @@ jobs:
                   BASE="https://storage.deymonster.ru/remote.php/dav/files/admin/hw"
                   AUTH="admin:${NEXTCLOUD_PASSWORD}"
 
+                  # Build hw-agent
+                  echo "Собираем hw-agent..."
+                  cd cmd/hw-agent
+                  GOOS=linux GOARCH=amd64 go build -o ../../scripts/hw-agent main.go
+                  cd ../..
+
                   test -f docker-compose.prod.yml || { echo "Файл docker-compose.prod.yml отсутствует"; exit 1; }
                   test -f scripts/install_v2.sh || { echo "Файл scripts/install_v2.sh отсутствует"; exit 1; }
                   test -f scripts/hwctl.sh || { echo "Файл scripts/hwctl.sh отсутствует"; exit 1; }
                   test -f scripts/cleanup.sh || { echo "Файл scripts/cleanup.sh отсутствует"; exit 1; }
+                  test -f scripts/hw-agent || { echo "Файл scripts/hw-agent отсутствует"; exit 1; }
 
                   curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/docker-compose/docker-compose.prod.yml" \
                        --data-binary @docker-compose.prod.yml \
@@ -275,6 +288,10 @@ jobs:
                   curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/cleanup.sh" \
                        --data-binary @scripts/cleanup.sh \
                        -w "cleanup.sh → %{http_code}\n" -o /dev/null
+
+                  curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/hw-agent" \
+                       --data-binary @scripts/hw-agent \
+                       -w "hw-agent → %{http_code}\n" -o /dev/null
 
                   echo ""
                   echo "Проверить можно здесь:"

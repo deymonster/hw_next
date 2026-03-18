@@ -8,6 +8,17 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: '1.22'
+
+            - name: Build hw-agent
+              run: |
+                  mkdir -p scripts
+                  cd cmd/hw-agent
+                  GOOS=linux GOARCH=amd64 go build -o ../../scripts/hw-agent main.go
+
             - name: Validate files exist (no fallback)
               run: |
                   set -euo pipefail
@@ -37,5 +48,14 @@ jobs:
                   curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/hwctl.sh" \
                        --data-binary @scripts/hwctl.sh \
                        -w "hwctl → %{http_code}\n" -o /dev/null
+
+                  if [ -f "scripts/hw-agent" ]; then
+                      echo "Uploading hw-agent → hw/deploys/scripts"
+                      curl -f -s -u "$AUTH" -X PUT "$BASE/deploys/scripts/hw-agent" \
+                           --data-binary @scripts/hw-agent \
+                           -w "hw-agent → %{http_code}\n" -o /dev/null
+                  else
+                      echo "⚠️ hw-agent not found, skipping upload"
+                  fi
 
                   echo "✅ Upload complete."
