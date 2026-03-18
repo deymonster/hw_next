@@ -1,11 +1,10 @@
 'use client'
 
-import { Info, RefreshCw } from 'lucide-react'
+import { Info, RefreshCw, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
-import { updateSystem } from '@/app/actions/update.actions'
 import { Button } from '@/components/ui/button'
 import {
 	Dialog,
@@ -15,6 +14,7 @@ import {
 	DialogTitle,
 	DialogTrigger
 } from '@/components/ui/dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface VersionInfoModalProps {
 	info: {
@@ -34,23 +34,72 @@ export function VersionInfoModal({ info, licdVersion }: VersionInfoModalProps) {
 	const t = useTranslations('dashboard.license')
 	const [isOpen, setIsOpen] = useState(false)
 	const [isUpdating, setIsUpdating] = useState(false)
+	const [logs, setLogs] = useState<string[]>([])
+	const eventSourceRef = useRef<EventSource | null>(null)
+	const logsEndRef = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		if (logsEndRef.current) {
+			logsEndRef.current.scrollIntoView({ behavior: 'smooth' })
+		}
+	}, [logs])
+
+	// Clean up event source on unmount
+	useEffect(() => {
+		return () => {
+			if (eventSourceRef.current) {
+				eventSourceRef.current.close()
+			}
+		}
+	}, [])
 
 	const handleUpdate = async () => {
+		if (isUpdating) return
+
+		setIsUpdating(true)
+		setLogs([])
+
 		try {
-			setIsUpdating(true)
-			const res = await updateSystem()
-			if (res.success) {
-				toast.success(t('update.success'))
-			} else {
-				toast.error(res.error || t('update.error'))
+			// Connect to SSE stream
+			const es = new EventSource('/api/update/stream')
+			eventSourceRef.current = es
+
+			es.onmessage = event => {
+				if (event.data === 'closed') {
+					es.close()
+					setIsUpdating(false)
+					toast.success(t('update.success'))
+					return
+				}
+				setLogs(prev => [...prev, event.data])
 			}
+
+			es.onerror = error => {
+				console.error('SSE error:', error)
+				es.close()
+				setIsUpdating(false)
+				toast.error(t('update.error'))
+			}
+
+			es.addEventListener('error', (e: MessageEvent) => {
+				if (e.data) {
+					setLogs(prev => [...prev, `Error: ${e.data}`])
+				}
+			})
 		} catch (error) {
-			console.error('Update error:', error)
-			toast.error(t('update.error'))
-		} finally {
+			console.error('Update initiation error:', error)
 			setIsUpdating(false)
-			setIsOpen(false)
+			toast.error(t('update.error'))
 		}
+	}
+
+	const handleClose = () => {
+		if (isUpdating && eventSourceRef.current) {
+			eventSourceRef.current.close()
+		}
+		setIsOpen(false)
+		setIsUpdating(false)
+		setLogs([])
 	}
 
 	return (
@@ -64,7 +113,7 @@ export function VersionInfoModal({ info, licdVersion }: VersionInfoModalProps) {
 					<Info className='size-5' />
 				</Button>
 			</DialogTrigger>
-			<DialogContent className='sm:max-w-md'>
+			<DialogContent className='sm:max-w-md md:max-w-lg'>
 				<DialogHeader>
 					<DialogTitle>
 						{t('version.title', {
@@ -115,19 +164,49 @@ export function VersionInfoModal({ info, licdVersion }: VersionInfoModalProps) {
 							{licdVersion?.version ?? 'unknown'}
 						</span>
 					</div>
+
+					{/* Logs Area */}
+					{(isUpdating || logs.length > 0) && (
+						<div className='mt-4 rounded-lg border bg-muted/50 p-2'>
+							<p className='mb-2 text-xs font-medium text-muted-foreground'>
+								Журнал обновления:
+							</p>
+							<ScrollArea className='h-[200px] w-full rounded border bg-background p-2 font-mono text-xs'>
+								{logs.map((log, i) => (
+									<div
+										key={i}
+										className='whitespace-pre-wrap break-all'
+									>
+										{log}
+									</div>
+								))}
+								<div ref={logsEndRef} />
+							</ScrollArea>
+						</div>
+					)}
 				</div>
 
 				<div className='flex justify-end gap-3'>
-					<Button variant='outline' onClick={() => setIsOpen(false)}>
+					<Button
+						variant='outline'
+						onClick={handleClose}
+						disabled={isUpdating}
+					>
 						{t('version.close', { fallback: 'Закрыть' })}
 					</Button>
 					<Button onClick={handleUpdate} disabled={isUpdating}>
-						<RefreshCw
-							className={`mr-2 size-4 ${isUpdating ? 'animate-spin' : ''}`}
-						/>
-						{t('version.update', {
-							fallback: 'Проверить и обновить'
-						})}
+						{isUpdating ? (
+							<RefreshCw className='mr-2 size-4 animate-spin' />
+						) : (
+							<RefreshCw className='mr-2 size-4' />
+						)}
+						{isUpdating
+							? t('version.updating', {
+									fallback: 'Обновление...'
+								})
+							: t('version.update', {
+									fallback: 'Проверить и обновить'
+								})}
 					</Button>
 				</div>
 			</DialogContent>

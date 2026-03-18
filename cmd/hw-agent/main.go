@@ -96,8 +96,11 @@ func run(cfg Config, logger *slog.Logger) error {
 	mux.HandleFunc("/update", agent.handleUpdate)
 	mux.HandleFunc("/restart", agent.handleRestart)
 
+	// Wrap mux with logging middleware
+	loggedMux := agent.loggingMiddleware(mux)
+
 	server := &http.Server{
-		Handler: mux,
+		Handler: loggedMux,
 	}
 
 	// Graceful shutdown
@@ -143,28 +146,100 @@ func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	a.logger.Info("update requested")
 
+	// Set headers for SSE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	// Send initial message
+	fmt.Fprintf(w, "data: %s\n\n", "Update started...")
+	flusher.Flush()
+
 	// Execute hwctl update
 	// We use a context with timeout to prevent hanging indefinitely
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute) // Updates can take time
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, a.cfg.HwctlPath, "update")
-	output, err := cmd.CombinedOutput()
 
+	// Create pipes for stdout and stderr
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		a.logger.Error("update failed", "error", err, "output", string(output))
-		respondJSON(w, Response{
-			Success: false,
-			Error:   fmt.Sprintf("Update failed: %v. Output: %s", err, string(output)),
-		})
+		fmt.Fprintf(w, "data: Error creating stdout pipe: %v\n\n", err)
+		flusher.Flush()
 		return
 	}
 
-	a.logger.Info("update completed successfully")
-	respondJSON(w, Response{
-		Success: true,
-		Message: "Update completed successfully",
-	})
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		fmt.Fprintf(w, "data: Error creating stderr pipe: %v\n\n", err)
+		flusher.Flush()
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(w, "data: Error starting command: %v\n\n", err)
+		flusher.Flush()
+		return
+	}
+
+	// Stream output
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			n, err := stdout.Read(buf)
+			if n > 0 {
+				chunk := string(buf[:n])
+				// Clean up newlines for SSE format
+				// In a real implementation, we might want to buffer lines
+				fmt.Fprintf(w, "data: %s\n\n", chunk)
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+			}
+			if err != nil {
+				break
+			}
+		}
+	}()
+
+	go func() {
+		buf := make([]byte, 1024)
+		for {
+			n, err := stderr.Read(buf)
+			if n > 0 {
+				chunk := string(buf[:n])
+				fmt.Fprintf(w, "data: %s\n\n", chunk)
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+			}
+			if err != nil {
+				break
+			}
+		}
+	}()
+
+	// Wait for command to finish
+	err = cmd.Wait()
+
+	if err != nil {
+		a.logger.Error("update failed", "error", err)
+		fmt.Fprintf(w, "data: Update failed: %v\n\n", err)
+	} else {
+		a.logger.Info("update completed successfully")
+		fmt.Fprintf(w, "data: Update completed successfully\n\n")
+	}
+
+	// Send a special event to close the connection
+	fmt.Fprintf(w, "event: close\ndata: closed\n\n")
+	flusher.Flush()
 }
 
 func (a *Agent) handleRestart(w http.ResponseWriter, r *http.Request) {
@@ -200,17 +275,38 @@ func (a *Agent) handleRestart(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func respondJSON(w http.ResponseWriter, resp Response) {
+func (a *Agent) loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Wrap ResponseWriter to capture status code
+		ww := &responseWriterWrapper{ResponseWriter: w, statusCode: http.StatusOK}
+
+		next.ServeHTTP(ww, r)
+
+		a.logger.Info("request handled",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", ww.statusCode,
+			"duration", time.Since(start),
+			"remote_addr", r.RemoteAddr,
+		)
+	})
+}
+
+type responseWriterWrapper struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriterWrapper) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func respondJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	if !resp.Success {
-		// You might want to use 500 or 400 depending on the error,
-		// but for this simple agent, 200 with success: false is often easier to handle in clients
-		// unless it's a protocol error. Let's stick to 200 OK for application-level errors
-		// or 500 if it's a server failure.
-		// For simplicity in the client, let's return 200 but with success=false body.
-	}
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		// Only log, can't write to w anymore
+	if err := json.NewEncoder(w).Encode(v); err != nil {
 		slog.Error("failed to encode response", "error", err)
 	}
 }
