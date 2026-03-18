@@ -62,6 +62,7 @@ services:
             - ./storage/logs:/app/storage/logs
             - ./storage/uploads:/app/storage/uploads
             - nextjs_prometheus_config:/app/prometheus
+            - /var/run/hw-monitor/hw-agent.sock:/app/agent.sock
 
     prometheus-config-init:
         image: deymonster/hw-monitor:latest # Обновить версию

@@ -397,6 +397,18 @@
 				"LICENSE_INVALID": "Invalid license format",
 				"INN_REQUIRED": "INN is required",
 				"UNKNOWN_ERROR": "An unknown error occurred during activation"
+			},
+			"version": {
+				"title": "System Information",
+				"description": "System component versions",
+				"close": "Close",
+				"update": "Check and Update"
+			},
+			"update": {
+				"success": "Update request sent",
+				"error": "Update error",
+				"checking": "Checking for updates...",
+				"up_to_date": "System is up to date"
 			}
 		},
 		"devices": {

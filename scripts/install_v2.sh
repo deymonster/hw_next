@@ -382,6 +382,67 @@ install_hwctl() {
     log "Установлен локальный скрипт управления: $hwctl_dst"
 }
 
+setup_agent_service() {
+    local service_file="/etc/systemd/system/hw-agent.service"
+    local agent_bin="/usr/local/bin/hw-agent"
+    local socket_dir="/var/run/hw-monitor"
+    
+    log "Настройка службы hw-agent..."
+
+    # Проверка наличия бинарника
+    if [[ ! -f "$agent_bin" ]]; then
+        # Пытаемся собрать/скачать агент
+        # В данном сценарии предполагаем, что он либо собирается из исходников, либо скачивается
+        # Для простоты: если есть исходники в папке установки, соберем их
+        
+        # NOTE: В реальной установке лучше скачивать готовый бинарник
+        # Здесь мы предполагаем, что бинарник должен быть доставлен вместе с пакетом установки
+        # Если его нет, пробуем найти в текущей директории
+        
+        local local_bin="$(cd "$(dirname "${BASH_SOURCE[0]}")/../cmd/hw-agent" && go build -o hw-agent main.go && echo "$(pwd)/hw-agent")"
+        if [[ -f "$local_bin" ]]; then
+             sudo cp "$local_bin" "$agent_bin"
+             sudo chmod +x "$agent_bin"
+        else
+             # Попытка найти уже скомпилированный рядом
+             local prebuilt="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/hw-agent"
+             if [[ -f "$prebuilt" ]]; then
+                  sudo cp "$prebuilt" "$agent_bin"
+                  sudo chmod +x "$agent_bin"
+             else
+                  warn "Бинарник hw-agent не найден. Пропускаю настройку агента."
+                  return
+             fi
+        fi
+    }
+
+    sudo mkdir -p "$socket_dir"
+    sudo chmod 755 "$socket_dir"
+
+    sudo tee "$service_file" >/dev/null <<EOF
+[Unit]
+Description=HW Monitor Agent Service
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=$agent_bin -socket ${socket_dir}/hw-agent.sock -hwctl /usr/local/bin/hwctl
+Restart=always
+RestartSec=5
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    sudo systemctl daemon-reload
+    sudo systemctl enable hw-agent
+    sudo systemctl restart hw-agent
+    log "Служба hw-agent настроена и запущена."
+}
+
 generate_htpasswd_if_needed() {
   if [[ -d "$NGINX_AUTH_FILE" ]]; then
     rm -rf "$NGINX_AUTH_FILE"
@@ -561,6 +622,8 @@ function main() {
 
   log "Устанавливаю hwctl (локальный и глобальный симлинк)"
   install_hwctl
+
+  setup_agent_service
 
   log "Генерирую .htpasswd, если заданы креды"
   generate_htpasswd_if_needed

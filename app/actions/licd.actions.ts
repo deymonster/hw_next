@@ -72,6 +72,28 @@ export async function getLicenseStatus(): Promise<
 }
 
 /**
+ * Получает версию сервера LICD
+ */
+export interface LicdVersion {
+	version: string
+	commit: string
+	date: string
+}
+
+export async function getLicdVersion(): Promise<LicdVersion | null> {
+	try {
+		const r = await fetch(`${LICD_URL}/version`, {
+			cache: 'no-store'
+		})
+		if (!r.ok) return null
+		return await r.json()
+	} catch (e) {
+		console.error('[LICD][VERSION] error:', e)
+		return null
+	}
+}
+
+/**
  * Регистрирует инстанс licd по ключу лицензии
  * POST /license/register
  */
