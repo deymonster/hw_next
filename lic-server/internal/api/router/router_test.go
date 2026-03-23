@@ -13,8 +13,8 @@ import (
 
 func TestHandleRegister_Validation(t *testing.T) {
 	// Setup (mock service is nil for now, we only test validation before service call)
-	svc := &license.Service{} 
-	r := router.NewRouter(svc)
+	svc := &license.Service{}
+	r := router.NewRouter(svc, "test-admin-key")
 
 	tests := []struct {
 		name       string

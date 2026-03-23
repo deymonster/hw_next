@@ -19,24 +19,28 @@ import (
 )
 
 type Router struct {
-	svc *license.Service
-	rl  *rateLimiter
+	svc      *license.Service
+	rl       *rateLimiter
+	adminKey string
 }
 
-func NewRouter(svc *license.Service) *chi.Mux {
+func NewRouter(svc *license.Service, adminKey string) *chi.Mux {
 	r := chi.NewRouter()
+	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	api := &Router{
-		svc: svc,
-		rl:  newRateLimiter(),
+		svc:      svc,
+		rl:       newRateLimiter(),
+		adminKey: adminKey,
 	}
 
+	// API v1 (Client)
 	r.Route("/v1", func(r chi.Router) {
 		r.With(api.RateLimit).Post("/register", api.HandleRegister)
 
-		// Protected endpoints
+		// Protected endpoints requiring mTLS
 		r.Group(func(r chi.Router) {
 			r.Use(api.RequireMTLS)
 			r.Post("/activate", api.HandleActivate)
@@ -44,7 +48,57 @@ func NewRouter(svc *license.Service) *chi.Mux {
 		})
 	})
 
+	// Admin API
+	r.Route("/api/admin", func(r chi.Router) {
+		r.Use(api.corsMiddleware)
+		r.Use(api.adminAuthMiddleware)
+		api.registerAdminRoutes(r)
+	})
+
 	return r
+}
+
+func (api *Router) corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*") // In production, restrict this to your frontend domain
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (api *Router) adminAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Expecting "Bearer <AdminAPIKey>" or simply checking a custom header like X-Admin-Key
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			respondError(w, http.StatusUnauthorized, "Missing Authorization header")
+			return
+		}
+
+		// Simple token check (e.g. "Bearer admin-secret-key-change-me")
+		// In a real app, you might compare this with a config value.
+		// For now, let's hardcode a check or inject it via Service/Config.
+		// Since Config isn't directly in Router, we could pass the admin key when creating Router.
+		// But let's assume we can fetch it or pass it.
+		// Actually, I should update NewRouter to accept the admin key.
+		// For now, I'll put a placeholder or get it from env.
+		expectedKey := api.adminKey
+		if expectedKey == "" {
+			expectedKey = "admin-secret-key-change-me" // fallback
+		}
+
+		if authHeader != "Bearer "+expectedKey {
+			respondError(w, http.StatusUnauthorized, "Invalid admin key")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Rate Limiter Implementation

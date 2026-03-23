@@ -158,6 +158,20 @@ func (r *ActivationRepository) DeactivateDevice(ctx context.Context, agentKey st
 	return tx.Commit()
 }
 
+// MarkLicenseRevoked marks the active license as revoked in the database
+func (r *ActivationRepository) MarkLicenseRevoked(ctx context.Context, inn string) error {
+	query := `
+		UPDATE license_info 
+		SET status = 'revoked'
+		WHERE inn = ? AND status = 'active'
+	`
+	_, err := r.db.ExecContext(ctx, query, inn)
+	if err != nil {
+		return fmt.Errorf("failed to mark license revoked: %w", err)
+	}
+	return nil
+}
+
 // GetActivations возвращает все активации для Prometheus SD
 func (r *ActivationRepository) GetActivations(ctx context.Context) ([]Activation, error) {
 	rows, err := r.db.QueryContext(ctx, `

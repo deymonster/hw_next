@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/deymonster/licd/internal/domain/entities"
@@ -445,18 +446,32 @@ func (uc *DeviceUseCase) RefreshLicense(ctx context.Context) error {
 
 	// 3. Try Heartbeat if token is valid and not expiring soon
 	if claims != nil {
-		expiry := claims.GetExpiresAt()
-		// If expiry is zero (no expiry) or far in future (> 24h), try heartbeat
-		// This reduces load on server (no token signing) and DB writes on client
-		if expiry.IsZero() || time.Until(expiry) > 24*time.Hour {
-			if hbErr := uc.licenseClient.Heartbeat(ctx); hbErr == nil {
-				// Heartbeat successful, license is active and binding is valid.
-				return nil
-			} else {
-				// If heartbeat failed, log and fall through to Activate
-				log.Printf("WARN: Heartbeat failed, attempting full activation: %v", hbErr)
+		_ = claims.GetExpiresAt() // Keep for future use or compatibility
+		// Always attempt full activation if we want to sync details immediately,
+		// or conditionally based on heartbeat.
+		// For now, let's keep heartbeat but if we need immediate sync, we can skip it.
+		// Actually, heartbeat only returns 200 OK. It doesn't sync new MaxSlots/OrgName.
+		// To force sync of new data (OrgName, MaxSlots), we should either:
+		// a) Have heartbeat return the new token
+		// b) Call Activate periodically to get a fresh token.
+		// Let's modify the condition: we only use heartbeat if we don't care about updates.
+		// To get updates, we MUST call Activate.
+		// Let's force Activate every time for now, or maybe heartbeat is fine and we just call Activate if heartbeat fails.
+		// But user asked how to sync these changes to licd. The answer is: licd needs to call Activate to get a new token with updated claims.
+		// Let's change the logic here to always call Activate to refresh the token claims (OrgName, MaxSlots).
+		// We'll comment out the heartbeat shortcut to ensure it always syncs.
+
+		/*
+			if expiry.IsZero() || time.Until(expiry) > 24*time.Hour {
+				if hbErr := uc.licenseClient.Heartbeat(ctx); hbErr == nil {
+					// Heartbeat successful, license is active and binding is valid.
+					return nil
+				} else {
+					// If heartbeat failed, log and fall through to Activate
+					log.Printf("WARN: Heartbeat failed, attempting full activation: %v", hbErr)
+				}
 			}
-		}
+		*/
 	}
 
 	// 4. Get LicenseKey
@@ -474,6 +489,13 @@ func (uc *DeviceUseCase) RefreshLicense(ctx context.Context) error {
 	// 6. Call server
 	resp, err := uc.licenseClient.Activate(ctx, inn, fp)
 	if err != nil {
+		errMsg := err.Error()
+		// If the server explicitly rejected the license because it's not active/revoked, update local status
+		if strings.Contains(errMsg, "no active license found") || strings.Contains(errMsg, "license is not active") {
+			log.Printf("WARN: License was revoked or inactive on server. Updating local status to revoked.")
+			// We can mark it as revoked by saving a dummy token or updating the DB directly
+			_ = uc.activationRepo.MarkLicenseRevoked(ctx, inn)
+		}
 		return fmt.Errorf("failed to refresh license via server: %w", err)
 	}
 

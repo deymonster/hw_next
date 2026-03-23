@@ -6,15 +6,38 @@ services:
         container_name: lic-server
         environment:
             - SERVER_ADDRESS=:8443
+            - ADMIN_ADDRESS=:8080
             - DB_PATH=/data/lic-server.db
             - CA_PATH=/certs/ca.crt
             - CA_KEY_PATH=/certs/ca.key
             - SERVER_CERT_PATH=/certs/server.crt
             - SERVER_KEY_PATH=/certs/server.key
             - LICENSE_KEY_PATH=/certs/license.key
+            - ADMIN_API_KEY=test-admin-key
         ports:
             - '8443:8443'
+            - '8080:8080'
         volumes:
             - ./data:/data
             - ./certs:/certs
         restart: unless-stopped
+        networks:
+            - lic-net
+
+    lic-server-frontend:
+        build: ../lic-server-frontend
+        container_name: lic-server-frontend
+        environment:
+            - API_URL=http://lic-server:8080/api/admin
+            - ADMIN_KEY=test-admin-key
+        ports:
+            - '3000:3000'
+        depends_on:
+            - lic-server
+        restart: unless-stopped
+        networks:
+            - lic-net
+
+networks:
+    lic-net:
+        driver: bridge

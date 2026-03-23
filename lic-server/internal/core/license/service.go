@@ -15,11 +15,17 @@ import (
 // Repository defines the interface for license storage
 type Repository interface {
 	GetLicenseByINN(ctx context.Context, inn string) (*sqlite.License, error)
+	CreateLicense(ctx context.Context, inn, org string, maxSlots int) error
+	UpdateLicenseDetails(ctx context.Context, inn, org string, maxSlots int) error
+	GetAllLicenses(ctx context.Context) ([]*sqlite.License, error)
+	UpdateLicenseStatus(ctx context.Context, inn string, status string) error
 	SaveClientCertBinding(ctx context.Context, binding *sqlite.ClientCertBinding) error
 	GetClientCertBinding(ctx context.Context, fingerprint string) (*sqlite.ClientCertBinding, error)
 	ValidateAndConsumeEnrollmentToken(ctx context.Context, token, inn string) error
 	CreateEnrollmentToken(ctx context.Context, inn string, ttl time.Duration) (string, error)
+	GetAllEnrollmentTokens(ctx context.Context) ([]*sqlite.EnrollmentToken, error)
 	LogAudit(ctx context.Context, action, inn, ip, details string) error
+	GetAllAuditEvents(ctx context.Context, limit int) ([]*sqlite.AuditEvent, error)
 }
 
 // CAService defines the interface for certificate operations
@@ -256,4 +262,36 @@ func (s *Service) VerifyLicenseByCert(ctx context.Context, certFingerprint, ip s
 // LogAudit logs an event to the audit log
 func (s *Service) LogAudit(ctx context.Context, action, inn, ip, details string) error {
 	return s.db.LogAudit(ctx, action, inn, ip, details)
+}
+
+// --- Admin Methods ---
+
+func (s *Service) GetAllLicenses(ctx context.Context) ([]*sqlite.License, error) {
+	return s.db.GetAllLicenses(ctx)
+}
+
+func (s *Service) CreateLicense(ctx context.Context, inn, org string, maxSlots int) error {
+	return s.db.CreateLicense(ctx, inn, org, maxSlots)
+}
+
+// UpdateLicenseDetails updates the organization and max slots of a license
+func (s *Service) UpdateLicenseDetails(ctx context.Context, inn, org string, maxSlots int) error {
+	_ = s.db.LogAudit(ctx, "update_license_details", inn, "admin", fmt.Sprintf("org=%s, maxSlots=%d", org, maxSlots))
+	return s.db.UpdateLicenseDetails(ctx, inn, org, maxSlots)
+}
+
+func (s *Service) UpdateLicenseStatus(ctx context.Context, inn, status string) error {
+	return s.db.UpdateLicenseStatus(ctx, inn, status)
+}
+
+func (s *Service) CreateEnrollmentToken(ctx context.Context, inn string, ttl time.Duration) (string, error) {
+	return s.db.CreateEnrollmentToken(ctx, inn, ttl)
+}
+
+func (s *Service) GetAllEnrollmentTokens(ctx context.Context) ([]*sqlite.EnrollmentToken, error) {
+	return s.db.GetAllEnrollmentTokens(ctx)
+}
+
+func (s *Service) GetAllAuditEvents(ctx context.Context, limit int) ([]*sqlite.AuditEvent, error) {
+	return s.db.GetAllAuditEvents(ctx, limit)
 }

@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// 5. Initialize Router
-	r := router.NewRouter(svc)
+	r := router.NewRouter(svc, cfg.AdminAPIKey)
 
 	// 6. Configure TLS
 	caCertPEM, err := os.ReadFile(cfg.CAPath)
@@ -122,18 +122,34 @@ func main() {
 		}
 	}()
 
+	// 7.1 Start Admin Server (Plain HTTP for internal use)
+	adminSrv := &http.Server{
+		Addr:    cfg.AdminAddress,
+		Handler: r, // Can use the same router, as routes are segregated by path
+	}
+
+	go func() {
+		log.Printf("Starting Admin server on %s (HTTP)", cfg.AdminAddress)
+		if adminErr := adminSrv.ListenAndServe(); adminErr != nil && adminErr != http.ErrServerClosed {
+			log.Fatalf("Admin server failed: %v", adminErr)
+		}
+	}()
+
 	// 8. Graceful Shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	log.Println("Shutting down servers...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if shutdownErr := srv.Shutdown(ctx); shutdownErr != nil {
-		log.Fatalf("Server forced to shutdown: %v", shutdownErr)
+		log.Fatalf("Main server forced to shutdown: %v", shutdownErr)
+	}
+	if shutdownErr := adminSrv.Shutdown(ctx); shutdownErr != nil {
+		log.Fatalf("Admin server forced to shutdown: %v", shutdownErr)
 	}
 
-	log.Println("Server exited properly")
+	log.Println("Servers exited properly")
 }

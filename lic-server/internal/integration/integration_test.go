@@ -56,7 +56,7 @@ func TestFullEnrollmentAndActivationFlow(t *testing.T) {
 	svc := license.NewService(store, caSvc, tokenSvc, "")
 
 	// Router
-	r := router.NewRouter(svc)
+	r := router.NewRouter(svc, "test-admin-key")
 
 	// Create TLS Server
 	// We need to configure it to trust our CA for client auth

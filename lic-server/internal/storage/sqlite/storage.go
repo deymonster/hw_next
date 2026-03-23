@@ -295,6 +295,80 @@ func (s *Storage) GetLicenseByINN(ctx context.Context, inn string) (*License, er
 	return &l, nil
 }
 
+func (s *Storage) GetAllLicenses(ctx context.Context) ([]*License, error) {
+	query := `
+		SELECT id, inn, organization, max_slots, used_slots, status, expires_at, created_at
+		FROM licenses
+		ORDER BY created_at DESC
+	`
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query licenses: %w", err)
+	}
+	defer rows.Close()
+
+	var licenses []*License
+	for rows.Next() {
+		var l License
+		if err := rows.Scan(
+			&l.ID, &l.INN, &l.Organization, &l.MaxSlots, &l.UsedSlots,
+			&l.Status, &l.ExpiresAt, &l.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan license: %w", err)
+		}
+		l.RemainingSlots = l.MaxSlots - l.UsedSlots
+		licenses = append(licenses, &l)
+	}
+	return licenses, rows.Err()
+}
+
+func (s *Storage) UpdateLicenseStatus(ctx context.Context, inn string, status string) error {
+	query := `UPDATE licenses SET status = ? WHERE inn = ?`
+	_, err := s.db.ExecContext(ctx, query, status, inn)
+	if err != nil {
+		return fmt.Errorf("failed to update license status: %w", err)
+	}
+	return nil
+}
+
+func (s *Storage) GetAllEnrollmentTokens(ctx context.Context) ([]*EnrollmentToken, error) {
+	query := `SELECT token, inn, expires_at, used, created_at FROM enrollment_tokens ORDER BY created_at DESC`
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query tokens: %w", err)
+	}
+	defer rows.Close()
+
+	var tokens []*EnrollmentToken
+	for rows.Next() {
+		var t EnrollmentToken
+		if err := rows.Scan(&t.Token, &t.INN, &t.ExpiresAt, &t.Used, &t.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan token: %w", err)
+		}
+		tokens = append(tokens, &t)
+	}
+	return tokens, rows.Err()
+}
+
+func (s *Storage) GetAllAuditEvents(ctx context.Context, limit int) ([]*AuditEvent, error) {
+	query := `SELECT id, action, inn, ip_address, details, created_at FROM audit_events ORDER BY created_at DESC LIMIT ?`
+	rows, err := s.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query audit events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []*AuditEvent
+	for rows.Next() {
+		var e AuditEvent
+		if err := rows.Scan(&e.ID, &e.Action, &e.INN, &e.IPAddress, &e.Details, &e.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan audit event: %w", err)
+		}
+		events = append(events, &e)
+	}
+	return events, rows.Err()
+}
+
 // CreateLicense adds a new license (helper for seeding/admin)
 func (s *Storage) CreateLicense(ctx context.Context, inn, org string, maxSlots int) error {
 	query := `
@@ -305,6 +379,16 @@ func (s *Storage) CreateLicense(ctx context.Context, inn, org string, maxSlots i
 	_, err := s.db.ExecContext(ctx, query, inn, org, maxSlots)
 	if err != nil {
 		return fmt.Errorf("failed to create license: %w", err)
+	}
+	return nil
+}
+
+// UpdateLicenseDetails updates the organization and max slots of a license
+func (s *Storage) UpdateLicenseDetails(ctx context.Context, inn, org string, maxSlots int) error {
+	query := `UPDATE licenses SET organization = ?, max_slots = ? WHERE inn = ?`
+	_, err := s.db.ExecContext(ctx, query, org, maxSlots, inn)
+	if err != nil {
+		return fmt.Errorf("failed to update license details: %w", err)
 	}
 	return nil
 }
