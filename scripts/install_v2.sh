@@ -258,17 +258,6 @@ ensure_env_file() {
   local SMTP_FROM_EMAIL="${SMTP_FROM_EMAIL:-$(get_env SMTP_FROM_EMAIL)}"; [[ -z "$SMTP_FROM_EMAIL" ]] && SMTP_FROM_EMAIL="noreply@example.com"
   local SMTP_FROM_NAME="${SMTP_FROM_NAME:-$(get_env SMTP_FROM_NAME)}"; [[ -z "$SMTP_FROM_NAME" ]] && SMTP_FROM_NAME="NITRINOnet Monitoring System"
 
-  if [ -t 0 ] && [[ "$NON_INTERACTIVE" != "1" ]]; then
-    read -rp "SMTP хост [${SMTP_HOST}]: " v; SMTP_HOST="${v:-$SMTP_HOST}"
-    read -rp "SMTP порт [${SMTP_PORT}]: " v; SMTP_PORT="${v:-$SMTP_PORT}"
-    read -rp "SMTP secure (true/false) [${SMTP_SECURE}]: " v; [[ -n "$v" ]] && SMTP_SECURE="${v}"
-    read -rp "SMTP пользователь [${SMTP_USER}]: " v; SMTP_USER="${v:-$SMTP_USER}"
-    read -rp "SMTP пароль [${SMTP_PASSWORD}]: " v; SMTP_PASSWORD="${v:-$SMTP_PASSWORD}"
-    read -rp "Отправитель (email) [${SMTP_FROM_EMAIL}]: " v; SMTP_FROM_EMAIL="${v:-$SMTP_FROM_EMAIL}"
-    read -rp "Отправитель (имя) [${SMTP_FROM_NAME}]: " v; SMTP_FROM_NAME="${v:-$SMTP_FROM_NAME}"
-  fi
-
-
   # Licensing
   ENROLLMENT_TOKEN="${ENROLLMENT_TOKEN:-$(get_env ENROLLMENT_TOKEN)}"
   
