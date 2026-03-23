@@ -3,6 +3,9 @@
 import nodemailer from 'nodemailer'
 import { z } from 'zod'
 
+import { prisma } from '@/libs/prisma'
+import { decrypt } from '@/utils/crypto/crypto'
+
 // Схема для проверки SMTP-конфигурации
 const smtpConfigSchema = z.object({
 	SMTP_HOST: z.string().min(1, 'SMTP_HOST is required'),
@@ -15,39 +18,49 @@ const smtpConfigSchema = z.object({
 
 // Переменная для хранения конфигурации
 let smtpConfigData: z.infer<typeof smtpConfigSchema> | null = null
-let transporter: nodemailer.Transporter | null = null
 
 // Функция для проверки и инициализации SMTP-конфигурации
-const initSmtpConfig = () => {
-	if (smtpConfigData) return true // Если уже инициализировано, возвращаем true
+const getEnvSmtpConfig = () => {
+	if (smtpConfigData) return smtpConfigData
 
 	// Проверка переменных окружения
 	const smtpConfig = smtpConfigSchema.safeParse(process.env)
-	console.log('SMTP_HOST:', process.env.SMTP_HOST)
 
 	if (!smtpConfig.success) {
-		console.error(
-			'❌ Invalid SMTP configuration:',
-			smtpConfig.error.format()
-		)
-		return false
+		console.warn('⚠️ No valid SMTP configuration in .env')
+		return null
 	}
 
-	// Сохраняем конфигурацию
 	smtpConfigData = smtpConfig.data
+	return smtpConfigData
+}
 
-	// Создание транспорта для отправки почты
-	transporter = nodemailer.createTransport({
-		host: smtpConfigData.SMTP_HOST,
-		port: parseInt(smtpConfigData.SMTP_PORT, 10),
-		secure: false, // Если порт 587 (для STARTTLS)
-		auth: {
-			user: smtpConfigData.SMTP_USER,
-			pass: smtpConfigData.SMTP_PASSWORD
+// Функция получения настроек из БД (от первого администратора)
+const getDbSmtpConfig = async () => {
+	try {
+		const adminSmtp = await prisma.smtpSettings.findFirst({
+			where: {
+				user: {
+					role: 'ADMIN'
+				}
+			}
+		})
+
+		if (adminSmtp) {
+			return {
+				host: adminSmtp.host,
+				port: adminSmtp.port,
+				secure: adminSmtp.secure,
+				user: adminSmtp.username,
+				password: decrypt(adminSmtp.password),
+				fromEmail: adminSmtp.fromEmail,
+				fromName: adminSmtp.fromName || 'NITRINOnet Monitoring System'
+			}
 		}
-	})
-
-	return true
+	} catch (error) {
+		console.error('Error fetching SMTP settings from DB:', error)
+	}
+	return null
 }
 
 // Функция отправки почты
@@ -64,10 +77,50 @@ export async function sendMail({
 	text: string // Текстовое содержание
 	html?: string // HTML-содержание (опционально)
 }) {
-	// Инициализируем конфигурацию при первом вызове
-	if (!initSmtpConfig() || !smtpConfigData || !transporter) {
-		throw new Error('Invalid SMTP configuration. Fix your .env file.')
+	let transporterConfig = null
+	let fromAddress = ''
+
+	// Сначала пытаемся получить настройки из БД
+	const dbConfig = await getDbSmtpConfig()
+
+	if (dbConfig) {
+		transporterConfig = {
+			host: dbConfig.host,
+			port: dbConfig.port,
+			secure: dbConfig.secure,
+			auth: {
+				user: dbConfig.user,
+				pass: dbConfig.password
+			}
+		}
+		fromAddress = email
+			? email
+			: `${dbConfig.fromName} <${dbConfig.fromEmail}>`
+	} else {
+		// Если в БД нет, используем .env
+		const envConfig = getEnvSmtpConfig()
+		if (!envConfig) {
+			throw new Error(
+				'Invalid SMTP configuration. Neither DB nor .env has valid settings.'
+			)
+		}
+		transporterConfig = {
+			host: envConfig.SMTP_HOST,
+			port: parseInt(envConfig.SMTP_PORT, 10),
+			secure: false, // Если порт 587 (для STARTTLS)
+			auth: {
+				user: envConfig.SMTP_USER,
+				pass: envConfig.SMTP_PASSWORD
+			}
+		}
+		fromAddress = email
+			? email
+			: `${envConfig.SMTP_FROM_NAME} <${envConfig.SMTP_FROM_EMAIL}>`
 	}
+
+	const transporter = nodemailer.createTransport(
+		transporterConfig as nodemailer.TransportOptions
+	)
 
 	try {
 		// Проверяем доступность SMTP-сервера
@@ -77,14 +130,9 @@ export async function sendMail({
 		throw new Error(`Error verifying SMTP server: ${error.message}`)
 	}
 
-	// Формируем от кого письмо (используем значения из .env, если email не указан)
-	const from = email
-		? `${email}` // Если передан email, используем его
-		: `${smtpConfigData.SMTP_FROM_NAME} <${smtpConfigData.SMTP_FROM_EMAIL}>` // Используем данные из конфигурации
-
 	try {
 		const info = await transporter.sendMail({
-			from,
+			from: fromAddress,
 			to: sendTo,
 			subject,
 			text,

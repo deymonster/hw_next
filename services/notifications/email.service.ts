@@ -5,6 +5,7 @@ import { changeEmailTemplate } from './templates/changeEmail'
 import { verifyEmailTemplate } from './templates/verifyEmail'
 import { EmailPayload, SmtpConfig } from './types'
 
+import { prisma } from '@/libs/prisma'
 import { services } from '@/services'
 import { decrypt } from '@/utils/crypto/crypto'
 
@@ -44,9 +45,54 @@ export class EmailService extends BaseNotificationService {
 		}
 	}
 
-	// Создание транспорта из системных настроек env
+	// Получение системных настроек из БД (от администратора)
+	private async getSystemConfigFromDb() {
+		try {
+			const adminSmtp = await prisma.smtpSettings.findFirst({
+				where: {
+					user: {
+						role: 'ADMIN'
+					}
+				}
+			})
+			if (adminSmtp) {
+				return {
+					host: adminSmtp.host,
+					port: adminSmtp.port,
+					secure: adminSmtp.secure,
+					auth: {
+						user: adminSmtp.username,
+						pass: decrypt(adminSmtp.password)
+					},
+					from: {
+						name: adminSmtp.fromName || this.fromName,
+						address: adminSmtp.fromEmail
+					}
+				}
+			}
+		} catch (error) {
+			console.error('Error fetching SMTP settings from DB:', error)
+		}
+		return null
+	}
+
+	// Создание транспорта из системных настроек
 	private async createSystemTransporter() {
-		// Проверяем конфигурацию перед созданием транспорта
+		const dbConfig = await this.getSystemConfigFromDb()
+
+		if (dbConfig) {
+			return nodemailer.createTransport({
+				host: dbConfig.host,
+				port: dbConfig.port,
+				secure: dbConfig.secure,
+				auth: {
+					user: dbConfig.auth.user,
+					pass: dbConfig.auth.pass
+				}
+			} as nodemailer.TransportOptions)
+		}
+
+		// Fallback to .env
 		this.validateConfig()
 
 		return nodemailer.createTransport({
@@ -63,21 +109,23 @@ export class EmailService extends BaseNotificationService {
 	// Метод для отправки с системными настройками из env
 	async send(payload: EmailPayload): Promise<boolean> {
 		try {
-			// Проверяем конфигурацию перед отправкой
-			this.validateConfig()
-
 			if (!('to' in payload)) {
 				console.error('[EMAIL_SERVICE_ERROR] No recipient specified')
 				return false
 			}
 
+			const dbConfig = await this.getSystemConfigFromDb()
 			const transporter = await this.createSystemTransporter()
 
+			let fromConfig = dbConfig
+				? dbConfig.from
+				: {
+						name: process.env.SMTP_FROM_NAME || this.fromName,
+						address: process.env.SMTP_FROM_EMAIL!
+					}
+
 			await transporter.sendMail({
-				from: {
-					name: process.env.SMTP_FROM_NAME || this.fromName,
-					address: process.env.SMTP_FROM_EMAIL!
-				},
+				from: fromConfig,
 				to: payload.to,
 				subject: payload.subject || '',
 				text: payload.text,

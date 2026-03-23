@@ -48,6 +48,35 @@ func main() {
 	// 4) Репозитории
 	activationRepo := sqlite.NewActivationRepository(db.DB())
 
+	// 4.5) Hardcoded offline license for specific customer (Secure)
+	if os.Getenv("LICD_CUSTOMER_BUILD") == "true" {
+		// Жестко фиксируем лимит и имя заказчика для этой сборки,
+		// чтобы пользователь не мог изменить это через .env
+		customerName := "ГАПОУ республики Бурятия 'Республиканский многоуровневый колледж' "
+		maxAgents := 15
+
+		// Перезаписываем глобальный конфиг, чтобы не было конфликтов
+		cfg.MaxAgents = maxAgents
+
+		err = activationRepo.UpdateLicense(
+			context.Background(),
+			"offline-customer-token",
+			"customer-install-id",
+			maxAgents,
+			"active",
+			time.Now().AddDate(1, 0, 0), // +1 year
+			customerName,
+			"0326481973",
+			time.Now(),
+			"CUSTOMER-KEY-123",
+		)
+		if err != nil {
+			log.Printf("ERROR: Failed to seed customer license: %v", err)
+		} else {
+			log.Printf("INFO: SECURE BUILD: Seeded customer license for '%s' with %d slots", customerName, maxAgents)
+		}
+	}
+
 	// 5) Сервисы
 	var tokenService *services.TokenService
 

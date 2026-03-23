@@ -3,6 +3,9 @@
 	"name": "hw-monitor",
 	"version": "1.0.0-alpha.7",
 	"private": true,
+	"prisma": {
+		"seed": "node prisma/seed.js"
+	},
 	"scripts": {
 		"dev": "next dev -H 0.0.0.0 --turbopack",
 		"dev:debug": "NODE_OPTIONS='--inspect' next dev",

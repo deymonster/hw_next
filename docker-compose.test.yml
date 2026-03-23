@@ -16,6 +16,16 @@ services:
             - hw-network-test
         env_file:
             - .env.test
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U $POSTGRES_USER -d $POSTGRES_DB -h localhost'
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+            start_period: 10s
 
     # Добавляем сервис для применения миграций в test среде
     db-migrate:
@@ -25,9 +35,10 @@ services:
             args:
                 ENCRYPTION_KEY: ${ENCRYPTION_KEY} # Добавить build arg
         container_name: db-migrate-test
-        command: npx prisma migrate deploy
+        command: sh -c "npx prisma migrate deploy && node prisma/seed.js"
         depends_on:
-            - postgres
+            postgres:
+                condition: service_healthy
         environment:
             - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
             - ENCRYPTION_KEY=${ENCRYPTION_KEY} # Добавить переменную окружения
@@ -47,10 +58,14 @@ services:
         ports:
             - '3001:3000' # Тестовый порт
         depends_on:
-            - postgres
-            - redis
-            - licd
-            - db-migrate # Добавляем зависимость от миграций
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_started
+            licd:
+                condition: service_started
+            db-migrate:
+                condition: service_completed_successfully
         environment:
             - NODE_ENV=production
             - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}

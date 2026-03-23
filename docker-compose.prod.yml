@@ -29,7 +29,7 @@ services:
     db-migrate:
         image: deymonster/hw-monitor:latest # Обновить версию
         container_name: db-migrate
-        command: npx prisma migrate deploy
+        command: sh -c "npx prisma migrate deploy && node prisma/seed.js"
         depends_on:
             postgres:
                 condition: service_healthy
