@@ -159,6 +159,8 @@ services:
             - LICENSE_SERVER_URL=https://192.168.13.162:8443
             # В продакшене лучше false, но если самоподписанный сертификат без доверенного CA - true
             - SKIP_TLS_VERIFY=true
+            # Включаем режим оффлайн-лицензии для заказчика
+            - LICD_CUSTOMER_BUILD=true
             # Токен передавать через внешний .env файл или переменную окружения при запуске
             - ENROLLMENT_TOKEN=${ENROLLMENT_TOKEN}
         expose:

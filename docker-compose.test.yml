@@ -157,6 +157,8 @@ services:
             - MAX_AGENTS=50
             - JOB_NAME=windows-agents
             - DB_PATH=/data/licd.db
+            # Включаем режим оффлайн-лицензии для заказчика
+            - LICD_CUSTOMER_BUILD=true
         ports:
             - '8083:8081' # Другой порт
         expose:
